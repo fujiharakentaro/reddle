@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RESONANCE: FINAL</title>
+<style>
+    :root {
+        --bg-color: #050505;
+        --bar-color: #e0e0e0;
+        --accent-color: #00ffcc;
+        --grid-color: rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+        background-color: var(--bg-color);
+        color: var(--bar-color);
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        user-select: none;
+        transition: background-color 2s;
+    }
+
+    /* --- SCREENS --- */
+    .screen {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-color);
+        z-index: 10;
+        transition: opacity 0.5s;
+    }
+    
+    .hidden {
+        opacity: 0;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    /* --- START SCREEN --- */
+    #start-screen h1 {
+        font-weight: 100;
+        letter-spacing: 0.5em;
+        font-size: 2rem;
+        margin-bottom: 40px;
+        text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+
+    .btn {
+        padding: 15px 40px;
+        font-size: 1.2rem;
+        letter-spacing: 0.2em;
+        background: transparent;
+        color: var(--bar-color);
+        border: 1px solid var(--bar-color);
+        cursor: pointer;
+        transition: all 0.3s;
+        font-family: 'Courier New', monospace;
+        font-weight: bold; /* 日本語フォント用に少し太く */
+    }
+    .btn:hover {
+        background: var(--bar-color);
+        color: var(--bg-color);
+        box-shadow: 0 0 20px var(--bar-color);
+    }
+
+    /* --- GAME SCREEN --- */
+    #game-ui {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #status {
+        margin-bottom: 40px;
+        font-family: 'Courier New', monospace;
+        color: #555;
+        font-size: 0.9rem;
+        letter-spacing: 0.2em;
+        height: 1.2rem; /* 文字が消えてもレイアウトが崩れないように高さを維持 */
+    }
+
+    #game-container {
+        display: flex;
+        gap: 25px;
+        height: 400px;
+        align-items: flex-end;
+        padding: 0 20px;
+        position: relative;
+    }
+
+    /* 背景グリッド */
+    #game-container::before {
+        content: "";
+        position: absolute;
+        top:0; left:0; width: 100%; height: 100%;
+        background-image: linear-gradient(var(--grid-color) 1px, transparent 1px);
+        background-size: 100% 20%;
+        z-index: -1;
+        pointer-events: none;
+    }
+
+    .column {
+        width: 40px;
+        height: 100%;
+        position: relative;
+        cursor: pointer;
+    }
+
+    /* ターゲットマーカー */
+    .target-line {
+        position: absolute;
+        left: -10px;
+        width: 60px;
+        height: 2px;
+        background-color: #444;
+        z-index: 0;
+        pointer-events: none;
+        transition: background-color 0.3s;
+    }
+
+    .bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: var(--bar-color);
+        transition: height 0.4s cubic-bezier(0.2, 0.9, 0.2, 1), background-color 0.3s;
+        opacity: 0.8;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        z-index: 1;
+        border-radius: 2px 2px 0 0;
+    }
+
+    /* Animations */
+    .moving .bar {
+        animation: fluctuate 0.8s infinite alternate ease-in-out;
+        background-color: #555;
+        opacity: 0.6;
+        box-shadow: none;
+    }
+
+    .column:nth-child(1) .bar { animation-delay: 0.0s; }
+    .column:nth-child(2) .bar { animation-delay: 0.2s; }
+    .column:nth-child(3) .bar { animation-delay: 0.5s; }
+    .column:nth-child(4) .bar { animation-delay: 0.1s; }
+    .column:nth-child(5) .bar { animation-delay: 0.3s; }
+
+    @keyframes fluctuate {
+        0% { height: 5%; opacity: 0.4; }
+        100% { height: 95%; opacity: 0.7; }
+    }
+
+    .stopped .bar { background-color: #999; animation: none; }
+
+    .matched .bar {
+        background-color: var(--accent-color);
+        box-shadow: 0 0 25px var(--accent-color);
+    }
+    .matched .target-line {
+        background-color: var(--accent-color);
+        box-shadow: 0 0 10px var(--accent-color);
+        height: 3px;
+        z-index: 2;
+    }
+
+    /* --- CLEAR EFFECTS --- */
+    /* 全体フラッシュ */
+    @keyframes flashWhite {
+        0% { background-color: #fff; }
+        100% { background-color: #000; }
+    }
+    .flash-anim {
+        animation: flashWhite 1.5s ease-out forwards;
+    }
+
+    /* バーが全力発光 */
+    .all-cleared .bar {
+        background-color: #fff !important;
+        box-shadow: 0 0 100px #fff, 0 0 50px var(--accent-color);
+        height: 100% !important; /* 全開 */
+        transition: height 0.5s ease-out, box-shadow 0.2s;
+    }
+    .all-cleared .target-line { opacity: 0; }
+
+    /* --- RESULT SCREEN --- */
+    #result-screen {
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(5px);
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 1s;
+    }
+    #result-screen.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .result-title {
+        color: var(--accent-color);
+        font-size: 1.5rem;
+        letter-spacing: 0.3em;
+        margin-bottom: 10px;
+    }
+    
+    .time-display {
+        font-family: 'Courier New', monospace;
+        font-size: 4rem;
+        color: #fff;
+        text-shadow: 0 0 20px rgba(255,255,255,0.5);
+        margin-bottom: 40px;
+    }
+
+</style>
+</head>
+<body>
+
+    <div id="start-screen" class="screen">
+        <h1>RESONANCE</h1>
+        <div style="margin-bottom: 20px; font-size: 0.8rem; color: #666; letter-spacing: 0.1em;">ALIGN THE WAVEFORMS</div>
+        <button class="btn" onclick="startGame()">スタート</button>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <div id="game-ui">
+            <div id="status"></div>
+            <div id="game-container">
+                <div class="column moving">
+                    <div class="target-line" style="bottom: 80%;"></div>
+                    <div class="bar" style="height: 50%;"></div>
+                </div>
+                <div class="column moving">
+                    <div class="target-line" style="bottom: 40%;"></div>
+                    <div class="bar" style="height: 50%;"></div>
+                </div>
+                <div class="column moving">
+                    <div class="target-line" style="bottom: 20%;"></div>
+                    <div class="bar" style="height: 50%;"></div>
+                </div>
+                <div class="column moving">
+                    <div class="target-line" style="bottom: 40%;"></div>
+                    <div class="bar" style="height: 50%;"></div>
+                </div>
+                <div class="column moving">
+                    <div class="target-line" style="bottom: 80%;"></div>
+                    <div class="bar" style="height: 50%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-screen" class="screen hidden">
+        <div class="result-title">SYSTEM SYNCHRONIZED</div>
+        <div class="time-display" id="final-time">00:00.000</div>
+        <button class="btn" onclick="location.reload()">リトライ</button>
+    </div>
+
+<script>
+    const columns = document.querySelectorAll('.column');
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const finalTimeDisplay = document.getElementById('final-time');
+    
+    // Game Logic
+    let currentLevels = [0, 0, 0, 0, 0];
+    const targetLevels = [4, 2, 1, 2, 4];
+    let isGameActive = false;
+    
+    // Timer
+    let startTime = 0;
+    let endTime = 0;
+
+    function startGame() {
+        startScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        isGameActive = true;
+        
+        // Start Timer
+        startTime = Date.now();
+    }
+
+    columns.forEach((col, index) => {
+        col.addEventListener('click', () => {
+            if (!isGameActive) return;
+            
+            const bar = col.querySelector('.bar');
+
+            if (currentLevels[index] === 0) {
+                // STOP: Set height based on moving count
+                const movingCount = currentLevels.filter(lvl => lvl === 0).length;
+                currentLevels[index] = movingCount;
+                
+                col.classList.remove('moving');
+                col.classList.add('stopped');
+                bar.style.height = (movingCount * 20) + '%';
+
+                checkMatch(col, movingCount, targetLevels[index]);
+
+            } else {
+                // RESTART
+                currentLevels[index] = 0;
+                col.classList.remove('stopped');
+                col.classList.remove('matched');
+                col.classList.add('moving');
+                bar.style.height = '50%';
+            }
+
+            checkAllClear();
+        });
+    });
+
+    function checkMatch(element, currentVal, targetVal) {
+        if (currentVal === targetVal) {
+            element.classList.add('matched');
+        } else {
+            element.classList.remove('matched');
+        }
+    }
+
+    function checkAllClear() {
+        const isComplete = currentLevels.every((lvl, idx) => lvl === targetLevels[idx]);
+
+        if (isComplete) {
+            gameClear();
+        }
+    }
+
+    function gameClear() {
+        isGameActive = false;
+        endTime = Date.now();
+        
+        // 1. Flash Effect
+        document.body.classList.add('flash-anim');
+        
+        // 2. Bars go full power
+        columns.forEach(col => {
+            col.classList.remove('matched');
+            col.classList.add('all-cleared');
+        });
+
+        // 3. Show Result after delay
+        const elapsedTime = endTime - startTime;
+        finalTimeDisplay.textContent = formatTime(elapsedTime);
+
+        setTimeout(() => {
+            resultScreen.classList.remove('hidden');
+            resultScreen.classList.add('show');
+        }, 1500); // Wait for the visual impact
+    }
+
+    function formatTime(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const milliseconds = ms % 1000;
+        
+        const s = seconds.toString().padStart(2, '0');
+        const m = milliseconds.toString().padStart(3, '0');
+        
+        return `${s}.${m}`;
+    }
+
+</script>
+</body>
+</html>
