@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>カード並び順判定システム</title>
+    <title>カード並び順判定システム（改良版）</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; }
         
-        /* 判定結果を表示するUI */
+        /* UIレイヤー */
         #ui-layer {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -17,30 +17,57 @@
             z-index: 999;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
-            align-items: center;
-            padding-bottom: 50px;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        #status-message {
-            background: rgba(0, 0, 0, 0.7);
+        /* 各カードの認識状況パネル */
+        #debug-panel {
+            background: rgba(0, 0, 0, 0.6);
             color: white;
-            padding: 15px 30px;
-            border-radius: 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            text-align: center;
-            transition: background 0.3s;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            text-align: left;
+            pointer-events: auto; /* タップ可能に */
         }
+        .status-row { margin: 5px 0; display: flex; align-items: center; }
+        .indicator {
+            width: 15px; height: 15px; border-radius: 50%;
+            margin-right: 10px; background: gray; border: 1px solid white;
+        }
+        .indicator.active { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
 
-        .success { background: rgba(46, 204, 113, 0.9) !important; }
-        .error { background: rgba(231, 76, 60, 0.9) !important; }
+        /* 結果メッセージ */
+        #result-box {
+            align-self: center;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+            display: none; /* 初期は非表示 */
+        }
+        .correct { color: #27ae60; border: 3px solid #27ae60; display: block !important; }
+        .wrong { color: #c0392b; border: 3px solid #c0392b; display: block !important; }
+
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
-        <div id="status-message">カードを映してください</div>
+        <div id="debug-panel">
+            <div class="status-row"><div id="ind-0" class="indicator"></div> 1枚目 (左)</div>
+            <div class="status-row"><div id="ind-1" class="indicator"></div> 2枚目 (中)</div>
+            <div class="status-row"><div id="ind-2" class="indicator"></div> 3枚目 (右)</div>
+            <div style="font-size:0.7rem; margin-top:5px; color:#ccc;">※全て緑になると判定します</div>
+        </div>
+
+        <div id="result-box"></div>
     </div>
 
     <a-scene 
@@ -53,97 +80,87 @@
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0" class="card-target" data-id="0">
-            <a-plane color="blue" opacity="0.5" position="0 0 0" height="1" width="1" rotation="0 0 0"></a-plane>
+            <a-plane color="blue" opacity="0.3" width="1" height="1"></a-plane>
+            <a-text value="1" color="white" align="center" width="6"></a-text>
         </a-entity>
 
         <a-entity mindar-image-target="targetIndex: 1" class="card-target" data-id="1">
-            <a-plane color="green" opacity="0.5" position="0 0 0" height="1" width="1" rotation="0 0 0"></a-plane>
+            <a-plane color="green" opacity="0.3" width="1" height="1"></a-plane>
+            <a-text value="2" color="white" align="center" width="6"></a-text>
         </a-entity>
 
         <a-entity mindar-image-target="targetIndex: 2" class="card-target" data-id="2">
-            <a-plane color="red" opacity="0.5" position="0 0 0" height="1" width="1" rotation="0 0 0"></a-plane>
+            <a-plane color="red" opacity="0.3" width="1" height="1"></a-plane>
+            <a-text value="3" color="white" align="center" width="6"></a-text>
         </a-entity>
-
     </a-scene>
 
     <script>
-        const statusMsg = document.getElementById('status-message');
-        const targets = document.querySelectorAll('.card-target');
+        const resultBox = document.getElementById('result-box');
+        const indicators = [
+            document.getElementById('ind-0'),
+            document.getElementById('ind-1'),
+            document.getElementById('ind-2')
+        ];
         
-        // カードの状態を保持するオブジェクト
-        let cardState = {
-            0: { visible: false, x: 0 },
-            1: { visible: false, x: 0 },
-            2: { visible: false, x: 0 }
-        };
+        // カードの状態管理
+        let cards = [
+            { visible: false, x: 0 },
+            { visible: false, x: 0 },
+            { visible: false, x: 0 }
+        ];
 
-        // 各ターゲットにイベントリスナーを設定
+        const targets = document.querySelectorAll('.card-target');
+
+        // イベントリスナー設定
         targets.forEach(target => {
-            const id = target.getAttribute('data-id');
+            const id = parseInt(target.getAttribute('data-id'));
 
-            // カードが見つかった時
             target.addEventListener("targetFound", () => {
-                cardState[id].visible = true;
-                updateStatus();
+                cards[id].visible = true;
+                indicators[id].classList.add('active');
             });
 
-            // カードを見失った時
             target.addEventListener("targetLost", () => {
-                cardState[id].visible = false;
-                updateStatus();
+                cards[id].visible = false;
+                indicators[id].classList.remove('active');
+                // ロストしたら結果表示も消す
+                resultBox.className = ""; 
+                resultBox.style.display = "none";
             });
         });
 
-        // 毎フレーム実行されるループ（位置情報の取得と判定）
+        // メインループ
         const scene = document.querySelector('a-scene');
         scene.addEventListener('loaded', () => {
             const loop = () => {
-                // 3つのカードの位置座標を取得
-                targets.forEach(target => {
-                    const id = target.getAttribute('data-id');
-                    if (cardState[id].visible) {
-                        // 世界座標からスクリーン上のX座標を取得
-                        const position = target.object3D.position;
-                        // カメラからの相対位置ではなく、ワールド座標を使う
-                        // ※MindARではobject3D.positionが更新される
-                        cardState[id].x = position.x;
-                    }
-                });
+                // 3枚とも見えているかチェック
+                const allVisible = cards.every(c => c.visible);
 
-                checkOrder();
+                if (allVisible) {
+                    // 座標更新
+                    targets.forEach(target => {
+                        const id = parseInt(target.getAttribute('data-id'));
+                        // ワールド座標を取得
+                        const pos = target.object3D.position; 
+                        cards[id].x = pos.x;
+                    });
+
+                    // 判定ロジック
+                    // 左(x小) < 中 < 右(x大)
+                    if (cards[0].x < cards[1].x && cards[1].x < cards[2].x) {
+                        resultBox.textContent = "正解！⭕️";
+                        resultBox.className = "correct";
+                    } else {
+                        resultBox.textContent = "並び順が違います❌";
+                        resultBox.className = "wrong";
+                    }
+                }
+
                 requestAnimationFrame(loop);
             };
             loop();
         });
-
-        // 状態表示の更新
-        function updateStatus() {
-            const visibleCount = Object.values(cardState).filter(c => c.visible).length;
-            if (visibleCount < 3) {
-                statusMsg.textContent = `カード認識中... (${visibleCount}/3)`;
-                statusMsg.className = "";
-            }
-        }
-
-        // 順番判定ロジック
-        function checkOrder() {
-            // 全てのカードが見えているか確認
-            if (!cardState[0].visible || !cardState[1].visible || !cardState[2].visible) {
-                return; 
-            }
-
-            // X座標の比較 (左にあるほどX座標は小さい)
-            // 期待値: Card0 < Card1 < Card2
-            const isOrdered = (cardState[0].x < cardState[1].x) && (cardState[1].x < cardState[2].x);
-
-            if (isOrdered) {
-                statusMsg.textContent = "正解！正しい並び順です！⭕️";
-                statusMsg.className = "success";
-            } else {
-                statusMsg.textContent = "並び順が違います...❌";
-                statusMsg.className = "error";
-            }
-        }
     </script>
 </body>
 </html>
