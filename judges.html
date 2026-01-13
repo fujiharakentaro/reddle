@@ -3,29 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Card Master V39</title>
+    <title>Card Master V40 (Final Landscape)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-     <style>
-        body { font-family: sans-serif; background: #111; color: #fff; margin: 0; overflow: hidden; width: 100vw; height: 100dvh; display: flex; flex-direction: column; }
+
+    <style>
+        body { font-family: sans-serif; background: #000; color: #fff; margin: 0; overflow: hidden; width: 100vw; height: 100dvh; display: flex; flex-direction: column; }
         
+        /* 画面管理 */
         .screen { position: absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:#222; z-index:10; }
         #game-screen { background: #000; }
 
+        /* キャンバス：アスペクト比を維持して画面に収める */
         #canvas-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+        canvas { 
+            display: block; 
+            max-width: 100%; max-height: 100%; 
+            width: auto; height: auto; 
+            object-fit: contain; /* これで潰れを防ぐ */
+        }
         
-        /* 内部処理用（デバッグ表示） */
+        /* 内部処理用（非表示） */
         #proc-canvas { display: none; }
+        /* デバッグ用：右上に小さく表示 */
         #debug-canvas { 
-            position: absolute; top: 10px; right: 10px; width: 100px; height: auto; 
+            position: absolute; top: 10px; right: 10px; width: 120px; height: auto; 
             border: 1px solid #0f0; background: black; z-index: 100; display:block;
         }
 
+        /* UIレイヤー */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box; z-index: 20; }
         button { pointer-events: auto; cursor: pointer; border: none; outline: none; }
         .btn-float { background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #aaa; padding: 8px 16px; border-radius: 20px; font-size: 14px; margin: 10px; }
         .judge-btn { width: 200px; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 50px; color: white; background: linear-gradient(to bottom, #28a745, #208030); align-self: center; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+        /* 横画面推奨メッセージ */
+        #rotate-msg {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); z-index: 9999; color: white; 
+            flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        /* 縦画面の時だけ表示するメディアクエリ */
+        @media screen and (orientation: portrait) {
+            #rotate-msg { display: flex; }
+        }
 
         /* 結果オーバーレイ */
         #result-overlay { display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); flex-direction:column; justify-content:center; align-items:center; z-index:500; }
@@ -47,9 +68,14 @@
 </head>
 <body>
 
+<div id="rotate-msg">
+    <div style="font-size: 50px;">⟳</div>
+    <p>画面を横にしてご利用ください</p>
+</div>
+
 <div id="title-screen" class="screen">
     <h1 style="margin-bottom:5px; text-shadow: 0 0 10px #0af;">CARD MASTER</h1>
-    <p style="color:#aaa; font-size:12px;">V39 Auto Detect</p>
+    <p style="color:#aaa; font-size:12px;">V40 Final Landscape</p>
     <div id="title-list" style="width:90%; max-width:400px; margin-top:20px;"></div>
     <div style="margin-top:20px;">
         <button class="btn-float" onclick="openSettings()">⚙️ 設定・同期</button>
@@ -126,17 +152,16 @@
 <script>
     // --- 定数 ---
     const CARD_ASPECT = 88/63; 
-    // 処理用低解像度 (軽くするために小さく処理して、座標だけ元のサイズに戻す)
     const WORK_W = 320; 
     const WORK_H = 240; 
-    // 比較用正規化サイズ
     const SCAN_W = 64; 
     const SCAN_H = Math.floor(SCAN_W * CARD_ASPECT);
 
     let cards=[], levels=[], blankData=null;
-    let detectedNames=["?","?","?","?"], detectedScores=[0,0,0,0];
+    // 初期値も「空白」に統一
+    let detectedNames=["空白","空白","空白","空白"], detectedScores=[0,0,0,0];
     let currentTarget=null;
-    let threshold = 100; // 黒色判定の閾値 (0-255, 小さいほど真っ黒しか反応しない)
+    let threshold = 100;
     let videoStream=null, isGameRunning=false, peer=null;
 
     const video = document.getElementById('video-source');
@@ -166,16 +191,22 @@
     }
     function goTitle(){ isGameRunning=false; stopCamera(); showScreen('title-screen'); }
 
-    // --- カメラ ---
+    // --- カメラ (横画面前提) ---
     async function startCamera(){
         try {
-            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
+            // 横長解像度を優先要求
+            const constraints = { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } };
+            const s = await navigator.mediaDevices.getUserMedia(constraints);
             videoStream = s; video.srcObject = s;
             video.onloadedmetadata = () => { 
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight; 
-                // 処理用キャンバスのサイズ設定
+                // キャンバスサイズを実際のビデオサイズに合わせる（これで潰れを防ぐ）
+                canvas.width = video.videoWidth; 
+                canvas.height = video.videoHeight; 
+                
+                // 処理用キャンバスサイズ設定
                 procCanvas.width = WORK_W; procCanvas.height = WORK_H;
                 debugCanvas.width = WORK_W; debugCanvas.height = WORK_H;
+                
                 requestAnimationFrame(loop); 
             };
         } catch(e) { alert("カメラエラー: " + e.message); goTitle(); }
@@ -188,41 +219,35 @@
         if(ts-lastTime<50)return; lastTime=ts; 
         if(video.readyState!==4)return;
 
-        // 1. 画面描画
+        // 1. 描画 (1:1で描画されるので歪まない)
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // 2. 検出用縮小画像作成
+        // 2. 処理用画像 (320x240にリサイズして取得)
         procCtx.drawImage(video, 0, 0, WORK_W, WORK_H);
         const imgData = procCtx.getImageData(0,0,WORK_W,WORK_H);
         
-        // 3. 黒い塊（Blobs）を見つける
-        // 単純なラベリング処理を行い、バウンディングボックスを取得
+        // 3. Blob検出
         const blobs = findBlobs(imgData, threshold);
         
-        // 4. フィルタリング (大きすぎる/小さすぎる/縦横比がおかしいものは除外)
+        // 4. フィルタリング
         const validBlobs = blobs.filter(b => {
             const area = b.w * b.h;
             const aspect = b.h / b.w;
-            // 画面の面積の1%以上、かつアスペクト比がカードに近い(1.0〜2.0)
+            // 画面の1%以上、アスペクト比 0.8~2.5 (カードに近い形)
             return area > (WORK_W*WORK_H)*0.01 && aspect > 0.8 && aspect < 2.5; 
         });
 
-        // 5. ソート (左から右へ)
+        // 5. 左から右へソート
         validBlobs.sort((a,b) => a.x - b.x);
-
-        // 6. 上位4つを採用 (もし4つ以上あれば)
-        // カードが横一列に並んでいると仮定し、Y座標が大きくズレているものは除外するロジックを入れても良いが、
-        // 今回はシンプルにX座標順で最初の4つを取る
         const frames = validBlobs.slice(0, 4);
 
-        detectedNames = []; detectedScores = [];
+        detectedNames = [];
 
-        // デバッグ表示 (右上の小窓に二値化画像を表示)
+        // デバッグ表示更新
         debugCtx.putImageData(binarizeDebug(imgData), 0, 0);
 
-        // 7. 各枠ごとの処理
         frames.forEach((frame, i) => {
-            // 元のキャンバス座標へ変換
+            // 座標変換 (WORK -> CANVAS)
             const scaleX = canvas.width / WORK_W;
             const scaleY = canvas.height / WORK_H;
             
@@ -231,67 +256,62 @@
             const fw = Math.floor(frame.w * scaleX);
             const fh = Math.floor(frame.h * scaleY);
 
-            // 枠の描画
+            // 枠描画
             ctx.lineWidth = 4;
-            ctx.strokeStyle = "#0f0"; // 緑枠 = 認識中
+            ctx.strokeStyle = "#0f0"; // 緑枠
             ctx.strokeRect(fx, fy, fw, fh);
-            
-            ctx.fillStyle = "#0f0"; ctx.font = "bold 20px sans-serif";
+            ctx.fillStyle = "#0f0"; ctx.font = "bold 24px sans-serif";
             ctx.fillText((i+1), fx, fy - 5);
 
-            // 枠内を切り出して判定
-            // 枠(黒線)自体を含まないように少し内側をトリミング
+            // 切り出し & 判定
             const padding = fw * 0.1; 
             if(fw > padding*2 && fh > padding*2) {
-                // 切り抜き用キャンバス(procCtxを再利用)に描画してデータ取得
-                // ※サイズは SCAN_W, SCAN_H にリサイズ
+                // Bitmap経由で切り出すと高速かつ正確
                 createImageBitmap(canvas, fx+padding, fy+padding, fw-padding*2, fh-padding*2).then(bmp => {
+                    // 一時キャンバスでリサイズ
                     const tempC = document.createElement('canvas');
                     tempC.width = SCAN_W; tempC.height = SCAN_H;
                     const tCtx = tempC.getContext('2d');
                     tCtx.drawImage(bmp, 0, 0, SCAN_W, SCAN_H);
                     
                     const fData = tCtx.getImageData(0,0,SCAN_W,SCAN_H);
-                    const bin = binarize(fData); // 判定用二値化
+                    const bin = binarize(fData);
                     const feat = getFeature(bin, SCAN_W, SCAN_H);
                     const res = identify(feat);
                     
-                    // 結果描画（非同期なのでフレームズレる可能性あるが、表示用なので許容）
-                    const disp = (res.name==="") ? "空" : (res.name==="?") ? "?" : res.name;
+                    // 結果格納 (非同期のためインデックス指定)
+                    // 「空白」に統一
+                    const disp = (res.name==="" || res.name==="?") ? "空白" : res.name;
                     detectedNames[i] = disp;
                     
-                    // 画面にテキスト表示
-                    ctx.fillStyle = "cyan"; ctx.font = "bold 16px sans-serif";
-                    ctx.fillText(disp, fx + fw/2 - 10, fy + fh + 20);
+                    // 画面表示
+                    ctx.fillStyle = "cyan"; ctx.font = "bold 20px sans-serif";
+                    ctx.fillText(disp, fx + fw/2 - 20, fy + fh + 30);
                 });
             }
         });
         
-        // 4つ見つかっていない場合、「?」で埋める
-        while(detectedNames.length < 4) detectedNames.push("?");
+        // 4つ未満の場合埋める
+        while(detectedNames.length < 4) detectedNames.push("空白");
     }
 
-    // --- Blob検出 (簡易ラベリング) ---
+    // --- Blob検出 ---
     function findBlobs(imgData, thresh) {
         const w = imgData.width; const h = imgData.height;
         const d = imgData.data;
-        const visited = new Uint8Array(w * h); // 0:未, 1:済
+        const visited = new Uint8Array(w * h);
         const blobs = [];
 
-        // ピクセル走査
-        for (let y = 0; y < h; y+=4) { // 高速化のためスキップ
+        for (let y = 0; y < h; y+=4) { 
             for (let x = 0; x < w; x+=4) {
                 const idx = (y * w + x);
                 if (visited[idx]) continue;
-
-                // 黒いピクセルか？ (RGB平均 < threshold)
                 const r = d[idx*4], g = d[idx*4+1], b = d[idx*4+2];
+                
+                // 黒画素判定
                 if ((r+g+b)/3 < thresh) {
-                    // 新しいBlob発見 -> 塗りつぶし探索 (Flood Fill的な処理)
-                    // 再帰はスタックオーバーフローするので、スタック配列を使う
                     const stack = [idx];
                     visited[idx] = 1;
-                    
                     let minX=x, maxX=x, minY=y, maxY=y;
                     let count = 0;
 
@@ -299,28 +319,23 @@
                         const curr = stack.pop();
                         const cy = Math.floor(curr / w);
                         const cx = curr % w;
-                        
                         if(cx < minX) minX = cx;
                         if(cx > maxX) maxX = cx;
                         if(cy < minY) minY = cy;
                         if(cy > maxY) maxY = cy;
                         count++;
 
-                        // 4近傍 (範囲チェックとVisitedチェック、黒チェック)
-                        // 高速化のため、詳細な連結性は多少犠牲にして飛び飛びで見る
                         const neighbors = [curr+1, curr-1, curr+w, curr-w];
                         for(let n of neighbors) {
                             if(n >= 0 && n < w*h && !visited[n]) {
                                 const nr=d[n*4], ng=d[n*4+1], nb=d[n*4+2];
                                 if ((nr+ng+nb)/3 < thresh) {
                                     visited[n] = 1;
-                                    // あまりに大きいBlobは背景かもしれないので打ち切り
                                     if(count < 20000) stack.push(n); 
                                 }
                             }
                         }
                     }
-                    
                     blobs.push({x:minX, y:minY, w:maxX-minX, h:maxY-minY});
                 }
             }
@@ -331,8 +346,9 @@
     function identify(feat){
         let best="?", minD=1.0;
         cards.forEach(c=>{ if(!c.isBlank){ const d=compare(feat,c.data); if(d<minD){minD=d;best=c.name;} } });
+        // 空白判定: 明示的に登録された「空白」画像と比較
         if(blankData){ const d=compare(feat,blankData); if(d<minD){minD=d;best="";} }
-        const sc=1.0-minD; if(sc<0.6) best="?"; // 閾値
+        const sc=1.0-minD; if(sc<0.6) best="?";
         return {name:best, score:sc};
     }
 
@@ -346,15 +362,20 @@
         let ok = true;
         let details = "";
         for(let i=0; i<4; i++) {
-            const correct = currentTarget.order[i];
-            const detected = detectedNames[i] || "?";
-            const isMatch = (detected === correct);
-            if(!isMatch) ok = false;
+            const correct = currentTarget.order[i]; // ここは "空白" またはカード名が入る
+            // detectedNames[i] はすでに "空白" またはカード名に変換済み
+            let detected = detectedNames[i] || "空白"; 
             
-            const color = isMatch ? "#0f0" : "#f55";
-            const detStr = (detected==="") ? "空白" : detected;
+            // 空白の整合性チェック
+            if (correct === "" || correct === "空白") {
+                if (detected !== "空白" && detected !== "") ok = false;
+            } else {
+                if (detected !== correct) ok = false;
+            }
+            
+            const color = (detected === correct || (detected==="空白" && correct==="")) ? "#0f0" : "#f55";
             const corStr = (correct==="") ? "空白" : correct;
-            details += `<span style="color:${color}">[${i+1}] 認識:${detStr} / 正解:${corStr}</span><br>`;
+            details += `<span style="color:${color}">[${i+1}] 認識:${detected} / 正解:${corStr}</span><br>`;
         }
         
         if(ok) { m.innerText="正解!! 🎉"; m.style.color="#0f0"; } 
@@ -363,7 +384,6 @@
     }
     function closeResult(){ document.getElementById('result-overlay').style.display='none'; }
     
-    // 閾値調整（トグル）
     function toggleDebug(){ 
         threshold = (threshold === 100) ? 150 : (threshold === 150) ? 60 : 100;
         document.getElementById('debug-val').innerText = threshold; 
@@ -371,7 +391,6 @@
 
     // --- 画像処理 (共通) ---
     function binarize(d){const b=new ImageData(d.width,d.height),bd=b.data,dd=d.data;for(let i=0;i<dd.length;i+=4){const v=(dd[i]+dd[i+1]+dd[i+2])/3<threshold?0:255;bd[i]=bd[i+1]=bd[i+2]=v;bd[i+3]=255}return b;}
-    // デバッグ表示用（アルファチャンネル保持）
     function binarizeDebug(d){const b=new ImageData(d.width,d.height),bd=b.data,dd=d.data;for(let i=0;i<dd.length;i+=4){const v=(dd[i]+dd[i+1]+dd[i+2])/3<threshold?0:255;bd[i]=v;bd[i+1]=v;bd[i+2]=v;bd[i+3]=255}return b;}
     function getFeature(b,w,h){const p=[],d=b.data,step=2;for(let y=0;y<h;y+=step)for(let x=0;x<w;x+=step)p.push(d[((y*w+x)*4)]===0?1:0);return p;}
     function compare(a,b){if(!a||!b||a.length!=b.length)return 1;let d=0,c=0;for(let i=0;i<a.length;i++){if(a[i]!=b[i])d++;c++}return c?d/c:1;}
@@ -407,9 +426,9 @@
         });
     }
     
-    function saveData(){ localStorage.setItem('cm_v39',JSON.stringify({cards,levels,blankData})); }
-    function loadData(){ const d=localStorage.getItem('cm_v39'); if(d){try{const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData}catch(e){}} }
-    function resetData(){ if(confirm("消去?")){localStorage.removeItem('cm_v39');location.reload();} }
+    function saveData(){ localStorage.setItem('cm_v40',JSON.stringify({cards,levels,blankData})); }
+    function loadData(){ const d=localStorage.getItem('cm_v40'); if(d){try{const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData}catch(e){}} }
+    function resetData(){ if(confirm("消去?")){localStorage.removeItem('cm_v40');location.reload();} }
     function showToast(m){const e=document.getElementById('status-msg');e.innerText=m;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000);}
     function openSettings(){document.getElementById('settings-overlay').classList.add('open');}
     function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
