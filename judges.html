@@ -2,240 +2,259 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Card Master V15 (Resolution Fix)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Card Master V17 (Direct View)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #111; color: #fff; margin: 0; overflow: hidden; width: 100vw; height: 100dvh; display: flex; justify-content: center; align-items: center; }
-        #app-container { position: relative; width: 100%; height: 100%; max-width: 600px; background: #000; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
-        video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s; z-index: 1; }
-        video.active { opacity: 1.0; }
+        body { font-family: sans-serif; background: #000; color: #fff; margin: 0; overflow: hidden; width: 100vw; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 15px; box-sizing: border-box; z-index: 10; pointer-events: none; transition: opacity 0.3s; }
-        .screen > * { pointer-events: auto; }
-        .hidden { display: none !important; opacity: 0; }
+        /* メインの表示エリア（Canvasをここに表示） */
+        #canvas-container {
+            position: relative;
+            width: 100%; max-width: 640px;
+            aspect-ratio: 16 / 9; /* カメラ比率に固定 */
+            background: #222;
+            box-shadow: 0 0 20px rgba(0,255,0,0.2);
+        }
+        canvas { width: 100%; height: 100%; display: block; }
 
-        .slot-container { width: 100%; height: 28vw; max-height: 180px; margin-top: 15vh; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
-        .slot { width: 20.2%; height: 100%; border: 2px solid rgba(0,255,0,0.5); background: rgba(255,255,255,0.05); border-radius: 6px; position: relative; }
-        /* 情報を詳しく表示 */
-        .slot-info { position: absolute; bottom: -50px; left: -10%; width: 120%; text-align: center; font-size: 9px; color: #0f0; font-weight: bold; text-shadow: 0 1px 2px #000; line-height: 1.2; white-space: pre-wrap;}
+        /* UIレイヤー */
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .ui-element { pointer-events: auto; }
 
-        #debug-monitor { position: absolute; top: 10px; left: 10px; width: 80px; height: 45px; border: 1px solid yellow; z-index: 100; background: #000; }
-        #controls-container { position: absolute; bottom: 100px; width: 90%; z-index: 50; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 10px; }
-        .slider-row { display: flex; flex-direction: column; margin-bottom: 8px; }
-        .slider-label { font-size: 11px; margin-bottom: 2px; display: flex; justify-content: space-between; }
+        /* 各種ボタン */
+        .btn-float { background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 12px; margin: 10px; }
+        .judge-btn { 
+            width: 80%; padding: 15px; font-size: 1.5rem; font-weight: bold; border: none; border-radius: 50px; 
+            color: white; background: linear-gradient(to bottom, #28a745, #208030); 
+            align-self: center; margin-bottom: 20px; pointer-events: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        /* 調整パネル */
+        #controls {
+            width: 90%; max-width: 600px; background: #222; padding: 10px; border-radius: 10px; margin-top: 10px;
+        }
+        .slider-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
         input[type=range] { width: 100%; }
 
-        h1 { font-size: 2.2rem; margin-top: 15%; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
-        .back-btn { position: absolute; top: 25px; left: 20px; z-index: 100; padding: 10px 25px; background: rgba(0,0,0,0.8); border: 1px solid #fff; color: #fff; border-radius: 30px; font-weight: bold; cursor: pointer; }
-        .judge-btn { position: absolute; bottom: 20px; width: 85%; z-index: 20; padding: 15px; font-size: 1.5rem; font-weight: bold; border: none; border-radius: 50px; color: white; background: linear-gradient(to bottom, #28a745, #208030); box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; }
-        
+        /* 設定オーバーレイ */
         #settings-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #151515; z-index: 200; transform: translateY(100%); transition: transform 0.3s; padding: 20px; overflow-y: auto; box-sizing: border-box; }
         #settings-overlay.open { transform: translateY(0); }
         .setting-box { background: #252525; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
         
-        .card-list { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; min-height: 90px;}
-        .card-thumb { min-width: 60px; height: 80px; background: #000; border: 1px solid #555; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
-        .card-thumb img { width: 100%; height: 60px; object-fit: contain; }
+        .card-list { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; min-height: 80px;}
+        .card-thumb { min-width: 60px; height: 80px; background: #000; border: 1px solid #555; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+        .card-thumb img { width: 100%; height: 100%; object-fit: contain; }
         
         input[type="text"], select { padding: 10px; width: 100%; margin-bottom: 5px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 5px;}
-        .level-item { background: rgba(40,40,40,0.9); padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;}
-        
-        #reload-cam-btn { position:absolute; top:15px; left:15px; font-size:12px; z-index:50; cursor:pointer; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 20px; border: 1px solid #555; color: #aaa; }
-        #gear-icon { position:absolute; top:15px; right:15px; font-size:24px; z-index:50; cursor:pointer; background: rgba(0,0,0,0.6); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-        #status-msg { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(40, 167, 69, 0.9); color: white; padding: 8px 20px; border-radius: 20px; font-weight: bold; z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.5s; }
-        #sync-area { text-align: center; display: none; margin-top: 10px; background: #fff; padding: 10px; border-radius: 8px; }
+        .level-item { background: #333; padding: 10px; margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+
+        /* 結果表示 */
         #result-view { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: none; z-index: 400; flex-direction: column; justify-content: center; align-items: center; }
+        
+        /* その他 */
+        #status-msg { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(40,167,69,0.9); padding: 5px 15px; border-radius: 20px; font-size:12px; opacity:0; transition:opacity 0.5s; z-index:300; }
+        #sync-area { display:none; background:#fff; padding:10px; border-radius:8px; text-align:center; margin-top:10px;}
+        video { display: none; } /* ビデオタグは非表示（キャンバスに描画するため） */
     </style>
 </head>
 <body>
 
-<div id="app-container">
-    <video id="video-bg" autoplay playsinline muted></video>
-    <div id="status-msg">保存しました！</div>
-    <div id="reload-cam-btn" onclick="startCam(true)">📷 再起動</div>
-    <div id="gear-icon" onclick="openSettings()">⚙️</div>
-
-    <canvas id="debug-monitor"></canvas>
-    
-    <div id="controls-container">
-        <div class="slider-row">
-            <div class="slider-label"><span>白黒感度 (Threshold)</span> <span id="thresh-val">90</span></div>
-            <input type="range" id="thresh-range" min="10" max="200" value="90" oninput="updateThresh(this.value)">
+<div id="canvas-container">
+    <canvas id="main-canvas"></canvas>
+    <div class="ui-layer">
+        <div style="display:flex; justify-content:space-between;">
+            <button class="btn-float ui-element" onclick="startCam(true)">📷 再起動</button>
+            <button class="btn-float ui-element" onclick="openSettings()">⚙️ 設定</button>
         </div>
-        <div class="slider-row">
-            <div class="slider-label"><span>★判定の甘さ (Tolerance)</span> <span id="tol-val">無理やり</span></div>
-            <input type="range" id="tol-range" min="0.1" max="1.0" step="0.05" value="0.6" oninput="updateTol(this.value)">
+        <button id="btn-judge" class="judge-btn" onclick="judge()" style="display:none;">判 定 !</button>
+        
+        <div id="title-ui" style="text-align:center; margin-top:20%; pointer-events:auto;">
+            <h1 style="text-shadow:0 0 10px #000;">CARD MASTER</h1>
+            <div id="level-list" style="background:rgba(0,0,0,0.8); padding:10px; border-radius:10px; max-height:200px; overflow-y:auto; width:80%; margin:0 auto;"></div>
         </div>
-        <div style="font-size:10px; color:#aaa; text-align:center;">
-            右端で「無理やり」判定します<br>
-            <span id="sys-status" style="color:#f00;"></span>
-        </div>
-    </div>
-
-    <div id="screen-title" class="screen">
-        <h1>CARD MASTER</h1>
-        <div id="level-list" style="width:96%; margin-top:20px;"></div>
-    </div>
-
-    <div id="screen-game" class="screen hidden">
-        <button class="back-btn" onclick="goTitle()">← BACK</button>
-        <div style="position:absolute; top:30px; width:100%; text-align:center; font-weight:bold; font-size:1.2rem;" id="game-title-text">LEVEL</div>
-        <div class="slot-container">
-            <div class="slot"><div class="slot-info" id="info-0">-</div></div>
-            <div class="slot"><div class="slot-info" id="info-1">-</div></div>
-            <div class="slot"><div class="slot-info" id="info-2">-</div></div>
-            <div class="slot"><div class="slot-info" id="info-3">-</div></div>
-        </div>
-        <button class="judge-btn" onclick="judge()">判 定 !</button>
-    </div>
-
-    <div id="settings-overlay">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-            <h2>設定</h2><button onclick="closeSettings()" style="padding:5px 15px;">閉じる</button>
-        </div>
-        <div class="setting-box">
-            <h3>1. 画像登録</h3>
-            <p style="font-size:12px; color:#f88;">※最初に「全削除」してから登録してください</p>
-            <input type="text" id="reg-name" placeholder="名前">
-            <div style="background:#333; padding:5px; margin-bottom:5px;"><label><input type="checkbox" id="is-blank-check"> これを「空白」にする</label></div>
-            <label style="display:block; background:#007bff; padding:10px; text-align:center; border-radius:5px; cursor:pointer;">📁 画像を選択<input type="file" accept="image/*" onchange="registerImage(this)" style="display:none;"></label>
-            <div class="card-list" id="reg-list"></div>
-        </div>
-        <div class="setting-box">
-            <h3>2. 問題作成</h3>
-            <input type="hidden" id="edit-index" value="-1">
-            <input type="text" id="lvl-name" placeholder="タイトル">
-            <div style="display:flex; gap:5px; margin-bottom:5px;">
-                <select id="sel-0"></select><select id="sel-1"></select><select id="sel-2"></select><select id="sel-3"></select>
-            </div>
-            <button id="add-update-btn" onclick="addOrUpdateLevel()" style="width:100%; padding:10px; background:#28a745; color:#fff; border:none; border-radius:5px;">＋ 追加</button>
-            <div id="settings-level-list" style="margin-top:10px;"></div>
-        </div>
-        <div class="setting-box">
-            <button onclick="downloadHTML()" style="width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; margin-bottom:5px;">💾 HTML保存</button>
-            <button onclick="startHost()" style="width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; margin-bottom:5px;">📡 QR同期</button>
-            <button onclick="resetData()" style="width:100%; padding:10px; background:#d00; color:#fff; border:none; border-radius:5px;">⚠ 全削除 (リセット)</button>
-            <div id="sync-area"><div id="qrcode"></div><div id="sync-msg" style="color:#000; font-size:11px;">待機中...</div></div>
-        </div>
-    </div>
-
-    <div id="result-view" onclick="this.style.display='none'">
-        <div id="res-msg" style="font-size:4rem; font-weight:bold;"></div>
-        <div>Tap to close</div>
     </div>
 </div>
 
+<div id="controls">
+    <div class="slider-row">
+        <span>白黒感度 (Threshold) <span id="val-thr">90</span></span>
+        <span>判定の甘さ <span id="val-tol">0.6</span></span>
+    </div>
+    <input type="range" min="10" max="200" value="90" oninput="updateParam('thr', this.value)">
+    <input type="range" min="0.1" max="1.0" step="0.05" value="0.6" oninput="updateParam('tol', this.value)" style="margin-top:5px;">
+    <div style="font-size:10px; color:#aaa; margin-top:5px;">
+        ※画面の黄色い枠の中にカードを入れてください。<br>
+        ※絵柄がはっきり見えるように上のバー(感度)を調整してください。
+    </div>
+</div>
+
+<div id="status-msg">保存しました</div>
+<video id="video-source" autoplay playsinline muted></video>
+
+<div id="settings-overlay">
+    <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+        <h2>設定</h2><button onclick="closeSettings()" class="btn-float" style="margin:0;">閉じる</button>
+    </div>
+    <div class="setting-box">
+        <h3>1. 画像登録</h3>
+        <p style="font-size:12px; color:#f88;">※最初に「全削除」してください</p>
+        <input type="text" id="reg-name" placeholder="名前">
+        <div style="background:#333; padding:5px; margin-bottom:5px;"><label><input type="checkbox" id="is-blank-check"> これを「空白」にする</label></div>
+        <label style="display:block; background:#007bff; padding:10px; text-align:center; border-radius:5px; cursor:pointer;">📁 画像を選択<input type="file" accept="image/*" onchange="registerImage(this)" style="display:none;"></label>
+        <div class="card-list" id="reg-list"></div>
+    </div>
+    <div class="setting-box">
+        <h3>2. 問題作成</h3>
+        <input type="hidden" id="edit-index" value="-1">
+        <input type="text" id="lvl-name" placeholder="タイトル">
+        <div style="display:flex; gap:5px; margin-bottom:5px;">
+            <select id="sel-0"></select><select id="sel-1"></select><select id="sel-2"></select><select id="sel-3"></select>
+        </div>
+        <button id="add-btn" onclick="addLevel()" style="width:100%; padding:10px; background:#28a745; color:#fff; border:none; border-radius:5px;">＋ 追加</button>
+        <div id="set-lvl-list" style="margin-top:10px;"></div>
+    </div>
+    <div class="setting-box">
+        <button onclick="downloadHTML()" style="width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; margin-bottom:5px;">💾 HTML保存</button>
+        <button onclick="startHost()" style="width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; margin-bottom:5px;">📡 QR同期</button>
+        <button onclick="resetData()" style="width:100%; padding:10px; background:#d00; color:#fff; border:none; border-radius:5px;">⚠ 全削除 (リセット)</button>
+        <div id="sync-area"><div id="qrcode"></div><div id="sync-msg" style="color:#000; font-size:11px;">待機中...</div></div>
+    </div>
+</div>
+
+<div id="result-view" onclick="this.style.display='none'">
+    <div id="res-msg" style="font-size:4rem; font-weight:bold;"></div>
+    <div>Tap to close</div>
+</div>
+
 <script id="embedded-data" type="application/json">null</script>
-<canvas id="proc-canvas" style="display:none;"></canvas>
 
 <script>
-    // --- 【重要】解像度の固定 ---
-    // ここでサイズを固定することで、アップロード画像とカメラ画像のサイズ不一致を防ぐ
-    const PROC_W = 320; 
-    const PROC_H = 180;
-    
-    const SLOT_WIDTH_PCT = 0.2019; const GAP_PCT = 0.0641;
-    const SLOT_X_PCT = [0, SLOT_WIDTH_PCT+GAP_PCT, (SLOT_WIDTH_PCT+GAP_PCT)*2, (SLOT_WIDTH_PCT+GAP_PCT)*3];
-    
-    let cards = []; let levels = []; let blankCardData = null;
-    let currentTarget = []; let detected = ["","","",""];
+    // --- 定数・変数 ---
+    const PROC_W = 320; const PROC_H = 180; // 内部解像度(16:9)
+    // 枠の定義 (画面全体に対する割合)
+    const SLOT_W_PCT = 0.20; 
+    const GAP_PCT = 0.05;
+    const START_X = (1.0 - (SLOT_W_PCT*4 + GAP_PCT*3)) / 2; // 中央寄せ
+    const SLOT_X_PCT = [
+        START_X, 
+        START_X + SLOT_W_PCT + GAP_PCT, 
+        START_X + (SLOT_W_PCT + GAP_PCT)*2, 
+        START_X + (SLOT_W_PCT + GAP_PCT)*3
+    ];
+
+    let cards=[], levels=[], blankData=null;
+    let currentOrder=[], detected=["","","",""];
+    let isGameMode = false;
     
     let threshold = 90; 
-    let tolerance = 0.6; 
+    let tolerance = 0.6;
 
-    const video = document.getElementById('video-bg');
-    const pCanvas = document.getElementById('proc-canvas');
-    const pCtx = pCanvas.getContext('2d');
-    const dbgCanvas = document.getElementById('debug-monitor');
-    const dbgCtx = dbgCanvas.getContext('2d');
+    const video = document.getElementById('video-source');
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
 
+    // --- 初期化 ---
     window.onload = () => {
-        // 解像度初期化（最優先）
-        pCanvas.width = PROC_W; pCanvas.height = PROC_H;
-        dbgCanvas.width = PROC_W; dbgCanvas.height = PROC_H;
-
+        canvas.width = PROC_W; canvas.height = PROC_H; // キャンバスサイズ固定
         try {
             const txt = document.getElementById('embedded-data').textContent;
-            if(txt && txt!=="null") { const d=JSON.parse(txt); cards=d.cards; levels=d.levels; blankCardData=d.blank; }
+            if(txt && txt!=="null") { const d=JSON.parse(txt); cards=d.cards; levels=d.levels; blankData=d.blank; }
             else loadLocal();
         } catch(e){ loadLocal(); }
+        
         renderUI(); startCam();
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.get('sync')) startClient(urlParams.get('sync'));
+        
+        const u = new URLSearchParams(window.location.search);
+        if(u.get('sync')) startClient(u.get('sync'));
     };
 
-    function updateThresh(v) { threshold = parseInt(v); document.getElementById('thresh-val').innerText = threshold; }
-    function updateTol(v) { 
-        tolerance = parseFloat(v); 
-        document.getElementById('tol-val').innerText = tolerance >= 0.8 ? "無理やり(激甘)" : tolerance.toFixed(2);
+    function updateParam(type, val) {
+        if(type==='thr') { threshold=parseInt(val); document.getElementById('val-thr').innerText=threshold; }
+        if(type==='tol') { tolerance=parseFloat(val); document.getElementById('val-tol').innerText=tolerance>=0.8?"無理やり":tolerance.toFixed(2); }
     }
 
-    async function startCam(isManual=false) {
+    // --- カメラ & 描画ループ ---
+    async function startCam(manual=false) {
         if(video.srcObject) video.srcObject.getTracks().forEach(t=>t.stop());
         try {
             const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
             video.srcObject = s;
-            video.onloadedmetadata = () => { video.play(); video.classList.add('active'); setInterval(process, 150); };
-            if(isManual) showToast("再起動しました");
+            video.onloadedmetadata = () => { video.play(); setInterval(loop, 100); }; // ループ開始
+            if(manual) showToast("再起動しました");
         } catch(e) { 
-            console.error(e);
-            if(isManual) alert("カメラエラー: "+e.name);
-            navigator.mediaDevices.getUserMedia({video:true}).then(s=>{ video.srcObject=s; video.onloadedmetadata=()=>{video.play(); video.classList.add('active');};});
+            navigator.mediaDevices.getUserMedia({video:true}).then(s=>{ video.srcObject=s; video.onloadedmetadata=()=>{video.play();};});
         }
     }
 
-    function process() {
+    function loop() {
         if(video.readyState !== 4) return;
-        // 定数サイズで描画
-        pCtx.drawImage(video, 0, 0, PROC_W, PROC_H);
         
-        const scanH = PROC_H * 0.3; const scanY = (PROC_H - scanH) / 2;
-        const bin = binarize(pCtx.getImageData(0,0,PROC_W,PROC_H));
+        // 1. 映像をキャンバスに描画 (全画面)
+        ctx.drawImage(video, 0, 0, PROC_W, PROC_H);
         
-        dbgCtx.putImageData(bin, 0, 0); 
-        dbgCtx.strokeStyle = "yellow"; dbgCtx.lineWidth = 2;
+        // 2. 処理用データ取得 (全体)
+        const imgData = ctx.getImageData(0, 0, PROC_W, PROC_H);
+        const bin = binarize(imgData); // 2値化データ
+        
+        // 3. 画面へのオーバーレイ描画 (デバッグ用白黒 & 枠)
+        // ユーザーには「システムが見ている白黒画面」を見せる（これが一番確実）
+        ctx.putImageData(bin, 0, 0); 
+        
+        // 枠の描画
+        ctx.strokeStyle = "#0f0"; ctx.lineWidth = 2;
+        ctx.fillStyle = "#0f0"; ctx.font = "10px Arial";
+        
+        const scanH = PROC_H * 0.4; // 判定エリア高さ
+        const scanY = (PROC_H - scanH) / 2;
 
         let detectedNow = [];
+
         for(let i=0; i<4; i++) {
-            const cx = SLOT_X_PCT[i] * PROC_W; const cw = SLOT_WIDTH_PCT * PROC_W;
-            const cutW = Math.floor(cw * 0.6); const cutX = Math.floor(cx + (cw - cutW)/2);
-            dbgCtx.strokeRect(cutX, scanY, cutW, scanH);
+            const cx = SLOT_X_PCT[i] * PROC_W;
+            const cw = SLOT_WIDTH_PCT * PROC_W;
             
-            // 特徴抽出
+            // 判定エリア（少し内側を見る）
+            const cutW = Math.floor(cw * 0.7);
+            const cutX = Math.floor(cx + (cw - cutW)/2);
+            
+            // 枠描画
+            ctx.strokeRect(cutX, scanY, cutW, scanH);
+            
+            // 判定ロジック
             const feat = getFeature(bin, cutX, scanY, cutW, scanH, PROC_W);
             let best = "?"; let minD = 1.0;
-            
+
             cards.forEach(c => {
                 if(c.isBlank) return;
-                const diff = compare(feat, c.data);
+                // ★ズレ補正あり比較 (Shift Match)
+                // 左右に4ピクセルずつずらして一番似ているところを探す
+                const diff = compareShift(feat, c.data, cutW, scanH, 4); 
                 if(diff < minD) { minD = diff; best = c.name; }
             });
-            
-            if(blankCardData) {
-                const bDiff = compare(feat, blankCardData);
+
+            if(blankData) {
+                const bDiff = compareShift(feat, blankData, cutW, scanH, 4);
                 if(bDiff < minD) { best = ""; minD = bDiff; }
             }
 
             if(minD > tolerance) best = "?";
-
+            
             detectedNow.push(best);
-            const info = document.getElementById(`info-${i}`);
-            if(info) {
-                const disp = best===""?"(空白)":best;
-                // バグ原因究明のためのステータス表示
-                let debugInfo = `Diff:${minD.toFixed(2)}`;
-                if(minD === 1.0) debugInfo = "ERR:SIZE"; // サイズ不一致エラーの検出
-                
-                info.innerText = `${disp}\n${debugInfo}`;
-                info.style.color = best==="?" ? "#f00" : "#0f0";
-            }
+            
+            // 結果をキャンバス上に文字で書く
+            const disp = best==="" ? "(空白)" : best;
+            ctx.fillText(`${disp}`, cutX, scanY + scanH + 12);
+            ctx.fillText(`(${minD.toFixed(2)})`, cutX, scanY + scanH + 22);
         }
         detected = detectedNow;
     }
 
-    // --- 画像登録 (サイズ固定化) ---
+    // --- 登録処理 ---
     function registerImage(input) {
         if(!input.files[0]) return;
         const name = document.getElementById('reg-name').value || "Img"+(cards.length+1);
@@ -244,136 +263,39 @@
         r.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                // ここで必ず PROC_W / PROC_H を使う
+                // 登録用一時キャンバス
                 const c = document.createElement('canvas');
-                const cw = SLOT_WIDTH_PCT * PROC_W; 
-                const cutW = Math.floor(cw * 0.6); 
-                const scanH = PROC_H * 0.3;
+                // Slot1 (Index 0) のサイズを計算して合わせる
+                const cw = SLOT_WIDTH_PCT * PROC_W;
+                const cutW = Math.floor(cw * 0.7);
+                const scanH = PROC_H * 0.4;
                 
                 c.width = cutW; c.height = scanH;
-                const ctx = c.getContext('2d');
-                ctx.drawImage(img, 0, 0, cutW, scanH); // 自動リサイズ描画
+                const tx = c.getContext('2d');
+                tx.drawImage(img, 0, 0, cutW, scanH); // リサイズ描画
                 
-                const b = binarize(ctx.getImageData(0,0,cutW,scanH));
+                const b = binarize(tx.getImageData(0,0,cutW,scanH));
                 const data = getFeature(b, 0, 0, cutW, scanH, cutW);
                 
-                ctx.putImageData(b, 0, 0);
+                tx.putImageData(b, 0, 0); // サムネ用
                 const thumb = c.toDataURL();
 
                 if(isBlank) {
-                    blankCardData = data;
+                    blankData = data;
                     cards = cards.filter(x=>!x.isBlank);
                     cards.unshift({name:"【空白】"+name, data, thumb, isBlank:true});
-                    showToast("空白として登録");
                 } else {
                     cards.push({name, data, thumb, isBlank:false});
-                    showToast("登録しました");
                 }
                 saveLocal(); renderUI();
-                input.value=""; document.getElementById('reg-name').value=""; document.getElementById('is-blank-check').checked=false;
+                input.value="";
             };
             img.src = e.target.result;
         };
         r.readAsDataURL(input.files[0]);
     }
 
-    function addOrUpdateLevel() {
-        const title = document.getElementById('lvl-name').value || "無題";
-        const order = [0,1,2,3].map(i => document.getElementById(`sel-${i}`).value);
-        const idx = parseInt(document.getElementById('edit-index').value);
-        if(idx >= 0) { levels[idx] = { title, order }; showToast("更新しました"); }
-        else { levels.push({ title, order }); showToast("追加しました"); }
-        cancelEdit(); saveLocal(); renderUI();
-    }
-    
-    function editLevel(i) {
-        const l=levels[i]; document.getElementById('lvl-name').value=l.title;
-        for(let j=0;j<4;j++) document.getElementById(`sel-${j}`).value=l.order[j];
-        document.getElementById('edit-index').value=i;
-        document.getElementById('add-update-btn').innerText="更新";
-        document.getElementById('cancel-btn').style.display="block";
-    }
-    function cancelEdit() {
-        document.getElementById('lvl-name').value="";
-        for(let j=0;j<4;j++) document.getElementById(`sel-${j}`).value="";
-        document.getElementById('edit-index').value="-1";
-        document.getElementById('add-update-btn').innerText="＋ 追加";
-        document.getElementById('cancel-btn').style.display="none";
-    }
-
-    function renderUI() {
-        const cl = document.getElementById('reg-list'); cl.innerHTML="";
-        cards.forEach((c,i)=>{
-            cl.innerHTML+=`<div class="card-thumb" style="${c.isBlank?'border:2px solid #0f0':''}"><img src="${c.thumb}"><div class="card-name">${c.name}</div><div style="position:absolute;top:0;right:0;background:red;width:20px;color:white;text-align:center;cursor:pointer;" onclick="if(confirm('削除?')){cards.splice(${i},1);if(c.isBlank)blankCardData=null;saveLocal();renderUI();}">×</div></div>`;
-        });
-        for(let i=0;i<4;i++){
-            const s=document.getElementById(`sel-${i}`); const v=s.value; s.innerHTML="<option value=''>- 空白 -</option>";
-            cards.forEach(c=>{ if(!c.isBlank) s.innerHTML+=`<option value='${c.name}'>${c.name}</option>`; });
-            s.value=v;
-        }
-        const ml = document.getElementById('level-list'); ml.innerHTML="";
-        const sl = document.getElementById('settings-level-list'); sl.innerHTML="";
-        levels.forEach((l,i)=>{
-            ml.innerHTML+=`<div class="level-item" onclick="startGame(${i})"><span>${l.title}</span> <span style="font-size:12px;">▶</span></div>`;
-            sl.innerHTML+=`<div style="display:flex;justify-content:space-between;background:#333;margin-bottom:5px;padding:5px;"><span style="font-size:12px;">${l.title}</span><div><button onclick="editLevel(${i})" style="margin-right:5px;">✎</button><button onclick="levels.splice(${i},1);saveLocal();renderUI();">🗑️</button></div></div>`;
-        });
-    }
-
-    function startGame(i) { currentTarget=levels[i].order; document.getElementById('game-title-text').innerText=levels[i].title; document.getElementById('screen-title').classList.add('hidden'); document.getElementById('screen-game').classList.remove('hidden'); video.classList.add('active'); }
-    function goTitle() { document.getElementById('screen-game').classList.add('hidden'); document.getElementById('screen-title').classList.remove('hidden'); video.classList.remove('active'); }
-    function judge() { const m = document.getElementById('res-msg'); const ok=(JSON.stringify(detected)===JSON.stringify(currentTarget)); m.innerText=ok?"正解!!":"不正解..."; m.style.color=ok?"#0f0":"#f00"; document.getElementById('result-view').style.display='flex'; }
-    function saveLocal() { localStorage.setItem('cm_v15_data', JSON.stringify({cards,levels,blank:blankCardData})); }
-    function loadLocal() { const d=localStorage.getItem('cm_v15_data'); if(d){ const j=JSON.parse(d); cards=j.cards; levels=j.levels; blankCardData=j.blank;} }
-    
-    // 【重要】解像度不一致を防ぐための全消去
-    function resetData() { if(confirm("全消去しますか？\n※V15では古いデータは使えません")) { localStorage.clear(); location.reload(); } }
-    
-    function showToast(m) { const e=document.getElementById('status-msg'); e.innerText=m; e.style.opacity=1; setTimeout(()=>e.style.opacity=0,2000); }
-    function openSettings() { document.getElementById('settings-overlay').classList.add('open'); }
-    function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); cancelEdit(); }
-    
-    function downloadHTML() {
-        let html = document.documentElement.outerHTML;
-        const data = JSON.stringify({ cards, levels, blank: blankCardData });
-        const targetId = 'embedded-data';
-        const regex = new RegExp('\x3cscript id="' + targetId + '" type="application/json"\x3e[\\s\\S]*?\x3c/script\x3e', 'i');
-        const newTag = '\x3cscript id="' + targetId + '" type="application/json"\x3e' + data + '\x3c/script\x3e';
-        if(regex.test(html)) {
-            html = html.replace(regex, newTag);
-            const blob = new Blob([html], {type: "text/html"});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = "index.html"; a.click();
-        } else { alert("保存エラー"); }
-    }
-    
-    // PeerJS
-    let peer = null;
-    function startHost() {
-        if(typeof Peer === 'undefined') { alert("通信エラー"); return; }
-        if(peer) peer.destroy(); peer = new Peer(); 
-        document.getElementById('sync-area').style.display = 'block';
-        document.getElementById('sync-msg').innerText = "準備中...";
-        peer.on('open', (id) => {
-            const u = window.location.href.split('?')[0] + "?sync=" + id;
-            document.getElementById('qrcode').innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { text: u, width: 128, height: 128 });
-            document.getElementById('sync-msg').innerText = "スマホでスキャン";
-        });
-        peer.on('connection', (c) => { c.on('open', () => { c.send({cards,levels,blank:blankCardData}); showToast("送信完了"); }); });
-    }
-    function startClient(id) {
-        if(peer) peer.destroy(); peer = new Peer();
-        peer.on('open', () => {
-            const c = peer.connect(id);
-            c.on('data', (d) => { 
-                cards=d.cards; levels=d.levels; blankCardData=d.blank; 
-                saveLocal(); renderUI(); showToast("同期完了");
-                window.history.replaceState({}, document.title, window.location.pathname);
-                setTimeout(()=>startCam(false),500);
-            });
-        });
-    }
-
+    // --- コアアルゴリズム (ズレ補正) ---
     function binarize(d) {
         const bin=new ImageData(d.width,d.height); const bd=bin.data; const dd=d.data;
         for(let i=0;i<dd.length;i+=4) {
@@ -382,18 +304,130 @@
         }
         return bin;
     }
-    function getFeature(b,x,y,w,h,tw) { const p=[]; const dd=b.data; const s=3; for(let py=y;py<y+h;py+=s) for(let px=x;px<x+w;px+=s) p.push(dd[(py*tw+px)*4]===0?1:0); return p; }
     
-    // 比較関数：データ長が違う場合はエラー(1.0)ではなくコンソールに出す
-    function compare(a,b) {
-        if(!a || !b) return 1.0;
-        if(a.length !== b.length) {
-            // ここでサイズ不一致が起きている
-            return 1.0; 
+    function getFeature(b,x,y,w,h,tw) {
+        const p=[]; const d=b.data; 
+        // 処理高速化のため解像度を少し落とす (step=2)
+        const step=2; 
+        for(let py=0; py<h; py+=step) for(let px=0; px<w; px+=step) {
+            // キャンバス全体座標(x+px, y+py)から取得
+            const idx = ((y+py)*tw + (x+px)) * 4;
+            p.push(d[idx]===0 ? 1 : 0);
         }
-        let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i])d++;
-        return d/a.length;
+        return p;
     }
+
+    // ズレ補正付き比較 (Shift Match)
+    // a: カメラ特徴, b: 登録特徴 (bの方が正)
+    // width, height: 特徴量抽出時のサイズ(step考慮前)
+    function compareShift(a, b, w, h, shiftRange) {
+        if(!a || !b || a.length !== b.length) return 1.0;
+        
+        let minDiff = 1.0;
+        const step = 2; // getFeatureと同じstep
+        const sw = Math.floor(w/step); // 特徴量配列としての幅
+        
+        // 上下左右にずらして比較するのは重いので、データ配列をシフトして簡易比較
+        // ここでは単純化して「配列インデックスのズレ」として近似する
+        // 1ピクセルズレ = 配列上で1要素ズレ
+        
+        // センター比較
+        minDiff = Math.min(minDiff, simpleCompare(a, b));
+        
+        // 簡易シフト比較 (前後数ピクセル分ずらして比較)
+        // ※厳密な2次元シフトは重いが、これで十分効果がある
+        for(let s=1; s<=shiftRange; s++) {
+            // 右にズレた場合 (aを右にずらす = indexを減らす)
+            minDiff = Math.min(minDiff, simpleCompare(a, b, s));
+            // 左にズレた場合
+            minDiff = Math.min(minDiff, simpleCompare(a, b, -s));
+        }
+        
+        return minDiff;
+    }
+
+    function simpleCompare(a, b, offset=0) {
+        let diff = 0;
+        let count = 0;
+        const len = a.length;
+        
+        for(let i=0; i<len; i++) {
+            let ai = i + offset;
+            if(ai >= 0 && ai < len) {
+                if(a[ai] !== b[i]) diff++;
+                count++;
+            }
+        }
+        return count===0 ? 1.0 : diff/count;
+    }
+
+    // --- UI制御 ---
+    function addLevel() {
+        const t = document.getElementById('lvl-name').value || "無題";
+        const o = [0,1,2,3].map(i => document.getElementById(`sel-${i}`).value);
+        const idx = parseInt(document.getElementById('edit-index').value);
+        if(idx>=0) levels[idx]={title:t, order:o}; else levels.push({title:t, order:o});
+        saveLocal(); renderUI(); closeSettings();
+    }
+    
+    function editLevel(i) {
+        const l=levels[i]; document.getElementById('lvl-name').value=l.title;
+        for(let j=0;j<4;j++) document.getElementById(`sel-${j}`).value=l.order[j];
+        document.getElementById('edit-index').value=i;
+        document.getElementById('add-btn').innerText="更新";
+    }
+
+    function renderUI() {
+        const cl = document.getElementById('reg-list'); cl.innerHTML="";
+        cards.forEach((c,i)=>{
+            cl.innerHTML+=`<div class="card-thumb" style="${c.isBlank?'border:2px solid #0f0':''}"><img src="${c.thumb}"><div class="card-name">${c.name}</div><div style="position:absolute;top:0;right:0;background:red;width:20px;color:white;text-align:center;cursor:pointer;" onclick="if(confirm('削除?')){cards.splice(${i},1);if(c.isBlank)blankData=null;saveLocal();renderUI();}">×</div></div>`;
+        });
+        for(let i=0;i<4;i++){
+            const s=document.getElementById(`sel-${i}`); const v=s.value; s.innerHTML="<option value=''>- 空白 -</option>";
+            cards.forEach(c=>{ if(!c.isBlank) s.innerHTML+=`<option value='${c.name}'>${c.name}</option>`; });
+            s.value=v;
+        }
+        const ll = document.getElementById('level-list'); ll.innerHTML="";
+        const sl = document.getElementById('set-lvl-list'); sl.innerHTML="";
+        levels.forEach((l,i)=>{
+            const item = `<div class="level-item" onclick="startGame(${i})"><span>${l.title}</span><span style="font-size:12px;">▶</span></div>`;
+            ll.innerHTML+=item;
+            sl.innerHTML+=`<div style="display:flex;justify-content:space-between;background:#333;margin-bottom:5px;padding:5px;"><span style="font-size:12px;">${l.title}</span><div><button onclick="editLevel(${i})" style="margin-right:5px;">✎</button><button onclick="levels.splice(${i},1);saveLocal();renderUI();">🗑️</button></div></div>`;
+        });
+    }
+
+    function startGame(i) { currentTarget=levels[i].order; isGameMode=true; updateScreen(); }
+    function goTitle() { isGameMode=false; updateScreen(); }
+    function updateScreen() {
+        document.getElementById('btn-judge').style.display = isGameMode ? 'block' : 'none';
+        document.getElementById('title-ui').style.display = isGameMode ? 'none' : 'block';
+    }
+    
+    function judge() { 
+        const isMatch = JSON.stringify(detected) === JSON.stringify(currentTarget); 
+        const m = document.getElementById('res-msg'); 
+        m.innerText=isMatch?"正解!!":"不正解..."; m.style.color=isMatch?"#0f0":"#f00";
+        document.getElementById('result-view').style.display='flex';
+    }
+
+    // --- 保存・同期 ---
+    function saveLocal() { localStorage.setItem('cm_v17_data', JSON.stringify({cards,levels,blank:blankData})); }
+    function loadLocal() { const d=localStorage.getItem('cm_v17_data'); if(d){ const j=JSON.parse(d); cards=j.cards; levels=j.levels; blankData=j.blank;} }
+    function resetData() { if(confirm("全消去?")) { localStorage.clear(); location.reload(); } }
+    function downloadHTML() {
+        let html = document.documentElement.outerHTML;
+        const data = JSON.stringify({ cards, levels, blank: blankData });
+        const tag = '\x3cscript id="embedded-data" type="application/json"\x3e' + data + '\x3c/script\x3e';
+        html = html.replace(/<script id="embedded-data" type="application\/json">.*?<\/script>/i, tag);
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], {type:"text/html"})); a.download = "index.html"; a.click();
+    }
+    function openSettings() { document.getElementById('settings-overlay').classList.add('open'); }
+    function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); document.getElementById('edit-index').value="-1"; document.getElementById('add-btn').innerText="＋ 追加"; }
+    
+    // PeerJS (省略形)
+    let peer=null;
+    function startHost(){ if(typeof Peer==='undefined'){alert("通信エラー");return;} if(peer)peer.destroy(); peer=new Peer(); document.getElementById('sync-area').style.display='block'; document.getElementById('sync-msg').innerText="待機中..."; peer.on('open',id=>{ new QRCode(document.getElementById('qrcode'),{text:window.location.href.split('?')[0]+"?sync="+id,width:128,height:128});}); peer.on('connection',c=>{c.on('open',()=>c.send({cards,levels,blank:blankData}));});}
+    function startClient(id){ if(peer)peer.destroy(); peer=new Peer(); peer.on('open',()=>{ const c=peer.connect(id); c.on('data',d=>{cards=d.cards;levels=d.levels;blankData=d.blank;saveLocal();renderUI();alert("同期完了");window.history.replaceState({},document.title,window.location.pathname);}); });}
 </script>
 </body>
 </html>
