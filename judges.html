@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Card Master V14 (Force Match)</title>
+    <title>Card Master V15 (Resolution Fix)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
@@ -18,14 +18,11 @@
 
         .slot-container { width: 100%; height: 28vw; max-height: 180px; margin-top: 15vh; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
         .slot { width: 20.2%; height: 100%; border: 2px solid rgba(0,255,0,0.5); background: rgba(255,255,255,0.05); border-radius: 6px; position: relative; }
-        .slot-info { position: absolute; bottom: -45px; left: -10%; width: 120%; text-align: center; font-size: 10px; color: #0f0; font-weight: bold; text-shadow: 0 1px 2px #000; line-height: 1.2; white-space: pre-wrap;}
+        /* 情報を詳しく表示 */
+        .slot-info { position: absolute; bottom: -50px; left: -10%; width: 120%; text-align: center; font-size: 9px; color: #0f0; font-weight: bold; text-shadow: 0 1px 2px #000; line-height: 1.2; white-space: pre-wrap;}
 
-        /* デバッグ・調整エリア */
         #debug-monitor { position: absolute; top: 10px; left: 10px; width: 80px; height: 45px; border: 1px solid yellow; z-index: 100; background: #000; }
-        #controls-container {
-            position: absolute; bottom: 100px; width: 90%; z-index: 50; 
-            background: rgba(0,0,0,0.6); padding: 10px; border-radius: 10px;
-        }
+        #controls-container { position: absolute; bottom: 100px; width: 90%; z-index: 50; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 10px; }
         .slider-row { display: flex; flex-direction: column; margin-bottom: 8px; }
         .slider-label { font-size: 11px; margin-bottom: 2px; display: flex; justify-content: space-between; }
         input[type=range] { width: 100%; }
@@ -64,7 +61,7 @@
     
     <div id="controls-container">
         <div class="slider-row">
-            <div class="slider-label"><span>白黒の感度 (Threshold)</span> <span id="thresh-val">90</span></div>
+            <div class="slider-label"><span>白黒感度 (Threshold)</span> <span id="thresh-val">90</span></div>
             <input type="range" id="thresh-range" min="10" max="200" value="90" oninput="updateThresh(this.value)">
         </div>
         <div class="slider-row">
@@ -72,7 +69,8 @@
             <input type="range" id="tol-range" min="0.1" max="1.0" step="0.05" value="0.6" oninput="updateTol(this.value)">
         </div>
         <div style="font-size:10px; color:#aaa; text-align:center;">
-            甘さMAXで「？(不明)」が出なくなります
+            右端で「無理やり」判定します<br>
+            <span id="sys-status" style="color:#f00;"></span>
         </div>
     </div>
 
@@ -99,6 +97,7 @@
         </div>
         <div class="setting-box">
             <h3>1. 画像登録</h3>
+            <p style="font-size:12px; color:#f88;">※最初に「全削除」してから登録してください</p>
             <input type="text" id="reg-name" placeholder="名前">
             <div style="background:#333; padding:5px; margin-bottom:5px;"><label><input type="checkbox" id="is-blank-check"> これを「空白」にする</label></div>
             <label style="display:block; background:#007bff; padding:10px; text-align:center; border-radius:5px; cursor:pointer;">📁 画像を選択<input type="file" accept="image/*" onchange="registerImage(this)" style="display:none;"></label>
@@ -117,7 +116,7 @@
         <div class="setting-box">
             <button onclick="downloadHTML()" style="width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; margin-bottom:5px;">💾 HTML保存</button>
             <button onclick="startHost()" style="width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; margin-bottom:5px;">📡 QR同期</button>
-            <button onclick="resetData()" style="width:100%; padding:10px; background:#d00; color:#fff; border:none; border-radius:5px;">⚠ 全削除</button>
+            <button onclick="resetData()" style="width:100%; padding:10px; background:#d00; color:#fff; border:none; border-radius:5px;">⚠ 全削除 (リセット)</button>
             <div id="sync-area"><div id="qrcode"></div><div id="sync-msg" style="color:#000; font-size:11px;">待機中...</div></div>
         </div>
     </div>
@@ -132,15 +131,19 @@
 <canvas id="proc-canvas" style="display:none;"></canvas>
 
 <script>
+    // --- 【重要】解像度の固定 ---
+    // ここでサイズを固定することで、アップロード画像とカメラ画像のサイズ不一致を防ぐ
+    const PROC_W = 320; 
+    const PROC_H = 180;
+    
     const SLOT_WIDTH_PCT = 0.2019; const GAP_PCT = 0.0641;
     const SLOT_X_PCT = [0, SLOT_WIDTH_PCT+GAP_PCT, (SLOT_WIDTH_PCT+GAP_PCT)*2, (SLOT_WIDTH_PCT+GAP_PCT)*3];
     
     let cards = []; let levels = []; let blankCardData = null;
     let currentTarget = []; let detected = ["","","",""];
     
-    // チューニングパラメータ
-    let threshold = 90; // 白黒閾値
-    let tolerance = 0.6; // 判定の甘さ (1.0なら強制マッチ)
+    let threshold = 90; 
+    let tolerance = 0.6; 
 
     const video = document.getElementById('video-bg');
     const pCanvas = document.getElementById('proc-canvas');
@@ -149,6 +152,10 @@
     const dbgCtx = dbgCanvas.getContext('2d');
 
     window.onload = () => {
+        // 解像度初期化（最優先）
+        pCanvas.width = PROC_W; pCanvas.height = PROC_H;
+        dbgCanvas.width = PROC_W; dbgCanvas.height = PROC_H;
+
         try {
             const txt = document.getElementById('embedded-data').textContent;
             if(txt && txt!=="null") { const d=JSON.parse(txt); cards=d.cards; levels=d.levels; blankCardData=d.blank; }
@@ -170,7 +177,7 @@
         try {
             const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
             video.srcObject = s;
-            video.onloadedmetadata = () => { video.play(); video.classList.add('active'); pCanvas.width=320; pCanvas.height=180; dbgCanvas.width=320; dbgCanvas.height=180; setInterval(process, 150); };
+            video.onloadedmetadata = () => { video.play(); video.classList.add('active'); setInterval(process, 150); };
             if(isManual) showToast("再起動しました");
         } catch(e) { 
             console.error(e);
@@ -181,21 +188,23 @@
 
     function process() {
         if(video.readyState !== 4) return;
-        pCtx.drawImage(video, 0, 0, pCanvas.width, pCanvas.height);
-        const w = pCanvas.width; const h = pCanvas.height;
-        const scanH = h * 0.3; const scanY = (h - scanH) / 2;
-        const bin = binarize(pCtx.getImageData(0,0,w,h));
+        // 定数サイズで描画
+        pCtx.drawImage(video, 0, 0, PROC_W, PROC_H);
         
-        dbgCtx.putImageData(bin, 0, 0); // デバッグ表示
+        const scanH = PROC_H * 0.3; const scanY = (PROC_H - scanH) / 2;
+        const bin = binarize(pCtx.getImageData(0,0,PROC_W,PROC_H));
+        
+        dbgCtx.putImageData(bin, 0, 0); 
         dbgCtx.strokeStyle = "yellow"; dbgCtx.lineWidth = 2;
 
         let detectedNow = [];
         for(let i=0; i<4; i++) {
-            const cx = SLOT_X_PCT[i] * w; const cw = SLOT_WIDTH_PCT * w;
+            const cx = SLOT_X_PCT[i] * PROC_W; const cw = SLOT_WIDTH_PCT * PROC_W;
             const cutW = Math.floor(cw * 0.6); const cutX = Math.floor(cx + (cw - cutW)/2);
             dbgCtx.strokeRect(cutX, scanY, cutW, scanH);
             
-            const feat = getFeature(bin, cutX, scanY, cutW, scanH, w);
+            // 特徴抽出
+            const feat = getFeature(bin, cutX, scanY, cutW, scanH, PROC_W);
             let best = "?"; let minD = 1.0;
             
             cards.forEach(c => {
@@ -206,31 +215,27 @@
             
             if(blankCardData) {
                 const bDiff = compare(feat, blankCardData);
-                // 空白判定: 無理やりモードでも「空白に近い」なら空白を優先したい
-                // ただし tolerance が高いと何でもカードになってしまうので、
-                // カードとの差分(minD) と 空白との差分(bDiff) を比較する
-                if(bDiff < minD) {
-                    // 空白の方が近いなら空白
-                     best = ""; minD = bDiff;
-                }
+                if(bDiff < minD) { best = ""; minD = bDiff; }
             }
 
-            // 閾値判定
-            // tolerance(甘さ) 以下なら採用。
-            // 1.0に設定すれば、minDが0.9とかでも採用される＝「無理やり判定」
             if(minD > tolerance) best = "?";
 
             detectedNow.push(best);
             const info = document.getElementById(`info-${i}`);
             if(info) {
-                info.innerText = (best===""?"(空白)":best) + `\n(${minD.toFixed(2)})`;
+                const disp = best===""?"(空白)":best;
+                // バグ原因究明のためのステータス表示
+                let debugInfo = `Diff:${minD.toFixed(2)}`;
+                if(minD === 1.0) debugInfo = "ERR:SIZE"; // サイズ不一致エラーの検出
+                
+                info.innerText = `${disp}\n${debugInfo}`;
                 info.style.color = best==="?" ? "#f00" : "#0f0";
             }
         }
         detected = detectedNow;
     }
 
-    // --- その他ロジック ---
+    // --- 画像登録 (サイズ固定化) ---
     function registerImage(input) {
         if(!input.files[0]) return;
         const name = document.getElementById('reg-name').value || "Img"+(cards.length+1);
@@ -239,24 +244,30 @@
         r.onload = (e) => {
             const img = new Image();
             img.onload = () => {
+                // ここで必ず PROC_W / PROC_H を使う
                 const c = document.createElement('canvas');
-                const w = pCanvas.width; const h = pCanvas.height;
-                const cw = SLOT_WIDTH_PCT * w; const cutW = Math.floor(cw * 0.6); const scanH = h * 0.3;
+                const cw = SLOT_WIDTH_PCT * PROC_W; 
+                const cutW = Math.floor(cw * 0.6); 
+                const scanH = PROC_H * 0.3;
+                
                 c.width = cutW; c.height = scanH;
                 const ctx = c.getContext('2d');
-                ctx.drawImage(img, 0, 0, cutW, scanH);
+                ctx.drawImage(img, 0, 0, cutW, scanH); // 自動リサイズ描画
+                
                 const b = binarize(ctx.getImageData(0,0,cutW,scanH));
                 const data = getFeature(b, 0, 0, cutW, scanH, cutW);
+                
                 ctx.putImageData(b, 0, 0);
                 const thumb = c.toDataURL();
+
                 if(isBlank) {
                     blankCardData = data;
                     cards = cards.filter(x=>!x.isBlank);
                     cards.unshift({name:"【空白】"+name, data, thumb, isBlank:true});
-                    showToast("空白設定完了");
+                    showToast("空白として登録");
                 } else {
                     cards.push({name, data, thumb, isBlank:false});
-                    showToast("登録完了");
+                    showToast("登録しました");
                 }
                 saveLocal(); renderUI();
                 input.value=""; document.getElementById('reg-name').value=""; document.getElementById('is-blank-check').checked=false;
@@ -308,12 +319,15 @@
         });
     }
 
-    function startGame(i) { currentTarget=levels[i].order; document.getElementById('game-title-text').innerText=levels[i].title; document.getElementById('screen-title').classList.add('hidden'); document.getElementById('screen-game').classList.remove('hidden'); }
-    function goTitle() { document.getElementById('screen-game').classList.add('hidden'); document.getElementById('screen-title').classList.remove('hidden'); }
+    function startGame(i) { currentTarget=levels[i].order; document.getElementById('game-title-text').innerText=levels[i].title; document.getElementById('screen-title').classList.add('hidden'); document.getElementById('screen-game').classList.remove('hidden'); video.classList.add('active'); }
+    function goTitle() { document.getElementById('screen-game').classList.add('hidden'); document.getElementById('screen-title').classList.remove('hidden'); video.classList.remove('active'); }
     function judge() { const m = document.getElementById('res-msg'); const ok=(JSON.stringify(detected)===JSON.stringify(currentTarget)); m.innerText=ok?"正解!!":"不正解..."; m.style.color=ok?"#0f0":"#f00"; document.getElementById('result-view').style.display='flex'; }
-    function saveLocal() { localStorage.setItem('cm_v14_data', JSON.stringify({cards,levels,blank:blankCardData})); }
-    function loadLocal() { const d=localStorage.getItem('cm_v14_data'); if(d){ const j=JSON.parse(d); cards=j.cards; levels=j.levels; blankCardData=j.blank;} }
-    function resetData() { if(confirm("全消去?")) { localStorage.clear(); location.reload(); } }
+    function saveLocal() { localStorage.setItem('cm_v15_data', JSON.stringify({cards,levels,blank:blankCardData})); }
+    function loadLocal() { const d=localStorage.getItem('cm_v15_data'); if(d){ const j=JSON.parse(d); cards=j.cards; levels=j.levels; blankCardData=j.blank;} }
+    
+    // 【重要】解像度不一致を防ぐための全消去
+    function resetData() { if(confirm("全消去しますか？\n※V15では古いデータは使えません")) { localStorage.clear(); location.reload(); } }
+    
     function showToast(m) { const e=document.getElementById('status-msg'); e.innerText=m; e.style.opacity=1; setTimeout(()=>e.style.opacity=0,2000); }
     function openSettings() { document.getElementById('settings-overlay').classList.add('open'); }
     function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); cancelEdit(); }
@@ -332,7 +346,7 @@
         } else { alert("保存エラー"); }
     }
     
-    // PeerJS (Sync)
+    // PeerJS
     let peer = null;
     function startHost() {
         if(typeof Peer === 'undefined') { alert("通信エラー"); return; }
@@ -369,7 +383,17 @@
         return bin;
     }
     function getFeature(b,x,y,w,h,tw) { const p=[]; const dd=b.data; const s=3; for(let py=y;py<y+h;py+=s) for(let px=x;px<x+w;px+=s) p.push(dd[(py*tw+px)*4]===0?1:0); return p; }
-    function compare(a,b) { if(!a||!b||a.length!==b.length) return 1.0; let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i])d++; return d/a.length; }
+    
+    // 比較関数：データ長が違う場合はエラー(1.0)ではなくコンソールに出す
+    function compare(a,b) {
+        if(!a || !b) return 1.0;
+        if(a.length !== b.length) {
+            // ここでサイズ不一致が起きている
+            return 1.0; 
+        }
+        let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i])d++;
+        return d/a.length;
+    }
 </script>
 </body>
 </html>
