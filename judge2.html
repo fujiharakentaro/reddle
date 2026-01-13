@@ -3,53 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Card Master V40 (Fixed)</title>
+    <title>Card Master V41 (Robust)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
     <style>
         body { font-family: sans-serif; background: #000; color: #fff; margin: 0; overflow: hidden; width: 100vw; height: 100dvh; display: flex; flex-direction: column; }
         
-        /* 画面管理 */
         .screen { position: absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:#222; z-index:10; }
         #game-screen { background: #000; }
 
-        /* キャンバス：アスペクト比を維持して画面に収める */
         #canvas-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         canvas { 
-            display: block; 
-            max-width: 100%; max-height: 100%; 
-            width: auto; height: auto; 
-            object-fit: contain; 
+            display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; 
         }
         
-        /* 内部処理用（非表示） */
         #proc-canvas { display: none; }
-        /* デバッグ用：右上に小さく表示 */
         #debug-canvas { 
             position: absolute; top: 10px; right: 10px; width: 120px; height: auto; 
             border: 1px solid #0f0; background: black; z-index: 100; display:block;
         }
 
-        /* UIレイヤー */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box; z-index: 20; }
         button { pointer-events: auto; cursor: pointer; border: none; outline: none; }
         .btn-float { background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #aaa; padding: 8px 16px; border-radius: 20px; font-size: 14px; margin: 10px; }
         .judge-btn { width: 200px; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 50px; color: white; background: linear-gradient(to bottom, #28a745, #208030); align-self: center; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
-        /* 横画面推奨メッセージ */
         #rotate-msg {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.9); z-index: 9999; color: white; 
             flex-direction: column; justify-content: center; align-items: center; text-align: center;
         }
-        @media screen and (orientation: portrait) {
-            #rotate-msg { display: flex; }
-        }
+        @media screen and (orientation: portrait) { #rotate-msg { display: flex; } }
 
-        /* 結果オーバーレイ */
         #result-overlay { display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); flex-direction:column; justify-content:center; align-items:center; z-index:500; }
         
-        /* 設定画面 */
         #settings-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #151515; z-index: 300; transform: translateY(100%); transition: transform 0.3s; padding: 20px; overflow-y: auto; box-sizing: border-box; }
         #settings-overlay.open { transform: translateY(0); }
         .setting-box { background: #252525; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #444; }
@@ -73,7 +61,7 @@
 
 <div id="title-screen" class="screen">
     <h1 style="margin-bottom:5px; text-shadow: 0 0 10px #0af;">CARD MASTER</h1>
-    <p style="color:#aaa; font-size:12px;">V40 Final Landscape (Fixed)</p>
+    <p style="color:#aaa; font-size:12px;">V41 Robust Detect</p>
     <div id="title-list" style="width:90%; max-width:400px; margin-top:20px;"></div>
     <div style="margin-top:20px;">
         <button class="btn-float" onclick="openSettings()">⚙️ 設定・同期</button>
@@ -156,9 +144,7 @@
     const SCAN_H = Math.floor(SCAN_W * CARD_ASPECT);
 
     let cards=[], levels=[], blankData=null;
-    // ★修正: 初期値を保持し、フレームごとにリセットしない
-    let detectedNames=["空白","空白","空白","空白"];
-    
+    let detectedNames=["空白","空白","空白","空白"], detectedScores=[0,0,0,0];
     let currentTarget=null;
     let threshold = 100;
     let videoStream=null, isGameRunning=false, peer=null;
@@ -196,16 +182,10 @@
             const constraints = { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } };
             const s = await navigator.mediaDevices.getUserMedia(constraints);
             videoStream = s; video.srcObject = s;
-            // ★修正: iOS対応のため明示的に再生
-            video.play().catch(e => console.log(e));
-
             video.onloadedmetadata = () => { 
-                canvas.width = video.videoWidth; 
-                canvas.height = video.videoHeight; 
-                
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight; 
                 procCanvas.width = WORK_W; procCanvas.height = WORK_H;
                 debugCanvas.width = WORK_W; debugCanvas.height = WORK_H;
-                
                 requestAnimationFrame(loop); 
             };
         } catch(e) { alert("カメラエラー: " + e.message); goTitle(); }
@@ -218,27 +198,34 @@
         if(ts-lastTime<50)return; lastTime=ts; 
         if(video.readyState!==4)return;
 
+        // 1. 描画
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+        // 2. 処理用画像
         procCtx.drawImage(video, 0, 0, WORK_W, WORK_H);
         const imgData = procCtx.getImageData(0,0,WORK_W,WORK_H);
         
-        const blobs = findBlobs(imgData, threshold);
+        // 3. Blob検出
+        let blobs = findBlobs(imgData, threshold);
         
-        const validBlobs = blobs.filter(b => {
+        // 4. 基本フィルタリング
+        blobs = blobs.filter(b => {
             const area = b.w * b.h;
             const aspect = b.h / b.w;
+            // 画面の1%以上、アスペクト比 0.8~2.5
             return area > (WORK_W*WORK_H)*0.01 && aspect > 0.8 && aspect < 2.5; 
         });
 
-        validBlobs.sort((a,b) => a.x - b.x);
-        const frames = validBlobs.slice(0, 4);
+        // 5. 包含関係の排除 (枠の中に枠がある場合、内側を削除)
+        blobs = filterIncludedBlobs(blobs);
 
-        // ★修正:detectedNames = [] の削除。
-        // 代わりに検出されなかったスロットだけ後で空白にする。
+        // 6. 横並び判定 (Y座標が近いものをグループ化して、最も数が多い＝4つ並んでいる列を採用)
+        const frames = selectBestRow(blobs);
 
+        detectedNames = [];
         debugCtx.putImageData(binarizeDebug(imgData), 0, 0);
 
+        // 7. 各枠ごとの処理
         frames.forEach((frame, i) => {
             const scaleX = canvas.width / WORK_W;
             const scaleY = canvas.height / WORK_H;
@@ -248,23 +235,17 @@
             const fw = Math.floor(frame.w * scaleX);
             const fh = Math.floor(frame.h * scaleY);
 
+            // 枠描画
             ctx.lineWidth = 4;
-            ctx.strokeStyle = "#0f0";
+            ctx.strokeStyle = "#0f0"; 
             ctx.strokeRect(fx, fy, fw, fh);
             ctx.fillStyle = "#0f0"; ctx.font = "bold 24px sans-serif";
             ctx.fillText((i+1), fx, fy - 5);
 
-            const padding = fw * 0.1; 
-            
-            // ★修正: 切り出し範囲のはみ出し防止 (IndexSizeError回避)
-            const sx = Math.max(0, fx + padding);
-            const sy = Math.max(0, fy + padding);
-            const sw = Math.min(canvas.width - sx, fw - padding * 2);
-            const sh = Math.min(canvas.height - sy, fh - padding * 2);
-
-            if(sw > 0 && sh > 0) {
-                // 非同期処理
-                createImageBitmap(canvas, sx, sy, sw, sh).then(bmp => {
+            // 切り出し & 判定
+            const padding = fw * 0.15; // 枠線を避けるため少し内側をトリミング
+            if(fw > padding*2 && fh > padding*2) {
+                createImageBitmap(canvas, fx+padding, fy+padding, fw-padding*2, fh-padding*2).then(bmp => {
                     const tempC = document.createElement('canvas');
                     tempC.width = SCAN_W; tempC.height = SCAN_H;
                     const tCtx = tempC.getContext('2d');
@@ -276,20 +257,60 @@
                     const res = identify(feat);
                     
                     const disp = (res.name==="" || res.name==="?") ? "空白" : res.name;
-                    
-                    // ★修正: 非同期完了後に特定のインデックスを更新
                     detectedNames[i] = disp;
                     
                     ctx.fillStyle = "cyan"; ctx.font = "bold 20px sans-serif";
                     ctx.fillText(disp, fx + fw/2 - 20, fy + fh + 30);
-                }).catch(e=>{}); // エラー握りつぶし(ループを止めないため)
+                });
             }
         });
         
-        // ★修正: 検出数が4未満の場合、残りのスロットを空白にする
-        for(let k = frames.length; k < 4; k++) {
-            detectedNames[k] = "空白";
+        while(detectedNames.length < 4) detectedNames.push("空白");
+    }
+
+    // --- 高度なフィルタリング ---
+    function filterIncludedBlobs(blobs) {
+        // あるBlob AがBlob Bに含まれている場合、A（内側）を削除
+        // B.x < A.x && B.y < A.y && B.x+B.w > A.x+A.w && B.y+B.h > A.y+A.h
+        return blobs.filter((a, idxA) => {
+            return !blobs.some((b, idxB) => {
+                if(idxA === idxB) return false;
+                return (b.x < a.x && b.y < a.y && (b.x+b.w) > (a.x+a.w) && (b.y+b.h) > (a.y+a.h));
+            });
+        });
+    }
+
+    function selectBestRow(blobs) {
+        if(blobs.length <= 4) {
+            blobs.sort((a,b) => a.x - b.x);
+            return blobs;
         }
+
+        // Y座標が近いものでクラスタリング
+        const rows = [];
+        const thresholdY = WORK_H * 0.1; // 高さの10%以内のズレなら同じ列とみなす
+
+        blobs.forEach(b => {
+            let added = false;
+            for(let row of rows) {
+                // 列の平均Yと比較
+                let avgY = row.reduce((sum, item) => sum + item.y, 0) / row.length;
+                if(Math.abs(b.y - avgY) < thresholdY) {
+                    row.push(b);
+                    added = true;
+                    break;
+                }
+            }
+            if(!added) rows.push([b]);
+        });
+
+        // 最も要素数が多い列、かつ4つに近い列を選ぶ
+        rows.sort((a,b) => b.length - a.length);
+        const bestRow = rows[0];
+        
+        // 左から右へソートして最大4つ返す
+        bestRow.sort((a,b) => a.x - b.x);
+        return bestRow.slice(0, 4);
     }
 
     // --- Blob検出 ---
@@ -321,13 +342,7 @@
                         if(cy > maxY) maxY = cy;
                         count++;
 
-                        // ★修正: 画面端の折り返し防止チェックを追加
-                        const neighbors = [];
-                        if (cx > 0) neighbors.push(curr-1);
-                        if (cx < w-1) neighbors.push(curr+1);
-                        if (cy > 0) neighbors.push(curr-w);
-                        if (cy < h-1) neighbors.push(curr+w);
-
+                        const neighbors = [curr+1, curr-1, curr+w, curr-w];
                         for(let n of neighbors) {
                             if(n >= 0 && n < w*h && !visited[n]) {
                                 const nr=d[n*4], ng=d[n*4+1], nb=d[n*4+2];
@@ -366,7 +381,6 @@
             const correct = currentTarget.order[i]; 
             let detected = detectedNames[i] || "空白"; 
             
-            // 空白の整合性チェック
             if (correct === "" || correct === "空白") {
                 if (detected !== "空白" && detected !== "") ok = false;
             } else {
@@ -426,9 +440,9 @@
         });
     }
     
-    function saveData(){ localStorage.setItem('cm_v40',JSON.stringify({cards,levels,blankData})); }
-    function loadData(){ const d=localStorage.getItem('cm_v40'); if(d){try{const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData}catch(e){}} }
-    function resetData(){ if(confirm("消去?")){localStorage.removeItem('cm_v40');location.reload();} }
+    function saveData(){ localStorage.setItem('cm_v41',JSON.stringify({cards,levels,blankData})); }
+    function loadData(){ const d=localStorage.getItem('cm_v41'); if(d){try{const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData}catch(e){}} }
+    function resetData(){ if(confirm("消去?")){localStorage.removeItem('cm_v41');location.reload();} }
     function showToast(m){const e=document.getElementById('status-msg');e.innerText=m;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000);}
     function openSettings(){document.getElementById('settings-overlay').classList.add('open');}
     function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
