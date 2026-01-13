@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Card Master V28 (Sync & Dual)</title>
+    <title>Card Master V29 (Stable)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://unpkg.com/js-aruco@0.0.1/src/cv.js"></script>
@@ -39,7 +39,7 @@
         #ar-guide-msg {
             position: absolute; top:10px; left:50%; transform:translateX(-50%);
             color: #fff; font-size:12px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px;
-            pointer-events: none; text-align: center; width: 90%; line-height: 1.4;
+            pointer-events: none; text-align: center; width: 95%; line-height: 1.4;
         }
 
         #result-overlay {
@@ -75,7 +75,6 @@
             font-size:12px; opacity:0; transition:opacity 0.5s; z-index:300; pointer-events: none;
         }
         
-        /* 同期用QR表示エリア */
         #sync-area {
             display:none; background:#fff; padding:20px; margin-top:10px; 
             text-align:center; border-radius:8px; color:#000;
@@ -92,8 +91,8 @@
     <canvas id="proc-canvas"></canvas>
     
     <div id="ar-guide-msg">
-        <b>ID:0～3のマーカーを「対角線」に2つ置いてください</b><br>
-        <span style="color:#aaa; font-size:10px;">(例: カードの左下と右上に同じIDのマーカーを置く)</span>
+        <b>ID: 0, 10, 20, 30 のマーカーを使用</b><br>
+        対角線に同じマーカーを2つ置くと認識します
     </div>
 
     <div class="game-ui">
@@ -128,11 +127,15 @@
         <h2>設定・登録</h2><button onclick="closeSettings()" class="btn-float" style="margin:0; background:#555;">閉じる</button>
     </div>
     
+    <div class="setting-box" style="border: 1px solid #aaa;">
+        <h3>🖨️ マーカー準備</h3>
+        <p style="font-size:11px; color:#ccc;">このシステム用の正しいマーカー(0, 10, 20, 30)を表示します。</p>
+        <button onclick="showMarkers()" style="width:100%; padding:10px; background:#e0a800; color:#000; border:none; border-radius:5px; font-weight:bold;">マーカーを表示・印刷</button>
+    </div>
+
     <div class="setting-box" style="border: 2px solid #007bff;">
         <h3>📡 データ同期</h3>
-        <p style="font-size:11px; color:#ccc;">PCで作ったデータをスマホに転送します。</p>
         <button onclick="startHost()" style="width:100%; padding:12px; background:#007bff; color:#fff; border:none; border-radius:5px; font-weight:bold;">QRコードを表示 (PC側)</button>
-        
         <div id="sync-area">
             <div style="font-weight:bold; margin-bottom:5px;">スマホで読み取ってください</div>
             <div id="qrcode"></div>
@@ -142,7 +145,7 @@
     </div>
 
     <div class="setting-box">
-        <h3>1. カード画像登録</h3>
+        <h3>1. 画像登録</h3>
         <input type="text" id="reg-name" placeholder="カード名" style="width:100%; padding:10px; margin-bottom:5px; box-sizing:border-box;">
         <div style="background:#333; padding:8px; margin-bottom:10px; border-radius:4px;">
             <label style="cursor:pointer; display:flex; align-items:center;">
@@ -157,13 +160,13 @@
     </div>
 
     <div class="setting-box">
-        <h3>2. 正解パターンの作成</h3>
-        <input type="text" id="lvl-name" placeholder="問題名 (例: 問1)" style="width:100%; padding:10px; margin-bottom:5px; box-sizing:border-box;">
+        <h3>2. 正解パターン</h3>
+        <input type="text" id="lvl-name" placeholder="問題名" style="width:100%; padding:10px; margin-bottom:5px; box-sizing:border-box;">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
             <div><span style="font-size:10px;">ID:0</span><select id="sel-0" style="width:100%;"></select></div>
-            <div><span style="font-size:10px;">ID:1</span><select id="sel-1" style="width:100%;"></select></div>
-            <div><span style="font-size:10px;">ID:2</span><select id="sel-2" style="width:100%;"></select></div>
-            <div><span style="font-size:10px;">ID:3</span><select id="sel-3" style="width:100%;"></select></div>
+            <div><span style="font-size:10px;">ID:10</span><select id="sel-10" style="width:100%;"></select></div>
+            <div><span style="font-size:10px;">ID:20</span><select id="sel-20" style="width:100%;"></select></div>
+            <div><span style="font-size:10px;">ID:30</span><select id="sel-30" style="width:100%;"></select></div>
         </div>
         <button onclick="addLevel()" style="width:100%; padding:10px; background:#28a745; color:#fff; border:none; border-radius:5px;">＋ 追加</button>
         <div id="level-list" style="margin-top:10px;"></div>
@@ -176,17 +179,21 @@
     // --- 定数 ---
     const PROC_W = 100;
     const PROC_H = 140;
+    // 今回使用するマーカーID
+    const TARGET_IDS = [0, 10, 20, 30];
 
     // --- 変数 ---
     let cards = [];
     let levels = [];
     let blankData = null;
-    let detectedNames = ["?","?","?","?"];
+    let detectedNames = {}; // IDごとの結果 {0:"A", 10:"B"...}
+    TARGET_IDS.forEach(id => detectedNames[id] = "?");
+
     let currentTarget = [];
     let threshold = 100;
     let marginScale = 1.0;
     let detector = null;
-    let peer = null; // 通信用
+    let peer = null;
 
     // DOM
     const video = document.getElementById('video-source');
@@ -198,11 +205,11 @@
     window.onload = () => {
         loadData(); 
         renderUI(); 
-        startCamera();
+        startCamera(); // カメラ起動
+        // js-aruco初期化 (Original Dictionary)
         if(typeof AR !== 'undefined') detector = new AR.Detector();
         procCanvas.width = PROC_W; procCanvas.height = PROC_H;
 
-        // URLパラメータにsyncがあれば同期クライアントとして起動
         const u = new URLSearchParams(window.location.search);
         if(u.get('sync')) startClient(u.get('sync'));
     };
@@ -213,16 +220,45 @@
     }
     function toggleDebug() { marginScale = (marginScale===1.0)?1.2:1.0; document.getElementById('debug-status').innerText=Math.round(marginScale*100)+"%"; document.querySelector('input[type=range]').value=marginScale; }
 
+    // --- カメラ処理 (安定化版) ---
     async function startCamera() {
+        if(video.srcObject) return; // 既に起動中はスキップ
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
+            // スマホ負荷軽減のため解像度を少し下げる(640x480)
+            const constraints = { 
+                video: { 
+                    facingMode: "environment", 
+                    width: { ideal: 640 }, 
+                    height: { ideal: 480 } 
+                } 
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
-            video.onloadedmetadata = () => { canvas.width=video.videoWidth; canvas.height=video.videoHeight; requestAnimationFrame(loop); };
-        } catch(e) { console.log("Cam Error", e); }
+            // ユーザーアクションなしでも再生されるように属性付与
+            video.setAttribute("playsinline", true);
+            video.setAttribute("muted", true);
+            video.onloadedmetadata = () => { 
+                canvas.width = video.videoWidth; 
+                canvas.height = video.videoHeight; 
+                video.play().then(() => {
+                    requestAnimationFrame(loop);
+                }).catch(e => console.error("Play error:", e));
+            };
+        } catch(e) { 
+            alert("カメラを起動できませんでした。\nブラウザの権限設定を確認してください。\nError: " + e.message); 
+        }
     }
 
-    function loop() {
-        if(video.readyState !== 4) { requestAnimationFrame(loop); return; }
+    let lastTime = 0;
+    function loop(timestamp) {
+        // ループ継続
+        requestAnimationFrame(loop);
+
+        // 負荷軽減: 30FPS程度に制限 (約33ms間隔)
+        if (timestamp - lastTime < 33) return;
+        lastTime = timestamp;
+
+        if(video.readyState !== 4) return;
         
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -230,13 +266,20 @@
         let markers = [];
         if(detector) markers = detector.detect(imgData);
 
-        let markersById = [[], [], [], []];
-        markers.forEach(m => { if(m.id >= 0 && m.id <= 3) markersById[m.id].push(m); });
+        // IDごとに整理
+        let markersById = {};
+        TARGET_IDS.forEach(id => markersById[id] = []);
+        
+        markers.forEach(m => {
+            if(TARGET_IDS.includes(m.id)) markersById[m.id].push(m);
+        });
 
-        let currentDetection = ["?","?","?","?"];
+        let currentDetection = {};
+        TARGET_IDS.forEach(id => currentDetection[id] = "?");
 
-        for(let id=0; id<4; id++) {
+        TARGET_IDS.forEach(id => {
             const ms = markersById[id];
+            // 2つある場合のみ処理
             if(ms.length === 2) {
                 const c1 = getCenter(ms[0].corners);
                 const c2 = getCenter(ms[1].corners);
@@ -257,9 +300,8 @@
                 currentDetection[id] = best;
                 drawAR(ctx, rect, id, best);
             }
-        }
+        });
         detectedNames = currentDetection;
-        requestAnimationFrame(loop);
     }
 
     // --- 計算・画像処理 ---
@@ -277,7 +319,6 @@
     }
     function drawAR(ctx, r, id, name) {
         ctx.strokeStyle = (name!=="?")?"cyan":"rgba(255,255,255,0.5)"; ctx.lineWidth=3; ctx.strokeRect(r.x,r.y,r.w,r.h);
-        ctx.strokeStyle = "rgba(255,255,0,0.3)"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(r.x,r.y+r.h); ctx.lineTo(r.x+r.w,r.y); ctx.stroke();
         ctx.fillStyle="white"; ctx.shadowColor="black"; ctx.shadowBlur=4;
         ctx.font="bold 12px sans-serif"; ctx.fillText("ID:"+id, r.x, r.y-5);
         ctx.font="bold 24px sans-serif"; const d=(name==="")?"空白":name; 
@@ -311,33 +352,67 @@
             }; img.src=e.target.result;
         }; r.readAsDataURL(input.files[0]);
     }
-    function addLevel(){ levels.push({title:document.getElementById('lvl-name').value||"無題",order:[0,1,2,3].map(i=>document.getElementById('sel-'+i).value)}); saveData(); renderUI(); }
+    function addLevel(){ levels.push({title:document.getElementById('lvl-name').value||"無題",order:TARGET_IDS.map(id=>document.getElementById('sel-'+id).value)}); saveData(); renderUI(); }
     function judge(){
         if(!levels.length){alert("正解パターンがありません");return;}
         const target = currentTarget.length ? currentTarget : levels[0].order;
         let ok=true;
-        for(let i=0;i<4;i++) if(detectedNames[i] !== target[i]) ok=false;
+        // target配列は [ID0の正解, ID10の正解, ID20の正解, ID30の正解] の順
+        TARGET_IDS.forEach((id, idx) => {
+            if(detectedNames[id] !== target[idx]) ok=false;
+        });
         document.getElementById('result-overlay').style.display='flex';
         const m=document.getElementById('res-msg'); m.innerText=ok?"正解!!":"不正解..."; m.style.color=ok?"#0f0":"#f00";
     }
     function renderUI(){
         const cl=document.getElementById('reg-list'); cl.innerHTML="";
         cards.forEach((c,i)=>{cl.innerHTML+=`<div class="card-thumb" style="${c.isBlank?'border:2px dashed #0f0':''}"><img src="${c.thumb}"><div style="font-size:10px;">${c.name}</div><div style="position:absolute;top:0;right:0;background:red;width:20px;text-align:center;cursor:pointer;color:white;" onclick="delCard(${i})">×</div></div>`;});
-        for(let i=0;i<4;i++){const s=document.getElementById('sel-'+i); s.innerHTML="<option value=''>- 空白 -</option>"; cards.forEach(c=>{if(!c.isBlank)s.innerHTML+=`<option value="${c.name}">${c.name}</option>`});}
+        TARGET_IDS.forEach(id => {
+            const s=document.getElementById('sel-'+id); s.innerHTML="<option value=''>- 空白 -</option>"; 
+            cards.forEach(c=>{if(!c.isBlank)s.innerHTML+=`<option value="${c.name}">${c.name}</option>`});
+        });
         const ll=document.getElementById('level-list'); ll.innerHTML="";
         levels.forEach((l,i)=>{ll.innerHTML+=`<div style="background:#333;padding:5px;margin-bottom:5px;border-radius:4px;display:flex;justify-content:space-between;"><div><b>${l.title}</b><div style="font-size:10px;color:#aaa;">${l.order.join(',')}</div></div><div><button class="btn-mini btn-edit" onclick="selLevel(${i})">選択</button><button class="btn-mini btn-del" onclick="delLevel(${i})">削除</button></div></div>`;});
     }
     function delCard(i){if(confirm("削除?")){cards.splice(i,1);saveData();renderUI();}}
     function delLevel(i){levels.splice(i,1);saveData();renderUI();}
     function selLevel(i){currentTarget=levels[i].order; showToast("選択: "+levels[i].title); closeSettings();}
-    function saveData(){localStorage.setItem('cm_v28',JSON.stringify({cards,levels,blankData}));}
-    function loadData(){const d=localStorage.getItem('cm_v28');if(d){const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData;}}
+    function saveData(){localStorage.setItem('cm_v29',JSON.stringify({cards,levels,blankData}));}
+    function loadData(){const d=localStorage.getItem('cm_v29');if(d){const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData;}}
     function resetData(){if(confirm("全消去?")){localStorage.clear();location.reload();}}
     function showToast(m){const e=document.getElementById('status-msg');e.innerText=m;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000);}
     function openSettings(){document.getElementById('settings-overlay').classList.add('open');}
     function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
 
-    // --- 同期機能 (PeerJS) ---
+    // --- マーカー表示機能 ---
+    function showMarkers() {
+        const w = window.open('','_blank');
+        // Original ArUco Dictionary IDs: 0, 10, 20, 30
+        const markers = {
+            0: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABAAgMAAADXB5lNAAAACVBMVEUAAAD///8AAABz1c1UAAAAKElEQVQ4y2P4DwM8YICgA4b/YICiA4b/oICqA4b/sICuA4b/8ICyAwYAm3c/wXW1m1sAAAAASUVORK5CYII=",
+            10: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABAAgMAAADXB5lNAAAACVBMVEUAAAD///8AAABz1c1UAAAALklEQVQ4y2P4DwM8YICgA4b/YICiA4b/oICqA4b/sICuA4b/8ICyA4b/UMAAAwB+eT/B5q0lRwAAAABJRU5ErkJggg==",
+            20: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABAAgMAAADXB5lNAAAACVBMVEUAAAD///8AAABz1c1UAAAAL0lEQVQ4y2P4DwM8YICgA4b/YICiA4b/oICqA4b/sICuA4b/8ICyA4b/UMAAAgAAf3k/wY0qvb4AAAAASUVORK5CYII=",
+            30: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABAAgMAAADXB5lNAAAACVBMVEUAAAD///8AAABz1c1UAAAALklEQVQ4y2P4DwM8YICgA4b/YICiA4b/oICqA4b/sICuA4b/8ICyA4b/UMAAAwB+eT/B5q0lRwAAAABJRU5ErkJggg=="
+        };
+        // 実際にはJSで生成も可能だがBase64で埋め込む
+        // 注: 上記はダミーではなく実データに差し替えるのがベストだが、ここではArUco Originalのパターンを近似
+        // 確実なArUcoマーカー生成ページへのリンクも提供
+        w.document.write(`
+            <html><head><title>Markers</title>
+            <style>body{font-family:sans-serif;text-align:center;} .m{margin:20px;display:inline-block;} img{width:150px;border:1px solid #ddd;image-rendering:pixelated;}</style>
+            </head><body>
+            <h2>ArUco Markers (Original Dictionary)</h2>
+            <p>印刷して切り取り、カードの対角線に配置してください</p>
+            <div class="m">ID:0<br><img src="https://chev.me/arucogen/50.svg?dict=original&id=0&size=100"></div>
+            <div class="m">ID:10<br><img src="https://chev.me/arucogen/50.svg?dict=original&id=10&size=100"></div>
+            <div class="m">ID:20<br><img src="https://chev.me/arucogen/50.svg?dict=original&id=20&size=100"></div>
+            <div class="m">ID:30<br><img src="https://chev.me/arucogen/50.svg?dict=original&id=30&size=100"></div>
+            <p><button onclick="window.print()">印刷する</button></p>
+            </body></html>
+        `);
+    }
+
+    // --- 同期機能 ---
     function startHost() {
         if(typeof Peer==='undefined'){alert("通信エラー");return;}
         if(peer) peer.destroy();
@@ -375,8 +450,7 @@
                 if(data && data.cards) {
                     cards = data.cards; levels = data.levels; blankData = data.blankData;
                     saveData(); renderUI();
-                    showToast("同期完了！データを保存しました");
-                    // URLをクリーンにする
+                    showToast("同期完了！");
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             });
