@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Card Master V27 (Dual Marker)</title>
+    <title>Card Master V28 (Sync & Dual)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://unpkg.com/js-aruco@0.0.1/src/cv.js"></script>
@@ -18,9 +18,8 @@
             display: flex; justify-content: center; align-items: center;
         }
         canvas { display: block; width: 100%; height: auto; }
-        #proc-canvas { display: none; } /* 内部処理用 */
+        #proc-canvas { display: none; }
 
-        /* UIレイヤー */
         .game-ui {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 10;
@@ -43,17 +42,16 @@
             pointer-events: none; text-align: center; width: 90%; line-height: 1.4;
         }
 
-        /* 結果表示オーバーレイ */
         #result-overlay {
             display:none; position:absolute; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.85); flex-direction:column; justify-content:center; align-items:center; z-index:50;
         }
 
-        /* コントロール・設定エリア */
         #controls { width: 90%; max-width: 600px; background: #222; padding: 10px; border-radius: 10px; margin-top: 10px; z-index: 5; }
         .slider-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
         input[type=range] { width: 100%; cursor: grab; }
 
+        /* 設定画面 */
         #settings-overlay { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: #151515; z-index: 200; transform: translateY(100%); 
@@ -76,6 +74,14 @@
             background: rgba(40,167,69,0.95); padding: 8px 20px; border-radius: 20px; 
             font-size:12px; opacity:0; transition:opacity 0.5s; z-index:300; pointer-events: none;
         }
+        
+        /* 同期用QR表示エリア */
+        #sync-area {
+            display:none; background:#fff; padding:20px; margin-top:10px; 
+            text-align:center; border-radius:8px; color:#000;
+        }
+        #qrcode { margin: 10px auto; }
+        
         video { display: none; }
     </style>
 </head>
@@ -87,12 +93,12 @@
     
     <div id="ar-guide-msg">
         <b>ID:0～3のマーカーを「対角線」に2つ置いてください</b><br>
-        <span style="color:#aaa; font-size:10px;">例: マーカー0をカードの[左下]と[右上]に置くと認識されます</span>
+        <span style="color:#aaa; font-size:10px;">(例: カードの左下と右上に同じIDのマーカーを置く)</span>
     </div>
 
     <div class="game-ui">
         <div style="display:flex; justify-content:space-between;">
-            <button class="btn-float" onclick="openSettings()">⚙️ 設定</button>
+            <button class="btn-float" onclick="openSettings()">⚙️ 設定・同期</button>
             <button class="btn-float" onclick="toggleDebug()">範囲調整: <span id="debug-status">100%</span></button>
         </div>
         
@@ -112,9 +118,6 @@
     </div>
     <input type="range" min="0.8" max="1.5" step="0.05" value="1.0" oninput="updateParam('margin', this.value)">
     <input type="range" min="10" max="250" value="100" oninput="updateParam('thr', this.value)" style="margin-top:5px;">
-    <div style="text-align:center; font-size:10px; color:#aaa; margin-top:5px;">
-        ※青い枠線がカード全体を囲むように「範囲」を調整してください
-    </div>
 </div>
 
 <div id="status-msg"></div>
@@ -125,6 +128,19 @@
         <h2>設定・登録</h2><button onclick="closeSettings()" class="btn-float" style="margin:0; background:#555;">閉じる</button>
     </div>
     
+    <div class="setting-box" style="border: 2px solid #007bff;">
+        <h3>📡 データ同期</h3>
+        <p style="font-size:11px; color:#ccc;">PCで作ったデータをスマホに転送します。</p>
+        <button onclick="startHost()" style="width:100%; padding:12px; background:#007bff; color:#fff; border:none; border-radius:5px; font-weight:bold;">QRコードを表示 (PC側)</button>
+        
+        <div id="sync-area">
+            <div style="font-weight:bold; margin-bottom:5px;">スマホで読み取ってください</div>
+            <div id="qrcode"></div>
+            <div id="sync-msg" style="font-size:12px;">接続待機中...</div>
+            <button onclick="document.getElementById('sync-area').style.display='none'" style="margin-top:10px; padding:5px 10px; background:#555; color:#fff; border:none; border-radius:4px;">閉じる</button>
+        </div>
+    </div>
+
     <div class="setting-box">
         <h3>1. カード画像登録</h3>
         <input type="text" id="reg-name" placeholder="カード名" style="width:100%; padding:10px; margin-bottom:5px; box-sizing:border-box;">
@@ -143,7 +159,6 @@
     <div class="setting-box">
         <h3>2. 正解パターンの作成</h3>
         <input type="text" id="lvl-name" placeholder="問題名 (例: 問1)" style="width:100%; padding:10px; margin-bottom:5px; box-sizing:border-box;">
-        <p style="font-size:11px; color:#aaa;">ID:0～3 のマーカー間に置くべきカードを選択</p>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
             <div><span style="font-size:10px;">ID:0</span><select id="sel-0" style="width:100%;"></select></div>
             <div><span style="font-size:10px;">ID:1</span><select id="sel-1" style="width:100%;"></select></div>
@@ -159,8 +174,8 @@
 
 <script>
     // --- 定数 ---
-    const PROC_W = 100; // 内部処理幅
-    const PROC_H = 140; // 内部処理高さ (カード比率)
+    const PROC_W = 100;
+    const PROC_H = 140;
 
     // --- 変数 ---
     let cards = [];
@@ -168,10 +183,10 @@
     let blankData = null;
     let detectedNames = ["?","?","?","?"];
     let currentTarget = [];
-    
     let threshold = 100;
-    let marginScale = 1.0; // バウンディングボックスの余白倍率
+    let marginScale = 1.0;
     let detector = null;
+    let peer = null; // 通信用
 
     // DOM
     const video = document.getElementById('video-source');
@@ -181,9 +196,15 @@
     const procCtx = procCanvas.getContext('2d');
 
     window.onload = () => {
-        loadData(); renderUI(); startCamera();
+        loadData(); 
+        renderUI(); 
+        startCamera();
         if(typeof AR !== 'undefined') detector = new AR.Detector();
         procCanvas.width = PROC_W; procCanvas.height = PROC_H;
+
+        // URLパラメータにsyncがあれば同期クライアントとして起動
+        const u = new URLSearchParams(window.location.search);
+        if(u.get('sync')) startClient(u.get('sync'));
     };
 
     function updateParam(k, v) {
@@ -197,7 +218,7 @@
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
             video.srcObject = stream;
             video.onloadedmetadata = () => { canvas.width=video.videoWidth; canvas.height=video.videoHeight; requestAnimationFrame(loop); };
-        } catch(e) { alert("カメラ起動エラー"); }
+        } catch(e) { console.log("Cam Error", e); }
     }
 
     function loop() {
@@ -206,142 +227,62 @@
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        // ArUco検出
         let markers = [];
-        if(detector) {
-            markers = detector.detect(imgData);
-        }
+        if(detector) markers = detector.detect(imgData);
 
-        // マーカーをIDごとにグループ化
         let markersById = [[], [], [], []];
-        markers.forEach(m => {
-            if(m.id >= 0 && m.id <= 3) markersById[m.id].push(m);
-        });
+        markers.forEach(m => { if(m.id >= 0 && m.id <= 3) markersById[m.id].push(m); });
 
-        // 判定結果の一時保存
         let currentDetection = ["?","?","?","?"];
 
-        // 各IDについて処理
         for(let id=0; id<4; id++) {
             const ms = markersById[id];
-            
-            // 同じIDが「2つ」見つかった場合のみ、その間をカードエリアとする
             if(ms.length === 2) {
-                // 2つのマーカーの中心座標を取得
                 const c1 = getCenter(ms[0].corners);
                 const c2 = getCenter(ms[1].corners);
-
-                // 2点を対角線とする矩形を定義 (マージン適用)
                 const rect = getBoundingRect(c1, c2, marginScale);
 
-                // 矩形領域を内部キャンバスへWarp (Perspective Correction)
-                // 簡易的に4点を定義: TL, TR, BR, BL
-                const srcPoints = [
-                    rect.x, rect.y,                   // TL
-                    rect.x + rect.w, rect.y,          // TR
-                    rect.x + rect.w, rect.y + rect.h, // BR
-                    rect.x, rect.y + rect.h           // BL
-                ];
+                // Warp
+                const srcPoints = [rect.x, rect.y, rect.x + rect.w, rect.y, rect.x + rect.w, rect.y + rect.h, rect.x, rect.y + rect.h];
                 const dstPoints = [0,0, PROC_W,0, PROC_W,PROC_H, 0,PROC_H];
-                
                 const H = getHomography(srcPoints, dstPoints);
                 warpImage(imgData, procCtx, H);
 
-                // 判定処理
+                // Identify
                 const procData = procCtx.getImageData(0,0,PROC_W, PROC_H);
                 const bin = binarize(procData);
                 const feat = getFeature(bin, PROC_W, PROC_H);
                 const best = identifyCard(feat);
                 
                 currentDetection[id] = best;
-
-                // AR表示 (認識エリアと結果)
                 drawAR(ctx, rect, id, best);
             }
         }
-
-        // 検出状況を更新 (検出されていないときは前回の値を維持せず、?にする)
         detectedNames = currentDetection;
-
         requestAnimationFrame(loop);
     }
 
-    // --- 計算関数 ---
-    
-    function getCenter(corners) {
-        let x=0, y=0;
-        corners.forEach(p => { x+=p.x; y+=p.y; });
-        return {x:x/4, y:y/4};
-    }
-
+    // --- 計算・画像処理 ---
+    function getCenter(corners) { let x=0,y=0; corners.forEach(p=>{x+=p.x;y+=p.y;}); return {x:x/4,y:y/4}; }
     function getBoundingRect(p1, p2, scale) {
-        // 2点を含むバウンディングボックス
-        const minX = Math.min(p1.x, p2.x);
-        const maxX = Math.max(p1.x, p2.x);
-        const minY = Math.min(p1.y, p2.y);
-        const maxY = Math.max(p1.y, p2.y);
-        
-        const w = maxX - minX;
-        const h = maxY - minY;
-        const cx = minX + w/2;
-        const cy = minY + h/2;
-
-        // スケール適用 (中心基準で拡大)
-        const nw = w * scale;
-        const nh = h * scale;
-        
-        return {
-            x: cx - nw/2,
-            y: cy - nh/2,
-            w: nw,
-            h: nh
-        };
+        const minX=Math.min(p1.x,p2.x), maxX=Math.max(p1.x,p2.x), minY=Math.min(p1.y,p2.y), maxY=Math.max(p1.y,p2.y);
+        const w=maxX-minX, h=maxY-minY, cx=minX+w/2, cy=minY+h/2, nw=w*scale, nh=h*scale;
+        return {x:cx-nw/2, y:cy-nh/2, w:nw, h:nh};
     }
-
     function identifyCard(feat) {
-        let best = "?"; let minD = 1.0;
-        cards.forEach(c => {
-            if(c.isBlank) return;
-            const diff = compare(feat, c.data);
-            if(diff < minD) { minD = diff; best = c.name; }
-        });
-        if(blankData) {
-            const bDiff = compare(feat, blankData);
-            if(bDiff < minD) { minD = bDiff; best = ""; } 
-        }
-        // 判定閾値 (緩めに設定: 0.4以下なら一致とみなす)
-        return minD > 0.4 ? "?" : best;
+        let best="?", minD=1.0;
+        cards.forEach(c=>{if(c.isBlank)return; const d=compare(feat,c.data); if(d<minD){minD=d;best=c.name;}});
+        if(blankData){ const bd=compare(feat,blankData); if(bd<minD){minD=bd;best="";} }
+        return minD>0.4 ? "?" : best;
     }
-
-    // --- 描画関数 ---
     function drawAR(ctx, r, id, name) {
-        // 認識枠
-        ctx.strokeStyle = (name !== "?") ? "cyan" : "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(r.x, r.y, r.w, r.h);
-
-        // マーカー接続線 (対角線)
-        ctx.strokeStyle = "rgba(255,255,0,0.3)";
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(r.x, r.y+r.h); ctx.lineTo(r.x+r.w, r.y); ctx.stroke(); // BL to TR
-
-        // ラベル
-        ctx.fillStyle = "white"; 
-        ctx.shadowColor="black"; ctx.shadowBlur=4;
-        
-        // ID
-        ctx.font = "bold 12px sans-serif";
-        ctx.fillText("ID:"+id, r.x, r.y - 5);
-
-        // 結果
-        ctx.font = "bold 24px sans-serif";
-        ctx.textAlign = "center";
-        const disp = (name === "") ? "空白" : name;
-        ctx.fillText(disp, r.x + r.w/2, r.y + r.h/2 + 8);
-        ctx.shadowBlur=0; ctx.textAlign = "start";
+        ctx.strokeStyle = (name!=="?")?"cyan":"rgba(255,255,255,0.5)"; ctx.lineWidth=3; ctx.strokeRect(r.x,r.y,r.w,r.h);
+        ctx.strokeStyle = "rgba(255,255,0,0.3)"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(r.x,r.y+r.h); ctx.lineTo(r.x+r.w,r.y); ctx.stroke();
+        ctx.fillStyle="white"; ctx.shadowColor="black"; ctx.shadowBlur=4;
+        ctx.font="bold 12px sans-serif"; ctx.fillText("ID:"+id, r.x, r.y-5);
+        ctx.font="bold 24px sans-serif"; const d=(name==="")?"空白":name; 
+        ctx.textAlign="center"; ctx.fillText(d, r.x+r.w/2, r.y+r.h/2+8); ctx.shadowBlur=0; ctx.textAlign="start";
     }
-
-    // --- 共通アルゴリズム ---
     function getHomography(src,dst){let A=[],B=[];for(let i=0;i<4;i++){let sx=src[i*2],sy=src[i*2+1],dx=dst[i*2],dy=dst[i*2+1];A.push([sx,sy,1,0,0,0,-sx*dx,-sy*dx]);A.push([0,0,0,sx,sy,1,-sx*dy,-sy*dy]);B.push(dx);B.push(dy);}return solveGaussian(A,B).concat([1.0]);}
     function solveGaussian(A,B){let n=A.length;let x=new Array(n);for(let i=0;i<n;i++){let max=Math.abs(A[i][i]),r=i;for(let k=i+1;k<n;k++)if(Math.abs(A[k][i])>max){max=Math.abs(A[k][i]);r=k;}for(let k=i;k<n;k++){let t=A[r][k];A[r][k]=A[i][k];A[i][k]=t;}let t=B[r];B[r]=B[i];B[i]=t;for(let k=i+1;k<n;k++){let c=-A[k][i]/A[i][i];for(let j=i;j<n;j++)if(i==j)A[k][j]=0;else A[k][j]+=c*A[i][j];B[k]+=c*B[i];}}for(let i=n-1;i>=0;i--){let s=0;for(let j=i+1;j<n;j++)s+=A[i][j]*x[j];x[i]=(B[i]-s)/A[i][i];}return x;}
     function invertMatrix(m){const n11=m[0],n12=m[1],n13=m[2],n21=m[3],n22=m[4],n23=m[5],n31=m[6],n32=m[7],n33=m[8],t11=n33*n22-n32*n23,t12=n32*n13-n33*n12,t13=n23*n12-n22*n13,det=n11*t11+n21*t12+n31*t13;if(det===0)return m;const i=1/det;return[t11*i,(n31*n23-n33*n21)*i,(n32*n21-n31*n22)*i,t12*i,(n33*n11-n31*n13)*i,(n31*n12-n32*n11)*i,t13*i,(n21*n13-n23*n11)*i,(n22*n11-n21*n12)*i];}
@@ -389,12 +330,58 @@
     function delCard(i){if(confirm("削除?")){cards.splice(i,1);saveData();renderUI();}}
     function delLevel(i){levels.splice(i,1);saveData();renderUI();}
     function selLevel(i){currentTarget=levels[i].order; showToast("選択: "+levels[i].title); closeSettings();}
-    function saveData(){localStorage.setItem('cm_v27',JSON.stringify({cards,levels,blankData}));}
-    function loadData(){const d=localStorage.getItem('cm_v27');if(d){const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData;}}
+    function saveData(){localStorage.setItem('cm_v28',JSON.stringify({cards,levels,blankData}));}
+    function loadData(){const d=localStorage.getItem('cm_v28');if(d){const j=JSON.parse(d);cards=j.cards||[];levels=j.levels||[];blankData=j.blankData;}}
     function resetData(){if(confirm("全消去?")){localStorage.clear();location.reload();}}
     function showToast(m){const e=document.getElementById('status-msg');e.innerText=m;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000);}
     function openSettings(){document.getElementById('settings-overlay').classList.add('open');}
     function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
+
+    // --- 同期機能 (PeerJS) ---
+    function startHost() {
+        if(typeof Peer==='undefined'){alert("通信エラー");return;}
+        if(peer) peer.destroy();
+        peer = new Peer();
+        const area = document.getElementById('sync-area');
+        const qrel = document.getElementById('qrcode');
+        const msg = document.getElementById('sync-msg');
+        
+        area.style.display = 'block';
+        qrel.innerHTML = "";
+        msg.innerText = "サーバー接続中...";
+
+        peer.on('open', id => {
+            const url = window.location.href.split('?')[0] + "?sync=" + id;
+            new QRCode(qrel, {text: url, width: 150, height: 150});
+            msg.innerText = "スマホのカメラで読み取ってください";
+        });
+        peer.on('connection', conn => {
+            msg.innerText = "接続されました！データ送信中...";
+            conn.on('open', () => {
+                conn.send({cards, levels, blankData});
+                setTimeout(()=>{ msg.innerText="送信完了"; }, 500);
+            });
+        });
+    }
+
+    function startClient(hostId) {
+        if(typeof Peer==='undefined') return;
+        if(peer) peer.destroy();
+        peer = new Peer();
+        showToast("データ同期を開始します...");
+        peer.on('open', () => {
+            const conn = peer.connect(hostId);
+            conn.on('data', data => {
+                if(data && data.cards) {
+                    cards = data.cards; levels = data.levels; blankData = data.blankData;
+                    saveData(); renderUI();
+                    showToast("同期完了！データを保存しました");
+                    // URLをクリーンにする
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            });
+        });
+    }
 </script>
 </body>
 </html>
