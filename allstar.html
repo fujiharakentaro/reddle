@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>All-Star Quiz System V12</title>
+    <title>All-Star Quiz System V13</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800;900&family=Anton&display=swap" rel="stylesheet">
@@ -109,16 +109,11 @@
         .btn-3 { background: radial-gradient(circle at 30% 30%, #66ff66, var(--col-3)); } 
         .btn-4 { background: radial-gradient(circle at 30% 30%, #ffff66, var(--col-4)); }
         
-        .client-overlay { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; 
-            background: rgba(0,0,0,0.9); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            padding: 30px; box-sizing: border-box; text-align: center;
-        }
-        .client-msg-box { border: 2px solid #fff; padding: 20px; border-radius: 15px; background: rgba(0,0,100,0.5); width: 100%; }
-        .client-msg-title { font-size: 20px; color: #aaa; margin-bottom: 10px; }
-        .client-msg-main { font-size: 32px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #0af; }
-        .ans-btn.selected { filter: brightness(0.4); pointer-events: none; position: relative; border-color: #888; }
-        .ans-btn.selected::after { content: attr(data-order); position: absolute; color: #fff; font-size: 50px; z-index: 10; font-family: 'Anton'; text-shadow: 0 0 10px #000; }
+        /* Client UI States */
+        .ans-btn.disabled { opacity: 0.2; pointer-events: none; filter: grayscale(100%); }
+        .ans-btn.selected { border-color: #fff; box-shadow: 0 0 30px #fff; transform: scale(1.05); z-index: 10; filter: brightness(1.2); }
+        .ans-btn.sort-selected::after { content: attr(data-order); position: absolute; color: #fff; font-size: 50px; z-index: 10; font-family: 'Anton'; text-shadow: 0 0 10px #000; }
+        .ans-btn.sort-selected { filter: brightness(0.5); pointer-events: none; position: relative; border-color: #888; }
 
     </style>
 </head>
@@ -165,12 +160,12 @@
     </div>
 
     <div id="game-layout" class="layout-text">
-        <div class="q-container"><div class="q-icon">Q</div><div class="q-text-box"><div class="q-text-content" id="q-text"></div></div></div>
+        <div class="q-container" id="q-area-l"><div class="q-icon">Q</div><div class="q-text-box"><div class="q-text-content" id="q-text"></div></div></div>
         <div class="options-area" id="opt-area">
-            <div id="opt-1" class="option-panel border-1"><div class="opt-num col-1">1</div><div class="opt-val" id="val-1"></div><div class="vote-count" id="vote-1">0</div></div>
-            <div id="opt-2" class="option-panel border-2"><div class="opt-num col-2">2</div><div class="opt-val" id="val-2"></div><div class="vote-count" id="vote-2">0</div></div>
-            <div id="opt-3" class="option-panel border-3"><div class="opt-num col-3">3</div><div class="opt-val" id="val-3"></div><div class="vote-count" id="vote-3">0</div></div>
-            <div id="opt-4" class="option-panel border-4"><div class="opt-num col-4">4</div><div class="opt-val" id="val-4"></div><div class="vote-count" id="vote-4">0</div></div>
+            <div id="opt-1" class="option-panel border-1"><div class="opt-num col-1">1</div><div class="opt-val opt-img-box" id="val-1"></div><div class="vote-count" id="vote-1">0</div></div>
+            <div id="opt-2" class="option-panel border-2"><div class="opt-num col-2">2</div><div class="opt-val opt-img-box" id="val-2"></div><div class="vote-count" id="vote-2">0</div></div>
+            <div id="opt-3" class="option-panel border-3"><div class="opt-num col-3">3</div><div class="opt-val opt-img-box" id="val-3"></div><div class="vote-count" id="vote-3">0</div></div>
+            <div id="opt-4" class="option-panel border-4"><div class="opt-num col-4">4</div><div class="opt-val opt-img-box" id="val-4"></div><div class="vote-count" id="vote-4">0</div></div>
         </div>
     </div>
     
@@ -178,11 +173,11 @@
         <h2 style="position:absolute; top:20px; color:#fff;">正解発表</h2>
         <div class="sort-compare-container">
             <div class="champ-ans-col" id="champ-ans-col">
-                <div style="color:#ffd700; font-weight:bold;">CHAMPION</div>
-                </div>
+                <div style="color:#ffd700; font-weight:bold; font-size:30px; margin-bottom:20px;">CHAMPION</div>
+            </div>
             <div class="correct-ans-col" id="correct-ans-col">
-                <div style="color:#00ffff; font-weight:bold;">ANSWER</div>
-                </div>
+                <div style="color:#00ffff; font-weight:bold; font-size:30px; margin-bottom:20px;">ANSWER</div>
+            </div>
         </div>
     </div>
 
@@ -210,22 +205,13 @@
 <div id="client-view" class="screen hidden">
     <div class="tv-background-client"></div>
     <div id="client-score">現在の得点: 0点</div>
-    
     <div id="client-pad" class="hidden">
-        <button class="ans-btn btn-1" onclick="sendAnswer('1')">1</button><button class="ans-btn btn-2" onclick="sendAnswer('2')">2</button>
-        <button class="ans-btn btn-3" onclick="sendAnswer('3')">3</button><button class="ans-btn btn-4" onclick="sendAnswer('4')">4</button>
+        <button class="ans-btn btn-1" id="cbtn-1" onclick="sendAnswer('1')">1</button>
+        <button class="ans-btn btn-2" id="cbtn-2" onclick="sendAnswer('2')">2</button>
+        <button class="ans-btn btn-3" id="cbtn-3" onclick="sendAnswer('3')">3</button>
+        <button class="ans-btn btn-4" id="cbtn-4" onclick="sendAnswer('4')">4</button>
     </div>
-
-    <div id="client-overlay" class="client-overlay">
-        <div class="client-msg-box">
-            <div class="client-msg-title" id="cli-msg-title">STATUS</div>
-            <div class="client-msg-main" id="cli-msg-main">出題をお待ちください</div>
-        </div>
-        <div id="sort-ui" class="hidden" style="margin-top:20px;">
-            <div class="sort-ui-selected" id="sort-sel"></div>
-            <button class="btn btn-red" onclick="resetSort()" style="padding:15px 30px; font-size:20px;">リセット</button>
-        </div>
-    </div>
+    <div id="wait-screen" class="full-screen flex-center hidden" style="background:rgba(0,0,0,0.8); z-index:50; color:#fff; font-size:30px; font-weight:bold;">STANDBY...</div>
 </div>
 
 <script>
@@ -241,8 +227,7 @@
     let peer, conn, conns={}, myId;
     let currentPIdx=0, currentQIdx=0, hostState=0; 
     let answers={}, participants={}, scores={}, periodScores={}, clientStartTime=0, bgmAudio=null;
-    let isSorting=false, clientSortAns=[];
-    let champSortAns = null; // Store champion's sort answer
+    let isSorting=false, clientSortAns=[], champSortAns=null;
 
     // Init
     window.onload = () => {
@@ -276,7 +261,7 @@
         peer.on('connection',c=>{
             c.on('open',()=>{ conns[c.peer]=c; c.on('data',d=>{
                 if(d.type==='LOGIN'){ participants[c.peer]=d.name; scores[c.peer]=0; }
-                if(d.type==='ANSWER' && (hostState===3||hostState===9) && !answers[c.peer]) answers[c.peer]=d;
+                if(d.type==='ANSWER' && (hostState===4||hostState===10) && !answers[c.peer]) answers[c.peer]=d;
             }); c.on('close',()=>{delete conns[c.peer];}); });
         });
     }
@@ -291,7 +276,11 @@
     }
     function renderSortOpt(pi, k, opt) { return `<div class="opt-cell"><span style="font-size:12px;color:#aaa;">選択肢${k}</span> <label style="font-size:10px"><input type="radio" name="st-${pi}-${k}" ${opt.type=='text'?'checked':''} onchange="setSortType(${pi},${k},'text')">文</label><label style="font-size:10px"><input type="radio" name="st-${pi}-${k}" ${opt.type=='image'?'checked':''} onchange="setSortType(${pi},${k},'image')">画</label> ${opt.type=='text'?`<input type="text" value="${opt.val}" onchange="upSortOv(${pi},${k},this.value)">`:`<input type="file" accept="image/*" style="font-size:10px;" onchange="upSortImg(this,${pi},${k})">${opt.val?`<img src="${opt.val}" style="height:20px;">`:''}`}</div>`; }
     function renderQList(pi){ const ql=document.getElementById(`p-${pi}-qs`); ql.innerHTML=""; periods[pi].questions.forEach((q,qi)=>{ const qd=document.createElement('div'); qd.className='q-card'; qd.innerHTML=`<div style="display:flex;justify-content:space-between;"><b>Q${qi+1}</b><button class="btn btn-red" style="padding:5px;" onclick="delQ(${pi},${qi})">削除</button></div><input type="text" value="${q.q}" onchange="periods[${pi}].questions[${qi}].q=this.value" placeholder="問題文"><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px;">${[1,2,3,4].map(k=>`<div><span style="font-size:12px;color:#aaa;">${k}</span> <label><input type="radio" name="t-${pi}-${qi}-${k}" ${q.options[k].type=='text'?'checked':''} onchange="setT(${pi},${qi},${k},'text')">文</label><label><input type="radio" name="t-${pi}-${qi}-${k}" ${q.options[k].type=='image'?'checked':''} onchange="setT(${pi},${qi},${k},'image')">画</label> ${q.options[k].type=='text'?`<input type="text" value="${q.options[k].val}" onchange="upOv(${pi},${qi},${k},this.value)">`:`<input type="file" accept="image/*" style="font-size:10px;" onchange="upImg(this,${pi},${qi},${k})">${q.options[k].val?`<img src="${q.options[k].val}" style="height:20px;">`:''}`}</div>`).join('')}</div><div style="margin-top:5px;">正解: <select onchange="periods[${pi}].questions[${qi}].correct=this.value">${[1,2,3,4].map(k=>`<option value="${k}" ${q.correct==k?'selected':''}>${k}</option>`).join('')}</select></div>`; ql.appendChild(qd); }); }
-    function addPeriod(){periods.push({title:`第${periods.length+1}ピリオド`,questions:[],sortingQ:{q:"",order:[],options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}}});renderPList();} function delP(pi){periods.splice(pi,1);renderPList();} function addQ(pi){periods[pi].questions.push({q:"",correct:"1",options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}});renderQList(pi);} function delQ(pi,qi){periods[pi].questions.splice(qi,1);renderQList(pi);} function setT(pi,qi,k,t){periods[pi].questions[qi].options[k].type=t;periods[pi].questions[qi].options[k].val="";renderQList(pi);} function upOv(pi,qi,k,v){periods[pi].questions[qi].options[k].val=v;} function upImg(el,pi,qi,k){if(el.files[0]){const r=new FileReader();r.onload=e=>{periods[pi].questions[qi].options[k].val=e.target.result;renderQList(pi);};r.readAsDataURL(el.files[0]);}} function setSortType(pi,k,t){periods[pi].sortingQ.options[k].type=t;periods[pi].sortingQ.options[k].val="";renderPList();} function upSortOv(pi,k,v){periods[pi].sortingQ.options[k].val=v;} function upSortImg(el,pi,k){if(el.files[0]){const r=new FileReader();r.onload=e=>{periods[pi].sortingQ.options[k].val=e.target.result;renderPList();};r.readAsDataURL(el.files[0]);}}
+    // Updaters
+    function addPeriod(){periods.push({title:`第${periods.length+1}ピリオド`,questions:[],sortingQ:{q:"",order:[],options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}}});renderPList();} function delP(pi){periods.splice(pi,1);renderPList();}
+    function addQ(pi){periods[pi].questions.push({q:"",correct:"1",options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}});renderQList(pi);} function delQ(pi,qi){periods[pi].questions.splice(qi,1);renderQList(pi);}
+    function setT(pi,qi,k,t){periods[pi].questions[qi].options[k].type=t;periods[pi].questions[qi].options[k].val="";renderQList(pi);} function upOv(pi,qi,k,v){periods[pi].questions[qi].options[k].val=v;} function upImg(el,pi,qi,k){if(el.files[0]){const r=new FileReader();r.onload=e=>{periods[pi].questions[qi].options[k].val=e.target.result;renderQList(pi);};r.readAsDataURL(el.files[0]);}}
+    function setSortType(pi,k,t){periods[pi].sortingQ.options[k].type=t;periods[pi].sortingQ.options[k].val="";renderPList();} function upSortOv(pi,k,v){periods[pi].sortingQ.options[k].val=v;} function upSortImg(el,pi,k){if(el.files[0]){const r=new FileReader();r.onload=e=>{periods[pi].sortingQ.options[k].val=e.target.result;renderPList();};r.readAsDataURL(el.files[0]);}}
 
     // --- Host Flow ---
     function renderPSel(){ const g=document.getElementById('period-grid'); g.innerHTML=""; periods.forEach((p,i)=>{ g.innerHTML+=`<div class="period-btn" onclick="selectP(${i})">${p.title}<br><span style="font-size:16px">${p.questions.length}問</span></div>`; }); document.getElementById('period-select-view').classList.remove('hidden'); }
@@ -301,51 +290,42 @@
         const P=periods[currentPIdx]; const Q=P.questions[currentQIdx];
         switch(hostState){
             case 0: renderPSel(); break; // P-Sel
-            case 1: // Next Q or P-End
+            case 1: // Next Q
                 currentQIdx++; isSorting=false;
                 if(currentQIdx>=P.questions.length){ hostState=7; nextPhase(); return; }
                 resetDisp(); hostState=2; broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); break;
-            case 2: // Start Immediate
+            case 2: // Open & Start Immediate
                 displayQ(Q); playAudio('q_open'); playAudio('thinking',true); startTimer(10);
                 broadcast({type:'START', sort:false}); hostState=4; break;
-            case 4: stopTimer(); break; // Stop
+            case 4: stopTimer(); break; // Timeup
             case 5: showVotes(); playAudio('votes'); hostState=6; break; // Votes
-            case 6: showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); hostState=13; break; // Correct -> Rank
+            case 6: showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); hostState=130; break; // Correct -> Rank
+            case 130: showRank(); hostState=140; break; // Single Rank
+            case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break; // Loop
             case 7: // P-End
                 document.getElementById('period-end-view').classList.remove('hidden');
                 const champId = Object.keys(periodScores).reduce((a,b)=>periodScores[a]>periodScores[b]?a:b, Object.keys(periodScores)[0]);
                 document.getElementById('champ-name').innerText = participants[champId] || "該当なし";
-                // Store champion's sort answer for later
-                champSortAns = null; // Reset
                 setTimeout(()=>document.getElementById('champ-name').classList.remove('hidden'), 1000);
                 hostState=8; break;
-            case 8: // Sort Open & Start Immediate
+            case 8: // Sort Open & Start
                 document.getElementById('period-end-view').classList.add('hidden'); resetDisp(); isSorting=true;
                 displayQ(P.sortingQ); playAudio('q_open'); playAudio('thinking',true); startTimer(30);
                 broadcast({type:'START', sort:true}); hostState=10; break;
             case 10: stopTimer(); break; // Sort Stop
-            case 11: // Sort Reveal Init
-                // Find champ answer
+            case 11: // Sort Reveal Prep
                 const cid = Object.keys(periodScores).reduce((a,b)=>periodScores[a]>periodScores[b]?a:b, Object.keys(periodScores)[0]);
                 champSortAns = (answers[cid] && answers[cid].choice) ? answers[cid].choice : ["?","?","?","?"];
-                renderSortResultLayout(champSortAns, P.sortingQ);
-                hostState=12; break; // Ready to reveal 1
-            case 12: // Reveal 1
-            case 13: // Reveal 2
-            case 14: // Reveal 3
-            case 15: // Reveal 4
-                const idx = hostState - 12;
-                revealSortRow(idx, P.sortingQ.order, champSortAns);
-                playAudio('votes');
-                hostState++;
-                if(hostState > 15) { calcSortScores(P.sortingQ.order); hostState=130; } // Go to rank (using 130 to map to 13 logic)
-                break;
-            case 130: showRank(); hostState=140; break;
-            case 13: showRank(); hostState=140; break;
-            case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); break;
+                renderSortResultLayout(champSortAns, P.sortingQ); hostState=12; break; 
+            case 12: case 13: case 14: case 15: // Reveal steps
+                revealSortRow(hostState-12, P.sortingQ.order, champSortAns); playAudio('votes'); hostState++;
+                if(hostState>15){ calcSortScores(P.sortingQ.order); hostState=131; } break;
+            case 131: showRank(); hostState=141; break;
+            case 141: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); break;
         }
     }
     function broadcast(m){for(let k in conns)conns[k].send(m);}
+    
     function resetDisp(){
         document.getElementById('q-text').innerText=""; document.getElementById('sort-result-view').classList.add('hidden');
         for(let k=1;k<=4;k++){ const p=document.getElementById('opt-'+k); p.classList.remove('dimmed','highlighted'); document.getElementById('val-'+k).innerHTML=""; document.getElementById('vote-'+k).style.opacity=0; }
@@ -354,8 +334,8 @@
     function displayQ(q){
         document.getElementById('q-text').innerText=q.q;
         for(let k=1;k<=4;k++){
-            const el=document.getElementById('val-'+k); el.className = isSorting ? 'opt-val' : 'opt-val';
-            if(q.options[k].type==='image') el.innerHTML=`<img src="${q.options[k].val}" class="opt-img">`; else el.innerText=q.options[k].val;
+            const el=document.getElementById('val-'+k); el.className = 'opt-val';
+            if(q.options[k].type==='image' && !isSorting) el.innerHTML=`<img src="${q.options[k].val}" class="opt-img">`; else el.innerText=q.options[k].val;
         }
     }
     let tId; function startTimer(sec){
@@ -367,33 +347,24 @@
     function showVotes(){ for(let k=1;k<=4;k++) document.getElementById('vote-'+k).innerText = Object.values(answers).filter(a=>a.choice==k).length; for(let k=1;k<=4;k++) document.getElementById('vote-'+k).style.opacity=1; }
     function showCorrect(c){ for(let k=1;k<=4;k++){ const p=document.getElementById('opt-'+k); if(k==c) p.classList.add('highlighted'); else p.classList.add('dimmed'); } }
     
-    // Sort Reveal Logic
     function renderSortResultLayout(champAns, q){
         document.getElementById('sort-result-view').classList.remove('hidden');
-        const cCol = document.getElementById('champ-ans-col'); cCol.innerHTML='<div style="color:#ffd700; font-weight:bold; font-size:30px; margin-bottom:20px;">CHAMPION</div>'; cCol.className = 'champ-ans-col'; // Reset dim
+        const cCol = document.getElementById('champ-ans-col'); cCol.innerHTML='<div style="color:#ffd700; font-weight:bold; font-size:30px; margin-bottom:20px;">CHAMPION</div>'; cCol.className = 'champ-ans-col';
         const rCol = document.getElementById('correct-ans-col'); rCol.innerHTML='<div style="color:#00ffff; font-weight:bold; font-size:30px; margin-bottom:20px;">ANSWER</div>';
         
         champAns.forEach(k => {
             const color = k==1?'var(--col-1)':k==2?'var(--col-2)':k==3?'var(--col-3)':'var(--col-4)';
             cCol.innerHTML += `<div class="sort-bubble" style="background:${color}">${k}</div>`;
         });
-        // Prepare hidden correct rows
         q.order.forEach((k, i) => {
             const txt = q.options[k].type=='text' ? q.options[k].val : `選択肢${k}`;
             const color = k==1?'var(--col-1)':k==2?'var(--col-2)':k==3?'var(--col-3)':'var(--col-4)';
-            rCol.innerHTML += `
-                <div class="sort-row-correct" id="sort-row-${i}">
-                    <div class="sort-bubble" style="background:${color}">${k}</div>
-                    <div class="sort-text-box">${txt}</div>
-                </div>`;
+            rCol.innerHTML += `<div class="sort-row-correct" id="sort-row-${i}"><div class="sort-bubble" style="background:${color}">${k}</div><div class="sort-text-box">${txt}</div></div>`;
         });
     }
     function revealSortRow(idx, correctOrder, champAns){
         document.getElementById(`sort-row-${idx}`).classList.add('visible');
-        // Compare
-        if(correctOrder[idx] !== champAns[idx]){
-            document.getElementById('champ-ans-col').classList.add('dimmed-all');
-        }
+        if(correctOrder[idx] !== champAns[idx]) document.getElementById('champ-ans-col').classList.add('dimmed-all');
     }
 
     function calcScores(c){ for(let id in answers) if(answers[id].choice==c){ scores[id]++; periodScores[id]++; } broadcastScores(); }
@@ -402,54 +373,47 @@
     function showRank(){
         const l=document.getElementById('rank-list'); l.innerHTML="";
         const w=Object.keys(scores).map(id=>({n:participants[id], s:scores[id]})).sort((a,b)=>b.s-a.s);
-        w.slice(0,10).forEach((p,i)=>{ l.innerHTML+=`<div class="rank-row" style="animation-delay:${i*0.1}s"><div class="rank-num">${i+1}</div><div class="rank-name">${p.n}</div><div class="rank-score-box">${p.s}P</div></div>`; });
+        if(!w.length) l.innerHTML="<div style='color:#fff;font-size:30px;text-align:center'>集計中...</div>";
+        else w.slice(0,10).forEach((p,i)=>{ l.innerHTML+=`<div class="rank-row" style="animation-delay:${i*0.1}s"><div class="rank-num">${i+1}</div><div class="rank-name">${p.n}</div><div class="rank-score-box">${p.s}P</div></div>`; });
         document.getElementById('ranking-modal').classList.remove('hidden');
     }
 
-    // --- Client ---
+    // --- Client Logic ---
     function initClient(hid){
         peer=new Peer(); 
         peer.on('open',()=>{ 
             conn=peer.connect(hid); 
-            // Enable join button only after connection is ready
-            conn.on('open', ()=>{ 
-                const btn = document.getElementById('join-btn');
-                btn.disabled = false; btn.innerText = "参加";
-            });
+            conn.on('open', ()=>{ document.getElementById('join-btn').disabled = false; document.getElementById('join-btn').innerText = "参加"; });
             conn.on('data',d=>{
                 if(d.type==='SCORE') document.getElementById('client-score').innerText=`現在の得点: ${d.score}点`;
                 if(d.type==='STANDBY'){ setClientState('standby', d.msg); }
                 if(d.type==='START'){ isSorting=d.sort; resetClientSort(); setClientState('active'); }
-                if(d.type==='TIMEUP'){ setClientState('waiting', '正解発表をお待ちください'); if(isSorting && clientSortAns.length<4) sendSortAnswer(); }
+                if(d.type==='TIMEUP'){ document.getElementById('client-pad').classList.add('hidden'); document.getElementById('client-overlay').classList.remove('hidden'); document.getElementById('cli-msg-title').innerText="TIME UP"; document.getElementById('cli-msg-main').innerText="正解発表をお待ちください"; if(isSorting && clientSortAns.length<4) sendSortAnswer(); }
             });
         });
     }
     function joinGame(){ 
         const n=document.getElementById('user-name').value; if(!n)return; 
-        if(!conn || !conn.open) return alert("接続中...少々お待ちください");
+        if(!conn || !conn.open) return alert("接続中...");
         conn.send({type:'LOGIN', name:n}); showScreen('client-view'); 
     }
     
     function setClientState(state, msg="") {
         const overlay = document.getElementById('client-overlay');
         const pad = document.getElementById('client-pad');
-        const main = document.getElementById('cli-msg-main');
-        
         if (state === 'active') {
             overlay.classList.add('hidden');
             pad.classList.remove('hidden');
-        } else {
+            // Enable buttons
+            document.querySelectorAll('.ans-btn').forEach(b=>{
+                b.classList.remove('disabled', 'selected', 'sort-selected');
+                b.style.pointerEvents = 'auto';
+            });
+        } else if (state === 'standby') {
             overlay.classList.remove('hidden');
             pad.classList.add('hidden');
-            main.innerText = msg;
-            // Sorting UI check
-            if(isSorting && state==='waiting'){
-                document.getElementById('sort-ui').classList.add('hidden'); // hide reset
-            } else if(isSorting) {
-                document.getElementById('sort-ui').classList.remove('hidden');
-            } else {
-                document.getElementById('sort-ui').classList.add('hidden');
-            }
+            document.getElementById('cli-msg-title').innerText = "STANDBY";
+            document.getElementById('cli-msg-main').innerText = msg;
         }
     }
 
@@ -457,28 +421,21 @@
         if(isSorting){
             if(clientSortAns.includes(c)) return;
             clientSortAns.push(c);
-            const btn = document.querySelector(`.btn-${c}`); btn.classList.add('selected'); btn.setAttribute('data-order', clientSortAns.length);
-            document.getElementById('sort-sel').innerText = clientSortAns.join(' → ');
+            const btn = document.querySelector(`.btn-${c}`);
+            btn.classList.add('sort-selected');
+            btn.setAttribute('data-order', clientSortAns.length);
             if(clientSortAns.length===4) sendSortAnswer();
         } else {
             conn.send({type:'ANSWER', choice:c});
-            setClientState('waiting', `[${c}]を選択しました`);
+            // Client visual lock
+            document.querySelectorAll('.ans-btn').forEach(b=>{
+                if(b.innerText === c) b.classList.add('selected');
+                else b.classList.add('disabled');
+            });
         }
     }
-    function resetClientSort(){ 
-        clientSortAns=[]; document.querySelectorAll('.ans-btn').forEach(b=>{b.classList.remove('selected'); b.removeAttribute('data-order');}); 
-        document.getElementById('sort-sel').innerText=""; 
-        const sortUI = document.getElementById('sort-ui');
-        if(isSorting && !document.getElementById('client-pad').classList.contains('hidden')) {
-            document.getElementById('client-overlay').appendChild(sortUI); // ensure UI position
-            sortUI.classList.remove('hidden');
-        } else { sortUI.classList.add('hidden'); }
-    }
-    function sendSortAnswer(){ 
-        conn.send({type:'ANSWER', choice:clientSortAns}); 
-        setClientState('waiting', '解答を送信しました');
-    }
-    function resetSort(){ clientSortAns=[]; document.querySelectorAll('.ans-btn').forEach(b=>{b.classList.remove('selected'); b.removeAttribute('data-order');}); document.getElementById('sort-sel').innerText=""; }
+    function resetClientSort(){ clientSortAns=[]; }
+    function sendSortAnswer(){ conn.send({type:'ANSWER', choice:clientSortAns}); }
 </script>
 </body>
 </html>
