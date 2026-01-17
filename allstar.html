@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>All-Star Quiz System V13</title>
+    <title>All-Star Quiz System V14</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800;900&family=Anton&display=swap" rel="stylesheet">
@@ -55,7 +55,7 @@
         .period-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; width: 90%; max-height: 70%; overflow-y: auto; padding: 20px; }
         .period-btn { background: linear-gradient(to bottom, #cc8800, #884400); border: 3px solid #ffcc00; border-radius: 15px; padding: 30px 20px; color: #fff; font-size: 28px; font-weight: 900; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); text-align: center; font-family: 'Anton'; letter-spacing: 2px; }
         
-        /* Game Layout (Standard) */
+        /* Game Layout */
         .layout-text { flex-direction: column; width: 100%; height: 100%; }
         .q-container { width: 90%; height: 22%; margin: 20px auto 30px auto; position: relative; background: linear-gradient(to right, #3a0088, #5500aa, #3a0088); border-radius: 15px; padding: 5px; border: 2px solid #aaa; display: flex; align-items: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.3); }
         .q-icon { font-family: 'Anton'; font-size: 80px; color: #00ffff; text-shadow: 3px 3px 0 #004444, 0 0 10px #00ffff; margin: 0 20px; transform: skewX(-10deg); }
@@ -96,12 +96,20 @@
         #client-view { background: #000; position: relative; height: 100vh; }
         .tv-background-client { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: linear-gradient(135deg, #001133 0%, #000000 100%); }
         #client-score { position: fixed; top: 0; left: 0; width: 100%; background: linear-gradient(to bottom, #222, #000); color: #ffd700; text-align: center; padding: 15px; font-size: 24px; font-weight: 900; z-index: 100; border-bottom: 2px solid #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.3); box-sizing: border-box; }
-        #client-pad { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100%; height: calc(100vh - 70px); margin-top: 70px; gap: 10px; padding: 10px; box-sizing: border-box; }
+        
+        /* 丸いボタンを横並びにするレイアウト */
+        #client-pad { 
+            position: absolute; top: 50%; left: 0; width: 100%; transform: translateY(-50%);
+            display: flex; flex-direction: row; justify-content: space-evenly; align-items: center;
+            padding: 10px; box-sizing: border-box;
+        }
         .ans-btn { 
-            border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; font-family: 'Anton'; font-size: 60px; color: #fff; 
+            width: 20vw; height: 20vw; max-width: 120px; max-height: 120px;
+            border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; 
+            font-family: 'Anton'; font-size: 40px; color: #fff; 
             display: flex; justify-content: center; align-items: center; 
             box-shadow: 0 5px 10px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.2); 
-            transition: 0.1s; height: 100%; text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+            transition: 0.1s; text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
         }
         .ans-btn:active { transform: scale(0.95); filter: brightness(1.2); border-color: #fff; }
         .btn-1 { background: radial-gradient(circle at 30% 30%, #44aaff, var(--col-1)); } 
@@ -110,9 +118,12 @@
         .btn-4 { background: radial-gradient(circle at 30% 30%, #ffff66, var(--col-4)); }
         
         /* Client UI States */
+        .client-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; background: rgba(0,0,0,0.9); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .client-msg-main { font-size: 32px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #0af; margin-bottom: 20px;}
+        
         .ans-btn.disabled { opacity: 0.2; pointer-events: none; filter: grayscale(100%); }
-        .ans-btn.selected { border-color: #fff; box-shadow: 0 0 30px #fff; transform: scale(1.05); z-index: 10; filter: brightness(1.2); }
-        .ans-btn.sort-selected::after { content: attr(data-order); position: absolute; color: #fff; font-size: 50px; z-index: 10; font-family: 'Anton'; text-shadow: 0 0 10px #000; }
+        .ans-btn.selected { border-color: #fff; box-shadow: 0 0 30px #fff; transform: scale(1.1); z-index: 10; filter: brightness(1.2); pointer-events: none; }
+        .ans-btn.sort-selected::after { content: attr(data-order); position: absolute; color: #fff; font-size: 40px; z-index: 10; font-family: 'Anton'; text-shadow: 0 0 10px #000; }
         .ans-btn.sort-selected { filter: brightness(0.5); pointer-events: none; position: relative; border-color: #888; }
 
     </style>
@@ -205,13 +216,17 @@
 <div id="client-view" class="screen hidden">
     <div class="tv-background-client"></div>
     <div id="client-score">現在の得点: 0点</div>
+    
     <div id="client-pad" class="hidden">
         <button class="ans-btn btn-1" id="cbtn-1" onclick="sendAnswer('1')">1</button>
         <button class="ans-btn btn-2" id="cbtn-2" onclick="sendAnswer('2')">2</button>
         <button class="ans-btn btn-3" id="cbtn-3" onclick="sendAnswer('3')">3</button>
         <button class="ans-btn btn-4" id="cbtn-4" onclick="sendAnswer('4')">4</button>
     </div>
-    <div id="wait-screen" class="full-screen flex-center hidden" style="background:rgba(0,0,0,0.8); z-index:50; color:#fff; font-size:30px; font-weight:bold;">STANDBY...</div>
+
+    <div id="client-overlay" class="client-overlay">
+        <div class="client-msg-main" id="cli-msg-main">出題をお待ちください</div>
+    </div>
 </div>
 
 <script>
@@ -297,10 +312,10 @@
             case 2: // Open & Start Immediate
                 displayQ(Q); playAudio('q_open'); playAudio('thinking',true); startTimer(10);
                 broadcast({type:'START', sort:false}); hostState=4; break;
-            case 4: stopTimer(); break; // Timeup
+            case 4: stopTimer(); break; // Timeup (wait user input)
             case 5: showVotes(); playAudio('votes'); hostState=6; break; // Votes
             case 6: showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); hostState=130; break; // Correct -> Rank
-            case 130: showRank(); hostState=140; break; // Single Rank
+            case 130: showRank(Q.correct); hostState=140; break; // Speed Rank
             case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break; // Loop
             case 7: // P-End
                 document.getElementById('period-end-view').classList.remove('hidden');
@@ -320,7 +335,7 @@
             case 12: case 13: case 14: case 15: // Reveal steps
                 revealSortRow(hostState-12, P.sortingQ.order, champSortAns); playAudio('votes'); hostState++;
                 if(hostState>15){ calcSortScores(P.sortingQ.order); hostState=131; } break;
-            case 131: showRank(); hostState=141; break;
+            case 131: showRank(null, true); hostState=141; break; // Overall Rank
             case 141: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); break;
         }
     }
@@ -370,11 +385,27 @@
     function calcScores(c){ for(let id in answers) if(answers[id].choice==c){ scores[id]++; periodScores[id]++; } broadcastScores(); }
     function calcSortScores(ord){ for(let id in answers) if(JSON.stringify(answers[id].choice)===JSON.stringify(ord)) scores[id]+=5; broadcastScores(); } 
     function broadcastScores(){ for(let id in conns) conns[id].send({type:'SCORE', score:scores[id]}); }
-    function showRank(){
+    
+    function showRank(correctAnswer, isOverall = false){
         const l=document.getElementById('rank-list'); l.innerHTML="";
-        const w=Object.keys(scores).map(id=>({n:participants[id], s:scores[id]})).sort((a,b)=>b.s-a.s);
-        if(!w.length) l.innerHTML="<div style='color:#fff;font-size:30px;text-align:center'>集計中...</div>";
-        else w.slice(0,10).forEach((p,i)=>{ l.innerHTML+=`<div class="rank-row" style="animation-delay:${i*0.1}s"><div class="rank-num">${i+1}</div><div class="rank-name">${p.n}</div><div class="rank-score-box">${p.s}P</div></div>`; });
+        let w = [];
+        
+        if (isOverall) {
+            // Overall Rank (Score desc)
+            w = Object.keys(scores).map(id=>({n:participants[id], v:scores[id]})).sort((a,b)=>b.v-a.v);
+        } else {
+            // Speed Rank (Time asc, only correct)
+            for(let id in answers) if(answers[id].choice == correctAnswer) w.push({n:participants[id]||"Unknown", v:answers[id].time});
+            w.sort((a,b)=>a.v-b.v);
+        }
+
+        if(!w.length) l.innerHTML="<div style='text-align:center;font-size:40px;color:#fff;'>該当者なし</div>";
+        else w.slice(0,10).forEach((p,i)=>{ 
+            let val = isOverall ? `${p.v}P` : `${p.v.toFixed(2)}s`;
+            l.innerHTML+=`<div class="rank-row" style="animation-delay:${i*0.1}s"><div class="rank-num">${i+1}</div><div class="rank-name">${p.n}</div><div class="rank-score-box">${val}</div></div>`; 
+        });
+        
+        document.querySelector('.side-text').innerText = isOverall ? "総合成績" : "スピード順";
         document.getElementById('ranking-modal').classList.remove('hidden');
     }
 
@@ -386,9 +417,10 @@
             conn.on('open', ()=>{ document.getElementById('join-btn').disabled = false; document.getElementById('join-btn').innerText = "参加"; });
             conn.on('data',d=>{
                 if(d.type==='SCORE') document.getElementById('client-score').innerText=`現在の得点: ${d.score}点`;
-                if(d.type==='STANDBY'){ setClientState('standby', d.msg); }
-                if(d.type==='START'){ isSorting=d.sort; resetClientSort(); setClientState('active'); }
-                if(d.type==='TIMEUP'){ document.getElementById('client-pad').classList.add('hidden'); document.getElementById('client-overlay').classList.remove('hidden'); document.getElementById('cli-msg-title').innerText="TIME UP"; document.getElementById('cli-msg-main').innerText="正解発表をお待ちください"; if(isSorting && clientSortAns.length<4) sendSortAnswer(); }
+                if(d.type==='STANDBY'){ updateClientUI('standby', d.msg); }
+                if(d.type==='START'){ isSorting=d.sort; resetClientSort(); updateClientUI('active'); }
+                // For TimeUp, keep visual state but disable interaction if not done
+                if(d.type==='TIMEUP'){ if(isSorting && clientSortAns.length<4) sendSortAnswer(); updateClientUI('locked'); }
             });
         });
     }
@@ -398,13 +430,15 @@
         conn.send({type:'LOGIN', name:n}); showScreen('client-view'); 
     }
     
-    function setClientState(state, msg="") {
+    function updateClientUI(state, msg="") {
         const overlay = document.getElementById('client-overlay');
         const pad = document.getElementById('client-pad');
+        const main = document.getElementById('cli-msg-main');
+        
         if (state === 'active') {
             overlay.classList.add('hidden');
             pad.classList.remove('hidden');
-            // Enable buttons
+            // Unlock all buttons
             document.querySelectorAll('.ans-btn').forEach(b=>{
                 b.classList.remove('disabled', 'selected', 'sort-selected');
                 b.style.pointerEvents = 'auto';
@@ -412,8 +446,11 @@
         } else if (state === 'standby') {
             overlay.classList.remove('hidden');
             pad.classList.add('hidden');
-            document.getElementById('cli-msg-title').innerText = "STANDBY";
-            document.getElementById('cli-msg-main').innerText = msg;
+            main.innerText = msg;
+        } else if (state === 'locked') {
+            // Keep pad visible, just disable interaction
+            // overlay.classList.add('hidden'); 
+            // We want users to see their choice.
         }
     }
 
@@ -421,15 +458,16 @@
         if(isSorting){
             if(clientSortAns.includes(c)) return;
             clientSortAns.push(c);
-            const btn = document.querySelector(`.btn-${c}`);
+            const btn = document.querySelector(`#cbtn-${c}`);
             btn.classList.add('sort-selected');
             btn.setAttribute('data-order', clientSortAns.length);
             if(clientSortAns.length===4) sendSortAnswer();
         } else {
             conn.send({type:'ANSWER', choice:c});
-            // Client visual lock
+            // Visual Lock
             document.querySelectorAll('.ans-btn').forEach(b=>{
-                if(b.innerText === c) b.classList.add('selected');
+                b.style.pointerEvents = 'none';
+                if(b.id === `cbtn-${c}`) b.classList.add('selected');
                 else b.classList.add('disabled');
             });
         }
