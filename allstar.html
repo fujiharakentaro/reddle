@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>All-Star Quiz System V15</title>
+    <title>All-Star Quiz System V16</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&family=Anton&family=Yusei+Magic&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&family=Anton&display=swap" rel="stylesheet">
     <style>
         :root { --col-1: #0088ff; --col-2: #ff2222; --col-3: #00cc00; --col-4: #ffcc00; }
         body { margin: 0; padding: 0; font-family: 'M PLUS Rounded 1c', sans-serif; width: 100vw; min-height: 100vh; overflow: hidden; user-select: none; background-color: #000; }
@@ -14,7 +14,7 @@
         .flex-center { display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .full-screen { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         
-        /* 背景 */
+        /* 背景 (全画面共通・固定) */
         .tv-background {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
             background: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 2px), radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 3px), linear-gradient(135deg, #00bfff 0%, #00008b 100%);
@@ -22,34 +22,29 @@
         }
         @keyframes bgMove { from { background-position: 0 0, 40px 60px, 130px 270px, 0 0; } to { background-position: 550px 550px, 390px 410px, 380px 820px, 0 0; } }
 
-        /* TITLE (本家風デザイン) */
+        /* TITLE */
         #title-view { z-index: 100; position: relative; height: 100vh; width: 100vw; }
-        .title-container { 
-            position: relative; margin-top: 5vh; margin-bottom: 5vh; text-align: center; 
-            transform: scale(1.2); 
+        .title-logo-container { position: relative; margin-top: 5vh; margin-bottom: 5vh; transform: scale(1.1); text-align: center; }
+        .title-logo-main {
+            font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 900; font-size: 140px; line-height: 1;
+            color: #ffd700; background: linear-gradient(to bottom, #ffffcc 0%, #ffcc00 40%, #b8860b 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 5px 0 #5c3a00) drop-shadow(0 8px 0 #222) drop-shadow(0 0 30px #ffd700);
+            transform: perspective(600px) rotateX(15deg); letter-spacing: -5px; margin-top: 10px;
         }
-        .logo-sub {
+        .title-logo-sub {
             font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 900; font-size: 50px;
-            /* 虹色グラデーション */
             background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             filter: drop-shadow(2px 2px 0px #000) drop-shadow(0 0 10px rgba(255,255,255,0.8));
             position: absolute; top: -30px; left: 50%; transform: translateX(-50%) skewX(-10deg);
             white-space: nowrap; z-index: 2; letter-spacing: 2px;
         }
-        .logo-main {
-            font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 900; font-size: 140px; line-height: 1;
-            /* ゴールドメタル質感 */
-            color: #ffd700;
-            background: linear-gradient(to bottom, #ffffcc 0%, #ffcc00 40%, #b8860b 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            /* 強力な立体枠線 */
-            filter: drop-shadow(0 5px 0 #5c3a00) drop-shadow(0 8px 0 #222) drop-shadow(0 0 30px #ffd700);
-            transform: perspective(600px) rotateX(15deg);
-            letter-spacing: -5px; margin-top: 10px;
-        }
-        .title-btn { 
-            width: 400px; padding: 20px; margin: 15px; font-size: 32px; font-weight: 900; color: #fff; border-radius: 50px; cursor: pointer; border: 3px solid #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.3); text-shadow: 2px 2px 4px #000; transition: 0.2s; font-family: 'Anton'; letter-spacing: 2px; 
+        .title-btn {
+            width: 400px; padding: 20px; margin: 15px; font-size: 32px; font-weight: 900; color: #fff;
+            border-radius: 50px; cursor: pointer; border: 3px solid #fff;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.3);
+            text-shadow: 2px 2px 4px #000; transition: 0.2s; font-family: 'Anton'; letter-spacing: 2px;
         }
         .btn-start-big { background: linear-gradient(to bottom, #ff2222, #990000); border-color: #ffaaaa; font-size: 40px; padding: 30px; }
         .btn-start-big:hover { transform: scale(1.05); background: linear-gradient(to bottom, #ff4444, #cc0000); }
@@ -120,7 +115,6 @@
         .tv-background-client { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: linear-gradient(135deg, #001133 0%, #000000 100%); }
         #client-score { position: fixed; top: 0; left: 0; width: 100%; background: linear-gradient(to bottom, #222, #000); color: #ffd700; text-align: center; padding: 15px; font-size: 24px; font-weight: 900; z-index: 100; border-bottom: 2px solid #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.3); box-sizing: border-box; }
         
-        /* 丸いボタンを横並びにするレイアウト */
         #client-pad { 
             position: absolute; top: 50%; left: 0; width: 100%; transform: translateY(-50%);
             display: flex; flex-direction: row; justify-content: space-evenly; align-items: center;
@@ -140,20 +134,17 @@
         .btn-3 { background: radial-gradient(circle at 30% 30%, #66ff66, var(--col-3)); } 
         .btn-4 { background: radial-gradient(circle at 30% 30%, #ffff66, var(--col-4)); }
         
-        /* Client UI States */
-        .client-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; background: rgba(0,0,0,0.9); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .client-msg-main { font-size: 32px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #0af; margin-bottom: 20px;}
-        
         .ans-btn.disabled { opacity: 0.2; pointer-events: none; filter: grayscale(100%); }
         .ans-btn.selected { border-color: #fff; box-shadow: 0 0 30px #fff; transform: scale(1.1); z-index: 10; filter: brightness(1.2); pointer-events: none; }
         .ans-btn.sort-selected::after { content: attr(data-order); position: absolute; color: #fff; font-size: 40px; z-index: 10; font-family: 'Anton'; text-shadow: 0 0 10px #000; }
         .ans-btn.sort-selected { filter: brightness(0.5); pointer-events: none; position: relative; border-color: #888; }
 
-        /* Result Animation */
-        #result-popup { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 200; pointer-events: none; }
-        .res-anim-win { font-family: 'Anton'; font-size: 100px; color: #ffd700; text-shadow: 0 0 50px #ff0000; animation: zoomIn 0.5s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
-        .res-anim-lose { font-family: 'Anton'; font-size: 100px; color: #888; text-shadow: 0 0 20px #fff; animation: zoomIn 0.5s; }
-        @keyframes zoomIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        /* Client Result Overlay (Static) */
+        #result-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; pointer-events: none; display: flex; justify-content: center; align-items: center; }
+        .res-text-win { font-family: 'M PLUS Rounded 1c'; font-weight: 900; font-size: 80px; color: #ffd700; text-shadow: 0 0 30px #ff0000, 2px 2px 0 #000; transform: rotate(-5deg); border: 5px solid #fff; padding: 20px 50px; border-radius: 20px; background: rgba(200,0,0,0.8); }
+        .res-text-lose { font-family: 'M PLUS Rounded 1c'; font-weight: 900; font-size: 80px; color: #ccc; text-shadow: 0 0 20px #000; transform: rotate(5deg); border: 5px solid #888; padding: 20px 50px; border-radius: 20px; background: rgba(50,50,50,0.8); }
+        
+        #client-wait-msg { position: absolute; bottom: 10%; width: 100%; text-align: center; font-size: 24px; color: #fff; text-shadow: 0 0 5px #000; z-index: 50; }
 
     </style>
 </head>
@@ -162,9 +153,9 @@
 <div class="tv-background"></div>
 
 <div id="title-view" class="screen flex-center tv-background">
-    <div class="title-container">
-        <div class="logo-sub">オールスター</div>
-        <div class="logo-main">感謝祭</div>
+    <div class="title-logo-container">
+        <div class="title-logo-sub">オールスター</div>
+        <div class="title-logo-main">感謝祭</div>
     </div>
     <button class="title-btn btn-start-big" onclick="goPeriodSelect()">START</button>
     <button class="title-btn btn-settings" onclick="startSetup()">SETTINGS</button>
@@ -174,7 +165,7 @@
     <div class="setup-container">
         <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h2>設定</h2><button class="btn" onclick="goTitle()">戻る</button></div>
         <div class="connect-info-box">
-            <div class="qr-area" id="qr-area"><div id="qrcode-setup"></div></div>
+            <div class="qr-area"><div id="qrcode-setup"></div></div>
             <div class="url-area">
                 <div style="font-weight:bold; color:#0f0;">参加者用URL:</div>
                 <input type="text" class="url-input" id="host-url" readonly onclick="this.select()">
@@ -253,11 +244,8 @@
         <button class="ans-btn btn-4" id="cbtn-4" onclick="sendAnswer('4')">4</button>
     </div>
 
-    <div id="client-overlay" class="client-overlay">
-        <div class="client-msg-main" id="cli-msg-main">出題をお待ちください</div>
-    </div>
-    
-    <div id="result-popup"></div>
+    <div id="client-wait-msg">出題をお待ちください</div>
+    <div id="result-overlay"></div>
 </div>
 
 <script>
@@ -278,8 +266,15 @@
     // Init
     window.onload = () => {
         const u = new URLSearchParams(window.location.search);
-        if(u.get('host')) { showScreen('client-login'); setTimeout(()=>initClient(u.get('host')), 500); } 
-        else { showScreen('title-view'); setTimeout(initHost, 500); }
+        if(u.get('host')) { 
+            // Client: Wait a bit before init to prevent UI freeze
+            showScreen('client-login'); 
+            setTimeout(()=>initClient(u.get('host')), 500); 
+        } else { 
+            // Host: Init immediately
+            showScreen('title-view'); 
+            setTimeout(initHost, 500); 
+        }
         document.addEventListener('keydown', e => { 
             if(e.code==='Escape') goTitle();
             if(!document.getElementById('host-view').classList.contains('hidden') && e.code==='Space'){ e.preventDefault(); nextPhase(); }
@@ -309,7 +304,7 @@
         });
         peer.on('connection',c=>{
             c.on('open',()=>{ conns[c.peer]=c; c.on('data',d=>{
-                if(d.type==='LOGIN'){ participants[c.peer]=d.name; scores[c.peer]=0; }
+                if(d.type==='LOGIN'){ participants[c.peer]=d.name; if(scores[c.peer]===undefined)scores[c.peer]=0; }
                 if(d.type==='ANSWER' && (hostState===4||hostState===10) && !answers[c.peer]) answers[c.peer]=d;
             }); c.on('close',()=>{delete conns[c.peer];}); });
         });
@@ -337,47 +332,65 @@
 
     function nextPhase(){
         const P=periods[currentPIdx]; const Q=P.questions[currentQIdx];
-        switch(hostState){
-            case 0: renderPSel(); break; // P-Sel
-            case 1: // Next Q
-                currentQIdx++; isSorting=false;
-                if(currentQIdx>=P.questions.length){ hostState=7; nextPhase(); return; }
-                resetDisp(); hostState=2; broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); break;
-            case 2: // Open & Start Immediate
-                displayQ(Q); playAudio('q_open'); playAudio('thinking',true); startTimer(10);
-                broadcast({type:'START', sort:false}); hostState=4; break;
-            case 4: stopTimer(); break; // Timeup
-            case 5: showVotes(); playAudio('votes'); hostState=6; break; // Votes
-            case 6: // Correct
-                showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); 
-                broadcast({type:'RESULT', correct:Q.correct}); // Send result to client
-                hostState=130; break; 
-            case 130: showRank(Q.correct); hostState=140; break; // Speed Rank
-            case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break; // Loop
-            case 7: // P-End
-                document.getElementById('period-end-view').classList.remove('hidden');
-                const champId = Object.keys(periodScores).reduce((a,b)=>periodScores[a]>periodScores[b]?a:b, Object.keys(periodScores)[0]);
-                document.getElementById('champ-name').innerText = participants[champId] || "該当なし";
-                setTimeout(()=>document.getElementById('champ-name').classList.remove('hidden'), 1000);
-                hostState=8; break;
-            case 8: // Sort Open & Start
-                document.getElementById('period-end-view').classList.add('hidden'); resetDisp(); isSorting=true;
-                displayQ(P.sortingQ); playAudio('q_open'); playAudio('thinking',true); startTimer(30);
-                broadcast({type:'START', sort:true}); hostState=10; break;
-            case 10: stopTimer(); break; // Sort Stop
-            case 11: // Sort Reveal Prep
-                const cid = Object.keys(periodScores).reduce((a,b)=>periodScores[a]>periodScores[b]?a:b, Object.keys(periodScores)[0]);
-                champSortAns = (answers[cid] && answers[cid].choice) ? answers[cid].choice : ["?","?","?","?"];
-                renderSortResultLayout(champSortAns, P.sortingQ); hostState=12; break; 
-            case 12: case 13: case 14: case 15: // Reveal steps
-                revealSortRow(hostState-12, P.sortingQ.order, champSortAns); playAudio('votes'); hostState++;
-                if(hostState>15){ 
-                    calcSortScores(P.sortingQ.order); 
-                    broadcast({type:'RESULT', correct:P.sortingQ.order});
-                    hostState=131; 
-                } break;
-            case 131: showRank(null, true); hostState=141; break; // Overall Rank
-            case 141: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); break;
+        try {
+            switch(hostState){
+                case 0: renderPSel(); break; // P-Sel
+                case 1: // Next Q
+                    currentQIdx++; isSorting=false;
+                    if(currentQIdx>=P.questions.length){ hostState=7; nextPhase(); return; }
+                    resetDisp(); hostState=2; broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); break;
+                case 2: // Open & Start Immediate
+                    displayQ(Q); playAudio('q_open'); playAudio('thinking',true); startTimer(10);
+                    broadcast({type:'START', sort:false}); hostState=4; break;
+                case 4: stopTimer(); break; // Timeup
+                case 5: showVotes(); playAudio('votes'); hostState=6; break; // Votes
+                case 6: // Correct
+                    showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); 
+                    broadcast({type:'RESULT', correct:Q.correct}); // Send result
+                    hostState=130; break; 
+                case 130: showRank(Q.correct); hostState=140; break; // Speed Rank (Safely)
+                case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break; // Loop
+                case 7: // P-End
+                    document.getElementById('period-end-view').classList.remove('hidden');
+                    // Safety check for champion
+                    let champId = "none";
+                    if(Object.keys(periodScores).length > 0) {
+                        champId = Object.keys(periodScores).reduce((a,b)=>periodScores[a]>periodScores[b]?a:b, Object.keys(periodScores)[0]);
+                    }
+                    document.getElementById('champ-name').innerText = participants[champId] || "該当なし";
+                    // Store champion's sort answer for later
+                    champSortAns = null; // Reset
+                    setTimeout(()=>document.getElementById('champ-name').classList.remove('hidden'), 1000);
+                    hostState=8; break;
+                case 8: // Sort Open & Start
+                    document.getElementById('period-end-view').classList.add('hidden'); resetDisp(); isSorting=true;
+                    displayQ(P.sortingQ); playAudio('q_open'); playAudio('thinking',true); startTimer(30);
+                    broadcast({type:'START', sort:true}); hostState=10; break;
+                case 10: stopTimer(); break; // Sort Stop
+                case 11: // Sort Reveal Prep
+                    // Find champ answer safely
+                    let cid = "none";
+                    if(Object.keys(periodScores).length > 0) {
+                        cid = Object.keys(periodScores).reduce((a,b)=>periodScores[a]>periodScores[b]?a:b, Object.keys(periodScores)[0]);
+                    }
+                    champSortAns = (answers[cid] && answers[cid].choice) ? answers[cid].choice : ["?","?","?","?"];
+                    renderSortResultLayout(champSortAns, P.sortingQ); hostState=12; break; 
+                case 12: case 13: case 14: case 15: // Reveal steps
+                    revealSortRow(hostState-12, P.sortingQ.order, champSortAns); playAudio('votes'); hostState++;
+                    if(hostState>15){ 
+                        calcSortScores(P.sortingQ.order); 
+                        broadcast({type:'RESULT', correct:P.sortingQ.order});
+                        hostState=131; 
+                    } break;
+                case 131: showRank(null, true); hostState=141; break; // Overall Rank
+                case 141: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); break;
+            }
+        } catch(e) {
+            console.error("State Error:", e);
+            // Fallback to avoid freeze
+            alert("エラーが発生しました。次の画面へ進みます。");
+            document.getElementById('ranking-modal').classList.add('hidden');
+            hostState=0;
         }
     }
     function broadcast(m){for(let k in conns)conns[k].send(m);}
@@ -431,16 +444,20 @@
         const l=document.getElementById('rank-list'); l.innerHTML="";
         let w = [];
         
-        if (isOverall) {
-            w = Object.keys(scores).map(id=>({n:participants[id]||"Unknown", v:scores[id]})).sort((a,b)=>b.v-a.v);
-        } else {
-            for(let id in answers) {
-                if(participants[id] && answers[id].choice == correctAnswer) { 
-                    w.push({n:participants[id], v:answers[id].time});
+        try {
+            if (isOverall) {
+                // Overall Rank
+                w = Object.keys(scores).map(id=>({n:participants[id]||"Unknown", v:scores[id]})).sort((a,b)=>b.v-a.v);
+            } else {
+                // Speed Rank (Time asc, only correct)
+                for(let id in answers) {
+                    if(participants[id] && answers[id].choice == correctAnswer) { 
+                        w.push({n:participants[id], v:answers[id].time});
+                    }
                 }
+                w.sort((a,b)=>a.v-b.v);
             }
-            w.sort((a,b)=>a.v-b.v);
-        }
+        } catch(e) { console.log("Rank Calc Error", e); }
 
         if(!w.length) l.innerHTML="<div style='text-align:center;font-size:40px;color:#fff;'>該当者なし</div>";
         else w.slice(0,10).forEach((p,i)=>{ 
@@ -477,26 +494,27 @@
     }
     
     function updateClientUI(state, msg="") {
-        const overlay = document.getElementById('client-overlay');
         const pad = document.getElementById('client-pad');
-        const main = document.getElementById('cli-msg-main');
-        const resPop = document.getElementById('result-popup');
-        resPop.innerHTML = ""; // Clear results
+        const main = document.getElementById('client-wait-msg');
+        const resPop = document.getElementById('result-overlay');
         
         if (state === 'active') {
-            overlay.classList.add('hidden');
             pad.classList.remove('hidden');
+            main.innerText = "解答してください";
+            resPop.innerHTML = ""; 
+            
+            // Unlock all buttons
             document.querySelectorAll('.ans-btn').forEach(b=>{
                 b.classList.remove('disabled', 'selected', 'sort-selected');
                 b.style.pointerEvents = 'auto';
             });
             lastChoice = null;
         } else if (state === 'standby') {
-            overlay.classList.remove('hidden');
             pad.classList.add('hidden');
             main.innerText = msg;
+            resPop.innerHTML = "";
         } else if (state === 'locked') {
-            // Keep visible, disable
+            main.innerText = "正解発表をお待ちください";
         }
     }
 
@@ -511,32 +529,37 @@
         } else {
             conn.send({type:'ANSWER', choice:c});
             lastChoice = c;
+            // Visual Lock (Do not hide buttons, just dim others)
             document.querySelectorAll('.ans-btn').forEach(b=>{
                 b.style.pointerEvents = 'none';
                 if(b.id === `cbtn-${c}`) b.classList.add('selected');
                 else b.classList.add('disabled');
             });
+            document.getElementById('client-wait-msg').innerText = "解答を受信しました";
         }
     }
     function resetClientSort(){ clientSortAns=[]; }
     function sendSortAnswer(){ 
         conn.send({type:'ANSWER', choice:clientSortAns}); 
-        lastChoice = JSON.stringify(clientSortAns); // store for sort check
+        lastChoice = JSON.stringify(clientSortAns);
+        document.getElementById('client-wait-msg').innerText = "解答を受信しました";
     }
     
     function showClientResult(correct) {
-        const pop = document.getElementById('result-popup');
+        const pop = document.getElementById('result-overlay');
         let isCorrect = false;
         
+        // Ensure buttons stay visible
+        document.getElementById('client-pad').classList.remove('hidden');
+
         if(isSorting) {
-            // Correct is array, lastChoice is stringified array or needs comparison
             if(JSON.stringify(clientSortAns) === JSON.stringify(correct)) isCorrect = true;
         } else {
             if(lastChoice === correct) isCorrect = true;
         }
         
-        if(isCorrect) pop.innerHTML = `<div class="res-anim-win">WIN</div>`;
-        else pop.innerHTML = `<div class="res-anim-lose">LOSE</div>`;
+        if(isCorrect) pop.innerHTML = `<div class="res-text-win">正解</div>`;
+        else pop.innerHTML = `<div class="res-text-lose">不正解</div>`;
     }
 </script>
 </body>
