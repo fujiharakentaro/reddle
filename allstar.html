@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>All-Star Quiz System V36</title>
+    <title>All-Star Quiz System V37</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&family=Anton&display=swap" rel="stylesheet">
@@ -138,7 +138,7 @@
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto;
             gap: 20px;
-            width: 48.75%; /* 65 * 0.75 */
+            width: 53%; /* Changed to 53% */
             margin: 0 auto; 
             justify-content: center;
             align-content: center;
@@ -610,8 +610,8 @@
                     showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); 
                     broadcast({type:'RESULT', correct:Q.correct}); 
                     hostState=130; break; 
-                case 130: showRank(Q.correct); hostState=140; break;
-                case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break;
+                case 130: showRank(Q.correct); hostState=140; break; // Speed Rank
+                case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break; // Loop
                 case 7: // P-End
                     document.getElementById('period-end-view').classList.remove('hidden');
                     document.getElementById('champ-name').classList.add('hidden'); 
@@ -644,7 +644,7 @@
                         broadcast({type:'RESULT', correct:P.sortingQ.order});
                         hostState=131; 
                     } break;
-                case 131: showRank(null, true); hostState=141; break;
+                case 131: showRank(null, true); hostState=141; break; // Overall Rank
                 case 141: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); break;
             }
         } catch(e) { console.error(e); alert("エラーが発生しましたが続行します"); document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; }
