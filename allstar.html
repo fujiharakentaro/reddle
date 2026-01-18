@@ -92,44 +92,80 @@
         .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
 
         /* HOST GAME */
-        #host-view { display: flex; padding: 20px; box-sizing: border-box; position: relative; height: 100vh; }
+        #host-view { display: flex; padding: 20px; box-sizing: border-box; position: relative; height: 100vh; flex-direction: column; }
         #period-select-view { background: rgba(0,0,0,0.9); z-index: 800; }
         .period-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; width: 90%; max-height: 70%; overflow-y: auto; padding: 20px; }
         .period-btn { background: linear-gradient(to bottom, #cc8800, #884400); border: 3px solid #ffcc00; border-radius: 15px; padding: 30px 20px; color: #fff; font-size: 28px; font-weight: 900; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); text-align: center; font-family: 'Anton'; letter-spacing: 2px; }
         
-        /* Game Layout */
-        .layout-text { flex-direction: column; width: 100%; height: 100%; }
-        .q-container { width: 90%; height: 15%; margin: 20px auto 30px auto; position: relative; background: linear-gradient(to right, #3a0088, #5500aa, #3a0088); border-radius: 15px; padding: 5px; border: 2px solid #aaa; display: flex; align-items: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.3); }
+        /* Game Layout (Unified Container) */
+        #game-layout {
+            display: flex; flex-direction: column; width: 100%; height: 100%;
+        }
+
+        /* Q-Container (Fixed Height/Position for both) */
+        .q-container { 
+            width: 90%; height: 18%; /* 固定の高さ */
+            margin: 0 auto 20px auto; 
+            position: relative; 
+            background: linear-gradient(to right, #3a0088, #5500aa, #3a0088); 
+            border-radius: 15px; padding: 5px; border: 2px solid #aaa; 
+            display: flex; align-items: center; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.3); 
+            flex-shrink: 0; /* 縮小させない */
+        }
         .q-icon { font-family: 'Anton'; font-size: 80px; color: #00ffff; text-shadow: 3px 3px 0 #004444, 0 0 10px #00ffff; margin: 0 20px; transform: skewX(-10deg); }
         .q-text-box { flex: 1; background: #fff; border-radius: 10px; padding: 10px; height: 80%; display: flex; align-items: center; justify-content: center; }
         .q-text-content { color: #000066; font-size: 3.0vw; font-weight: 900; text-align: center; line-height: 1.2; }
-        .options-area { width: 85%; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
         
-        /* Grid Layout for Images */
+        /* Options Area (Shared Space) */
+        .options-area { 
+            flex: 1; /* 残りの高さを全て使う */
+            width: 90%; margin: 0 auto 5vh auto;
+            position: relative;
+        }
+        
+        /* Layout: Text (Column List) */
+        .layout-text .options-area {
+            display: flex; flex-direction: column; gap: 15px; justify-content: space-between;
+        }
+        .layout-text .option-panel { 
+            width: 100%; flex: 1; /* 均等に高さを分ける */
+            background: linear-gradient(to bottom, #222, #000); 
+            border-radius: 45px; border: 2px solid #555; 
+            display: flex; align-items: center; padding: 0 10px; position: relative; overflow: hidden; 
+        }
+        .layout-text .opt-num {
+            width: 60px; height: 60px; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            font-family: 'Anton'; font-size: 36px; color: #fff; border: 3px solid #fff; 
+            margin-right: 20px; flex-shrink: 0; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); 
+            box-shadow: 0 3px 5px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.4); 
+            z-index: 5; 
+        }
+
+        /* Layout: Image (2x2 Grid) */
         .layout-image .options-area {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto auto;
+            grid-template-rows: 1fr 1fr; /* 全高さいっぱい */
             gap: 20px;
-            width: 65%; /* Restore width to 65% */
-            margin: 0 auto 5vh auto; 
-            justify-content: center;
         }
-
-        .option-panel { width: 100%; height: 90px; background: linear-gradient(to bottom, #222, #000); border-radius: 45px; border: 2px solid #555; display: flex; align-items: center; padding: 0 10px; position: relative; overflow: hidden; }
-        
-        /* Image Option Panel Specifics */
         .layout-image .option-panel {
-            width: 100%; height: auto; padding: 0;
+            width: 100%; height: 100%; padding: 0;
             border-radius: 20px; background: #000; border: 4px solid #fff;
-            aspect-ratio: 16 / 9; /* Enforce 16:9 */
+            position: relative; overflow: hidden;
+            /* aspect-ratio removed to fill grid */
+        }
+        .layout-image .opt-num { 
+            position: absolute; top: 10px; left: 10px; margin: 0; 
+            width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff; font-family: 'Anton'; font-size: 36px; color: #fff;
+            display: flex; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.5); /* slightly clearer numbers */
+            z-index: 5;
         }
 
-        .opt-num { width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-family: 'Anton'; font-size: 36px; color: #fff; border: 3px solid #fff; margin-right: 20px; flex-shrink: 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); box-shadow: 0 3px 5px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.4); z-index: 5; }
-        
-        /* Image Layout Numbers */
-        .layout-image .opt-num { position: absolute; top: 10px; left: 10px; margin: 0; }
-
+        /* Shared Option Content */
         .opt-val { color: #fff; font-size: 3vw; font-weight: 900; text-shadow: 0 0 5px #00f; flex: 1; position: relative; height: 100%; display: flex; align-items: center; }
         
         /* Image Styling - FORCE STRETCH */
@@ -151,17 +187,10 @@
         /* Image Layout Vote Count */
         .layout-image .vote-count {
             position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: #0044aa; /* Blue background */
-            border: 3px solid #fff;
-            border-radius: 15px;
-            padding: 0 20px;
-            min-width: 60px;
-            font-size: 40px;
-            text-align: center;
-            opacity: 0;
-            z-index: 20;
+            bottom: 10px; right: 10px;
+            background: #0044aa; border: 3px solid #fff; border-radius: 15px;
+            padding: 0 20px; min-width: 60px; font-size: 40px; text-align: center;
+            opacity: 0; z-index: 20;
         }
 
         .col-1 { background: radial-gradient(circle at 30% 30%, #44aaff, var(--col-1)); border-color: #fff; } .col-2 { background: radial-gradient(circle at 30% 30%, #ff6666, var(--col-2)); border-color: #fff; } .col-3 { background: radial-gradient(circle at 30% 30%, #66ff66, var(--col-3)); border-color: #fff; } .col-4 { background: radial-gradient(circle at 30% 30%, #ffff66, var(--col-4)); border-color: #fff; }
