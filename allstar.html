@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>All-Star Quiz System</title>
+    <title>All-Star Quiz System V29</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&family=Anton&display=swap" rel="stylesheet">
@@ -107,14 +107,14 @@
         /* Options Area (Text vs Image) */
         .options-area { width: 85%; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
         
-        /* Grid Layout for Images (Modified to prevent overlap) */
+        /* Grid Layout for Images (Adjusted to fit screen) */
         .layout-image .options-area {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto;
             gap: 20px;
-            width: 80%; /* Reduced width to avoid corner overlap */
-            margin: 0 auto 5vh auto; /* Added bottom margin */
+            width: 70%; /* Shrink width to ensure height fits on screen */
+            margin: 0 auto 5vh auto; 
             justify-content: center;
         }
 
@@ -142,14 +142,14 @@
         /* Normal Vote Count */
         .vote-count { position: absolute; right: 30px; font-family: 'Anton'; font-size: 50px; color: #ffd700; text-shadow: 2px 2px 0 #000; opacity: 0; z-index: 10; }
         
-        /* Image Layout Vote Count (New Design) */
+        /* Image Layout Vote Count */
         .layout-image .vote-count {
             position: absolute;
             bottom: 10px;
             right: 10px;
             background: #0044aa; /* Blue background */
             border: 3px solid #fff;
-            border-radius: 15px; /* Rounded corners */
+            border-radius: 15px;
             padding: 0 20px;
             min-width: 60px;
             font-size: 40px;
@@ -411,6 +411,7 @@
     let currentPIdx=0, currentQIdx=0, hostState=0; 
     let answers={}, participants={}, scores={}, periodScores={}, clientStartTime=0, bgmAudio=null;
     let isSorting=false, clientSortAns=[], champSortAns=null, lastChoice=null;
+    let isLagTime = false;
 
     // --- Init ---
     window.onload = () => {
@@ -454,7 +455,13 @@
         peer.on('connection',c=>{
             c.on('open',()=>{ conns[c.peer]=c; c.on('data',d=>{
                 if(d.type==='LOGIN'){ participants[c.peer]=d.name; scores[c.peer]=0; }
-                if(d.type==='ANSWER' && (hostState===4||hostState===10) && !answers[c.peer]) answers[c.peer]=d;
+                if(d.type==='ANSWER') {
+                    const canAnswer = (hostState === 3 || hostState === 9) || 
+                                      ((hostState === 4 || hostState === 10) && isLagTime);
+                    if (canAnswer && !answers[c.peer]) {
+                        answers[c.peer] = d;
+                    }
+                }
             }); c.on('close',()=>{delete conns[c.peer];}); });
         });
     }
@@ -562,15 +569,16 @@
                     resetDisp(); hostState=2; broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); break;
                 case 2: // Open & Start Immediate
                     displayQ(Q); playAudio('q_open'); playAudio('thinking',true); startTimer(10);
-                    broadcast({type:'START', sort:false}); hostState=4; break;
+                    broadcast({type:'START', sort:false}); hostState=3; break; 
+                case 3: /* Thinking... handled by timer */ break;
                 case 4: stopTimer(); break; // Timeup
-                case 5: showVotes(); playAudio('votes'); hostState=6; break; // Votes
+                case 5: showVotes(); playAudio('votes'); hostState=6; break; // Votes 
                 case 6: // Correct
                     showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); 
                     broadcast({type:'RESULT', correct:Q.correct}); 
                     hostState=130; break; 
-                case 130: showRank(Q.correct); hostState=140; break; // Speed Rank
-                case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break; // Loop
+                case 130: showRank(Q.correct); hostState=140; break;
+                case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break;
                 case 7: // P-End
                     document.getElementById('period-end-view').classList.remove('hidden');
                     document.getElementById('champ-name').classList.add('hidden'); 
@@ -585,23 +593,23 @@
                     displayQ({q:"", options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}});
                     broadcast({type:'STANDBY', msg:'山分けクイズが出題されます'});
                     hostState=9; break;
-                case 9: // Sort Open & Start (20s)
+                case 9: // Sort Open & Start
                     displayQ(P.sortingQ); playAudio('q_open'); playAudio('sort_thinking',true); startTimer(20);
-                    broadcast({type:'START', sort:true}); hostState=10; break;
-                case 10: stopTimer(); break; // Sort Stop
+                    broadcast({type:'START', sort:true}); hostState=9; break;
+                case 10: stopTimer(); break; // Sort Stop 
                 case 11: // Sort Reveal Prep
                     let cid="none"; if(Object.keys(periodScores).length>0) cid=Object.keys(periodScores).reduce((a,b)=>periodScores[a]>periodScores[b]?a:b, Object.keys(periodScores)[0]);
                     champSortAns = (answers[cid] && answers[cid].choice) ? answers[cid].choice : ["?","?","?","?"];
                     renderSortResultLayout(champSortAns, P.sortingQ); hostState=12; break; 
-                case 12: case 13: case 14: case 15: // Reveal steps
+                case 12: case 13: case 14: case 15: // Reveal
                     revealSortRow(hostState-12, P.sortingQ.order, champSortAns); playAudio('sort_reveal'); hostState++;
                     if(hostState>15){ 
                         calcSortScores(P.sortingQ.order); 
                         broadcast({type:'RESULT', correct:P.sortingQ.order});
                         hostState=131; 
                     } break;
-                case 131: showRank(null, true); hostState=141; break; // Overall Rank
-                case 141: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); break;
+                case 131: showRank(null, true); hostState=141; break;
+                case 141: document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; nextPhase(); broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); break;
             }
         } catch(e) { console.error(e); alert("エラーが発生しましたが続行します"); document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; }
     }
@@ -650,11 +658,19 @@
     function stopTimer(){ 
         clearInterval(tId); 
         broadcast({type:'TIMEUP'}); 
-        stopAudio(); 
-        hostState++; 
+        // BGM NOT STOPPED HERE
+        
+        // Strict Lag Logic
+        isLagTime = true;
+        setTimeout(() => { isLagTime = false; }, 1000);
+
+        if(hostState === 3) hostState = 4; // Normal Thinking -> TimeUp
+        else if(hostState === 9) hostState = 10; // Sort Thinking -> Sort TimeUp
+        else hostState++; 
     }
     
     function showVotes(){ 
+        stopAudio(); // Stop Thinking BGM here
         document.getElementById('timer-display').classList.add('hidden'); // Hide 0 here
         for(let k=1;k<=4;k++) document.getElementById('vote-'+k).innerText = Object.values(answers).filter(a=>a.choice==k).length; 
         for(let k=1;k<=4;k++) document.getElementById('vote-'+k).style.opacity=1; 
