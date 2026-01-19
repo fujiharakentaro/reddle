@@ -315,12 +315,13 @@
             </div>
         </div>
 
-        <div id="setup-bgm" class="setup-body hidden">
+       <div id="setup-bgm" class="setup-body hidden">
             <button class="btn" onclick="showSetupMenu()" style="margin-bottom:10px;">◀ メニューへ</button>
             <h3 style="color:#fb0;">音響設定 (自動保存)</h3>
             <div style="line-height:2.5;">
                 出題:<input type="file" accept="audio/*" onchange="saveAudio('q_open',this)"><br>
                 シンキング:<input type="file" accept="audio/*" onchange="saveAudio('thinking',this)"><br>
+                ピリオド終了:<input type="file" accept="audio/*" onchange="saveAudio('period_end',this)"><br>
                 集計:<input type="file" accept="audio/*" onchange="saveAudio('votes',this)"><br>
                 正解:<input type="file" accept="audio/*" onchange="saveAudio('correct',this)"><br>
                 山分け発表:<input type="file" accept="audio/*" onchange="saveAudio('sort_reveal',this)"><br>
