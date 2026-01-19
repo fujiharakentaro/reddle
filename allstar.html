@@ -490,11 +490,17 @@
         });
         peer.on('connection',c=>{
             c.on('open',()=>{ conns[c.peer]=c; c.on('data',d=>{
-                if(d.type==='LOGIN'){ participants[c.peer]=d.name; scores[c.peer]=0; }
+                if(d.type==='LOGIN'){ 
+                    participants[c.peer]=d.name; 
+                    // ▼▼▼ 修正: 初期化漏れを防ぐ ▼▼▼
+                    if(scores[c.peer] === undefined) scores[c.peer]=0;
+                    if(periodScores[c.peer] === undefined) periodScores[c.peer]=0;
+                    if(periodTimes[c.peer] === undefined) periodTimes[c.peer]=0;
+                    // ▲▲▲▲▲▲
+                }
                 if(d.type==='ANSWER') {
-                    // Receive answer logic
-                    const canAnswer = (hostState === 3 || hostState === 9)||isLagTime;
-                    
+                    // 解答受信ロジック（ラグタイム考慮）
+                    const canAnswer = (hostState === 3 || hostState === 9) || isLagTime;
                     if (canAnswer && !answers[c.peer]) {
                         answers[c.peer] = d;
                     }
@@ -755,11 +761,18 @@
     function calcScores(c){ 
         for(let id in answers) {
             if(answers[id].choice==c){ 
+                // ▼▼▼ 修正: 数値でない場合は0にしてから加算 ▼▼▼
+                if(isNaN(scores[id])) scores[id] = 0;
+                if(isNaN(periodScores[id])) periodScores[id] = 0;
+                if(isNaN(periodTimes[id])) periodTimes[id] = 0;
+                
                 scores[id]++; 
                 periodScores[id]++; 
-                // 累積時間を加算
-                if(!periodTimes[id]) periodTimes[id]=0;
-                periodTimes[id] += parseFloat(answers[id].time || 0);
+                
+                // タイムを加算
+                let t = parseFloat(answers[id].time || 0);
+                periodTimes[id] += t;
+                // ▲▲▲▲▲▲
             }
         } 
         broadcastScores(); 
