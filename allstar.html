@@ -440,9 +440,14 @@
     
     let peer, conn, conns={}, myId;
     let currentPIdx=0, currentQIdx=0, hostState=0; 
-    let answers={}, participants={}, scores={}, periodScores={}, clientStartTime=0, bgmAudio=null, currentChampId=null;
-    let isSorting=false, clientSortAns=[], champSortAns=null, lastChoice=null, currentChampId=null;
+    
+    // ▼▼▼ 修正箇所：ここをきれいに書き換えます ▼▼▼
+    let answers={}, participants={}, scores={}, periodScores={}, periodTimes={};
+    let clientStartTime=0, bgmAudio=null;
+    let isSorting=false, clientSortAns=[], champSortAns=null, lastChoice=null;
     let isLagTime = false;
+    let currentChampId = null; // ここで1回だけ宣言する
+    // ▲▲▲▲▲▲
 
     // --- Init ---
     window.onload = () => {
