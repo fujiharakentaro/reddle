@@ -138,7 +138,7 @@
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto;
             gap: 20px;
-            width: 56%; /* Changed to 56% */
+            width: 53%; /* Changed to 53% */
             margin: 0 auto; 
             justify-content: center;
             align-content: center;
@@ -641,7 +641,7 @@
                     currentChampId = champId; // ここでグローバル変数に保存
                     
                     document.getElementById('champ-name').innerText = participants[champId] || "該当なし";
-                    champSortAns = null; hostState = 71; break;
+                    champSortAns = null; hostState = 71; break; 
                 
                 case 71: // Reveal Champ
                     document.getElementById('champ-name').classList.remove('hidden'); playAudio('correct');
@@ -660,7 +660,7 @@
                     // --- 修正箇所：保存された currentChampId を参照 ---
                     champSortAns = (answers[currentChampId] && answers[currentChampId].choice) ? answers[currentChampId].choice : ["?","?","?","?"];
                     
-                    renderSortResultLayout(champSortAns, P.sortingQ); hostState = 12; break;
+                    renderSortResultLayout(champSortAns, P.sortingQ); hostState = 12; break; 
                 case 12: case 13: case 14: case 15: // Reveal
                     revealSortRow(hostState-12, P.sortingQ.order, champSortAns); playAudio('sort_reveal'); hostState++;
                     if(hostState>15){ 
