@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Bluff Quiz Master V14</title>
+    <title>Bluff Quiz Master V15</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -29,6 +29,9 @@
         /* Specific Buttons */
         .btn-back { background: #7f8c8d; font-size: 14px; padding: 5px 15px; }
         .btn-opt { background: #3498db; width: 100%; margin: 10px 0; text-align: left; }
+        /* V15: Disabled Option Style */
+        .btn-opt:disabled { background: #444; color: #888; border: 1px solid #555; pointer-events: none; }
+        
         .btn-copy { background: #27ae60; font-size: 14px; padding: 5px 10px; }
         .btn-start-q { background: #e67e22; font-weight: bold; width: 45%; margin: 5px; }
         .btn-judge-qr { background: #8e44ad; font-size: 14px; padding: 5px 10px; margin-left: 10px; }
@@ -66,7 +69,7 @@
         }
         
         .author-info { 
-            display: none; /* Hidden initially */
+            display: none; 
             font-size: 16px; color: #ccc; 
             margin-top: 8px; text-align: right; 
             border-top: 1px solid #555; padding-top: 5px; 
@@ -101,7 +104,7 @@
 <body>
 
 <div id="host-title" class="screen hidden">
-    <h1>Bluff Quiz Master V14</h1>
+    <h1>Bluff Quiz Master V15</h1>
     <button class="btn-gear" onclick="goToQRegistration()" title="問題登録">⚙️</button>
     <div class="title-container">
         <button class="btn-big-start" onclick="goToGameSettings()">GAME<br>START</button>
@@ -286,7 +289,8 @@
     let maxPlayers = 3;
     let isHost = false;
     let myRole = 'player'; 
-    let selectedVoteIndex = -1; // Client vote selection
+    let selectedVoteIndex = -1; 
+    let myFakeAnswer = ""; // V15 Add: Store my answer
     
     // Result Phase Variables
     let currentResultStep = 0; // 0:Votes, 1:Answer, 2:Authors, 3:Scores
@@ -722,7 +726,6 @@
                 btn.innerText = "確定して出題する";
             }
             if (data.type === 'JUDGE_RESET_BUTTON') {
-                // Reset button specifically
                 const btn = document.getElementById('btn-judge-publish');
                 btn.disabled = false;
                 btn.innerText = "確定して出題する";
@@ -800,6 +803,7 @@
     function submitFakeAnswer() {
         const ans = document.getElementById('fake-answer').value;
         if (!ans) return;
+        myFakeAnswer = ans; // V15: Save my answer
         hostConn.send({ type: 'FAKE_ANSWER', answer: ans });
         const btn = document.getElementById('client-input').querySelector('button');
         btn.innerText = "送信完了！画面で待機...";
@@ -808,9 +812,13 @@
 
     function renderClientOptions(options) {
         const container = document.getElementById('cli-options');
-        container.innerHTML = options.map((opt, i) => 
-            `<button class="btn-opt" onclick="showVoteConfirm(${i}, '${opt.replace(/'/g, "\\'")}')">${opt}</button>`
-        ).join('');
+        container.innerHTML = options.map((opt, i) => {
+            // V15: Check if it matches my answer
+            if (opt === myFakeAnswer) {
+                return `<button class="btn-opt" disabled>${opt} (あなた)</button>`;
+            }
+            return `<button class="btn-opt" onclick="showVoteConfirm(${i}, '${opt.replace(/'/g, "\\'")}')">${opt}</button>`;
+        }).join('');
     }
 
     function showVoteConfirm(index, text) {
