@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>被らないダンジョン V3.5</title>
+    <title>被らないダンジョン V3.6</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Reggae+One&display=swap" rel="stylesheet">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Reggae+One&display=swap');
-
         body {
             font-family: 'DotGothic16', sans-serif;
             background-color: #111;
@@ -30,158 +32,122 @@
             transition: background 0.5s;
         }
 
-        /* --- Title Screen Styles (Updated V3.5) --- */
-        #screen-title { background: #000; background-image: radial-gradient(circle, #333 1px, transparent 1px); background-size: 20px 20px; }
+        /* --- Title Logo Design (The "Top Line" Style) --- */
+        #screen-title { 
+            background: #000; 
+            background-image: radial-gradient(circle, #333 1px, transparent 1px); 
+            background-size: 20px 20px; 
+        }
         
         .title-logo {
             font-family: 'Reggae One', cursive;
-            font-size: 100px; /* 迫力を出すため少し大きく */
-            color: #d32f2f; /* 文字本体は赤 */
+            font-size: 110px; /* PC向け特大サイズ */
+            line-height: 1.1;
+            margin-bottom: 60px;
             position: relative;
-            margin-bottom: 40px;
-            line-height: 1.2;
+            z-index: 1;
             
-            /* 1. 滑らかな太い枠線（黄色） */
+            /* 文字の中身（赤グラデーション） */
+            background: linear-gradient(to bottom, #ff5e62 0%, #c0392b 50%, #800000 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            
+            /* 金色の縁取りと、分厚い立体の土台（影） */
+            /* strokeで縁取りしつつ、shadowで厚みを出す */
             -webkit-text-stroke: 4px #f1c40f;
-            
-            /* 2. 枠の外側の発光（オレンジ）と立体感の影 */
-            /* drop-shadowは輪郭に対してかかるので、黄色の枠の外側にオレンジの発光が広がる */
-            filter: 
-                drop-shadow(0 0 4px #e67e22)  /* 枠のすぐ外側の強いオレンジ光 */
-                drop-shadow(0 0 15px #e67e22) /* 外側に広がるオレンジのぼかし */
-                drop-shadow(8px 8px 15px rgba(0,0,0,0.9)); /* 全体の立体的な影 */
-        }
-        @media (max-width: 600px) { 
-            .title-logo { 
-                font-size: 60px; 
-                -webkit-text-stroke: 3px #f1c40f;
-            } 
+            filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
         }
 
+        /* 立体感を出すためのレイヤー（擬似要素で厚みを表現） */
+        .title-logo::before {
+            content: "被らないダンジョン";
+            position: absolute;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            
+            /* 中身の色を無効化 */
+            -webkit-text-fill-color: transparent;
+            -webkit-text-stroke: 8px #f39c12; /* 外側の太い枠（オレンジ金） */
+            
+            /* 影を重ねて厚みを表現 */
+            text-shadow: 
+                0px 4px 0 #d35400,  /* 1段目 */
+                0px 8px 0 #d35400,  /* 2段目 */
+                0px 12px 0 #a04000, /* 3段目 */
+                0px 16px 0 #a04000, /* 4段目 */
+                0px 20px 10px rgba(0,0,0,0.8); /* 接地影 */
+        }
+
+        /* スマホ対応 */
+        @media (max-width: 800px) { 
+            .title-logo { font-size: 60px; -webkit-text-stroke: 2px #f1c40f; }
+            .title-logo::before { -webkit-text-stroke: 5px #f39c12; text-shadow: 0px 4px 0 #d35400, 0px 8px 5px rgba(0,0,0,0.8); }
+        }
+
+        /* ボタン類のデザイン */
         .btn-title-start {
-            padding: 20px 50px; font-size: 28px; background: #c0392b; border: 4px solid #f1c40f;
-            color: #fff; text-shadow: 2px 2px 0 #000; box-shadow: 0 8px 0 #8e2a1f;
+            padding: 20px 60px; font-size: 32px; 
+            background: linear-gradient(to bottom, #c0392b, #8e2a1f);
+            border: 4px solid #f1c40f; border-radius: 10px;
+            color: #fff; text-shadow: 2px 2px 0 #000; 
+            box-shadow: 0 10px 0 #5a1a15, 0 15px 10px rgba(0,0,0,0.5);
             transition: all 0.1s; cursor: pointer; font-family: 'Reggae One', cursive; margin-bottom: 20px;
         }
-        .btn-title-start:active { transform: translateY(5px); box-shadow: 0 3px 0 #8e2a1f; }
+        .btn-title-start:active { transform: translateY(6px); box-shadow: 0 4px 0 #5a1a15; }
 
         .btn-title-settings {
-            padding: 10px 30px; font-size: 16px; background: #333; border: 1px solid #777;
-            cursor: pointer; color: #aaa; font-family: 'DotGothic16', sans-serif;
+            padding: 10px 30px; font-size: 16px; background: transparent; border: 1px solid #777;
+            cursor: pointer; color: #777; font-family: 'DotGothic16', sans-serif; margin-top: 20px;
         }
-        .btn-title-settings:hover { color: #fff; border-color: #fff; background: #444; }
+        .btn-title-settings:hover { color: #fff; border-color: #fff; background: rgba(255,255,255,0.1); }
 
         /* --- Start Options Modal --- */
         .start-options-box {
-            background: rgba(0,0,0,0.9); border: 4px double #fff; padding: 30px; border-radius: 10px;
-            width: 90%; max-width: 500px;
+            background: rgba(0,0,0,0.9); border: 4px double #f1c40f; padding: 40px; border-radius: 10px;
+            width: 90%; max-width: 500px; box-shadow: 0 0 30px rgba(241, 196, 15, 0.2);
         }
-        .option-row { margin: 20px 0; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .option-row input { width: 80px; font-size: 20px; padding: 5px; }
+        .option-row { margin: 30px 0; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
+        .option-row input { width: 100px; font-size: 24px; padding: 5px; }
 
-        /* --- Other UI Components --- */
-        button {
-            font-family: 'DotGothic16', sans-serif;
-            background: #333; color: #fff; border: 1px solid #fff;
-            padding: 8px 16px; cursor: pointer; margin: 5px;
-            transition: 0.1s;
-        }
+        /* --- Common UI --- */
+        button { font-family: 'DotGothic16', sans-serif; background: #333; color: #fff; border: 1px solid #fff; padding: 8px 16px; cursor: pointer; margin: 5px; transition: 0.1s; }
         button:active { transform: translateY(2px); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-large { padding: 15px 30px; font-size: 20px; background: #c0392b; border: 2px solid #fff; }
         .btn-confirm { background: #e67e22; color: #000; font-weight: bold; }
-
-        input[type="text"], input[type="number"] {
-            padding: 5px; background: #000; color: #fff; border: 1px solid #777; text-align: center;
-        }
+        input[type="text"], input[type="number"] { padding: 5px; background: #000; color: #fff; border: 1px solid #777; text-align: center; font-family: 'DotGothic16', sans-serif; }
 
         /* --- Setup Screen --- */
-        #setup-container {
-            width: 95%; max-width: 800px; height: 90vh;
-            overflow-y: auto; background: #222; border: 4px double #777;
-            padding: 20px; box-sizing: border-box; text-align: left;
-        }
+        #setup-container { width: 95%; max-width: 800px; height: 90vh; overflow-y: auto; background: #222; border: 4px double #777; padding: 20px; box-sizing: border-box; text-align: left; }
         .setup-section { margin-bottom: 20px; border-bottom: 1px dashed #555; padding-bottom: 20px; }
         .setup-section h3 { color: #f1c40f; margin-top: 0; }
-        
-        .floor-config-row {
-            display: flex; align-items: center; gap: 10px; margin-bottom: 5px;
-            background: #333; padding: 5px;
-        }
+        .floor-config-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; background: #333; padding: 5px; }
         .floor-label { width: 40px; font-weight: bold; }
-
-        .q-list-item {
-            background: #333; padding: 5px; margin-bottom: 2px;
-            display: flex; justify-content: space-between; font-size: 14px;
-        }
+        .q-list-item { background: #333; padding: 5px; margin-bottom: 2px; display: flex; justify-content: space-between; font-size: 14px; }
 
         /* --- Game Screen --- */
-        .dungeon-header {
-            position: absolute; top: 0; left: 0; width: 100%;
-            display: flex; justify-content: space-between; padding: 20px; box-sizing: border-box;
-            z-index: 10; text-shadow: 2px 2px 0 #000;
-        }
+        .dungeon-header { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px; box-sizing: border-box; z-index: 10; text-shadow: 2px 2px 0 #000; }
         .floor-indicator { font-size: 40px; color: #f1c40f; font-family: 'Reggae One', cursive; }
         .timer-box { font-size: 32px; border: 2px solid #fff; padding: 5px 15px; background: rgba(0,0,0,0.7); }
         .timer-warning { color: #e74c3c; animation: blink 0.5s infinite; }
-
-        /* Enemy Area */
-        .enemy-area {
-            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            width: 100%; position: relative; z-index: 5;
-        }
-        .enemy-img { 
-            max-width: 60%; max-height: 40vh; object-fit: contain;
-            filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
-            animation: float 3s ease-in-out infinite;
-        }
-        .question-box {
-            background: rgba(0,0,0,0.85); border: 4px double #fff; padding: 20px;
-            font-size: 26px; width: 85%; margin-top: 20px; min-height: 60px;
-            border-radius: 8px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        /* Answers Grid */
-        .answers-grid {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;
-            width: 95%; padding-bottom: 20px; z-index: 10; min-height: 120px;
-        }
-        .answer-card {
-            background: #222; border: 2px solid #777; padding: 10px;
-            width: 130px; min-height: 80px; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            position: relative; transition: 0.2s; cursor: pointer;
-        }
+        .enemy-area { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; position: relative; z-index: 5; }
+        .enemy-img { max-width: 60%; max-height: 40vh; object-fit: contain; filter: drop-shadow(0 0 20px rgba(0,0,0,0.8)); animation: float 3s ease-in-out infinite; }
+        .question-box { background: rgba(0,0,0,0.85); border: 4px double #fff; padding: 20px; font-size: 26px; width: 85%; margin-top: 20px; min-height: 60px; border-radius: 8px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .answers-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; width: 95%; padding-bottom: 20px; z-index: 10; min-height: 120px; }
+        .answer-card { background: #222; border: 2px solid #777; padding: 10px; width: 130px; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transition: 0.2s; cursor: pointer; }
         .p-name { font-size: 12px; color: #aaa; }
         .p-ans { font-size: 20px; font-weight: bold; word-break: break-all; }
-        
-        .answer-card.selected-ng { 
-            background: #c0392b !important; border-color: #e74c3c !important; transform: scale(1.05); 
-        }
-        .answer-card.selected-ng::after {
-            content: "被り!"; position: absolute; top: -5px; right: -5px; font-weight:bold;
-            background: #fff; color: #c0392b; padding: 2px 6px; font-size: 14px; border: 2px solid #c0392b;
-        }
+        .answer-card.selected-ng { background: #c0392b !important; border-color: #e74c3c !important; transform: scale(1.05); }
+        .answer-card.selected-ng::after { content: "被り!"; position: absolute; top: -5px; right: -5px; font-weight:bold; background: #fff; color: #c0392b; padding: 2px 6px; font-size: 14px; border: 2px solid #c0392b; }
 
         /* Animations */
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         @keyframes blink { 50% { opacity: 0.5; } }
         .shake-screen { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; background: #300 !important; }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-5px, 0, 0); }
-            20%, 80% { transform: translate3d(10px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-10px, 0, 0); }
-            40%, 60% { transform: translate3d(10px, 0, 0); }
-        }
-        .slash-effect {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 150vw; height: 20px; background: #fff; box-shadow: 0 0 20px #fff;
-            animation: slash 0.4s ease-out; z-index: 100;
-        }
-        @keyframes slash {
-            0% { width: 0; transform: translate(-50%, -50%) rotate(-45deg); opacity: 1; }
-            100% { width: 250vw; transform: translate(-50%, -50%) rotate(-45deg); opacity: 0; }
-        }
+        @keyframes shake { 10%, 90% { transform: translate3d(-5px, 0, 0); } 20%, 80% { transform: translate3d(10px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-10px, 0, 0); } 40%, 60% { transform: translate3d(10px, 0, 0); } }
+        .slash-effect { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 150vw; height: 20px; background: #fff; box-shadow: 0 0 20px #fff; animation: slash 0.4s ease-out; z-index: 100; }
+        @keyframes slash { 0% { width: 0; transform: translate(-50%, -50%) rotate(-45deg); opacity: 1; } 100% { width: 250vw; transform: translate(-50%, -50%) rotate(-45deg); opacity: 0; } }
 
         /* Player Screen */
         #screen-player { padding: 20px; box-sizing: border-box; background: #222; }
@@ -192,34 +158,23 @@
 <audio id="bgm-player" loop></audio>
 
 <div id="screen-title" class="screen">
-    <h1 class="title-logo">被らないダンジョン</h1>
-    
+    <div class="title-logo">被らないダンジョン</div>
     <button class="btn-title-start" onclick="showStartOptions()">ゲームスタート</button>
-    
     <br>
-    
     <button class="btn-title-settings" onclick="showScreen('screen-setup')">設定（素材・BGM・お題）</button>
 </div>
-
 
 <div id="screen-start-options" class="screen hidden" style="background:rgba(0,0,0,0.8);">
     <div class="start-options-box">
         <h2 style="color:#f1c40f; margin-top:0;">ミッション設定</h2>
-        
         <div class="option-row">
             <label>参加人数</label>
-            <div>
-                <input type="number" id="opt-players" value="4" min="2" style="width:60px;"> 人
-            </div>
+            <div><input type="number" id="opt-players" value="4" min="2"> 人</div>
         </div>
-        
         <div class="option-row">
             <label>制限時間</label>
-            <div>
-                <input type="number" id="opt-time" value="300" step="30" style="width:60px;"> 秒
-            </div>
+            <div><input type="number" id="opt-time" value="300" step="30"> 秒</div>
         </div>
-
         <div style="margin-top:30px;">
             <button class="btn-large" onclick="goToLobby()">ロビーを作成</button>
             <br>
@@ -228,32 +183,22 @@
     </div>
 </div>
 
-
 <div id="screen-setup" class="screen hidden" style="background:#111; overflow: auto; display:block; position:relative;">
     <div style="display:flex; justify-content:center; align-items:center; height:100vh;">
         <div id="setup-container">
             <h2 style="text-align:center; color:#e74c3c; margin:0 0 20px 0;">詳細設定</h2>
-            
             <div class="setup-section">
                 <h3>1. BGM設定</h3>
-                <label>BGMファイル (MP3等): <input type="file" id="file-bgm" accept="audio/*"></label>
-                <p style="font-size:12px; color:#aaa;">※設定するとゲーム中にループ再生されます</p>
+                <label>BGMファイル: <input type="file" id="file-bgm" accept="audio/*"></label>
             </div>
-
             <div class="setup-section">
                 <h3>2. 階層ビジュアル (背景・敵画像)</h3>
-                <p style="font-size:12px; color:#aaa;">※設定しない場合はデフォルト表示になります</p>
-                <div id="visual-config-area">
-                    </div>
+                <p style="font-size:12px; color:#aaa;">※設定しない場合はデフォルト表示</p>
+                <div id="visual-config-area"></div>
             </div>
-
             <div class="setup-section">
                 <h3>3. お題登録</h3>
-                <p style="font-size:12px; color:#aaa;">
-                    お題と「有効回答数(目安)」を登録してください。<br>
-                    <strong>参加人数に応じて、適切なお題を区間ごとにランダム選出します。</strong><br>
-                    ※お題がたくさんあるほど、毎回違う問題が出やすくなります。
-                </p>
+                <p style="font-size:12px; color:#aaa;">お題と「有効回答数(目安)」を登録してください。</p>
                 <div style="display:flex; gap:5px; margin-bottom:10px;">
                     <input type="text" id="q-text" placeholder="お題 (例: 都道府県)" style="flex:1; text-align:left;">
                     <input type="number" id="q-count" placeholder="回答数" style="width:60px;">
@@ -262,7 +207,6 @@
                 <div id="question-list" style="max-height:150px; overflow-y:auto; border:1px solid #555;"></div>
                 <div style="text-align:right; font-size:12px; color:#f1c40f;" id="q-status">現在 0 問</div>
             </div>
-
             <div style="text-align:center; margin-top: 20px;">
                 <button class="btn-large" onclick="saveSettingsAndBack()">保存してタイトルへ</button>
                 <br>
@@ -289,11 +233,11 @@
         <div class="floor-indicator">B<span id="disp-floor">1</span></div>
         <div class="timer-box" id="game-timer">00:00</div>
     </div>
-
     <div class="enemy-area">
         <div id="slash-layer"></div>
-        <img src="" id="enemy-img" class="enemy-img" style="display:none;"> <div id="enemy-placeholder" style="font-size:120px; filter: drop-shadow(0 0 10px #fff);">👾</div> <div class="question-box" id="question-text">---</div>
-        
+        <img src="" id="enemy-img" class="enemy-img" style="display:none;">
+        <div id="enemy-placeholder" style="font-size:120px; filter: drop-shadow(0 0 10px #fff);">👾</div>
+        <div class="question-box" id="question-text">---</div>
         <div style="margin-top:20px; height: 50px;">
             <button id="btn-open" onclick="openAnswers()" class="hidden btn-title-start" style="font-size:20px; padding:10px 30px;">回答オープン</button>
             <div id="judge-ui" class="hidden">
@@ -302,7 +246,6 @@
             </div>
         </div>
     </div>
-
     <div class="answers-grid" id="answers-container"></div>
 </div>
 
@@ -329,18 +272,9 @@
     <button class="btn-large" id="p-send-btn" onclick="sendAnswer()" style="width:90%; background:#27ae60; font-size:28px; padding:20px;">送信</button>
 </div>
 
-
 <script>
-    // --- Data Management ---
     const MAX_FLOOR = 7;
-    let config = {
-        players: 4, // Default, overwritten by start options
-        time: 300,  // Default, overwritten by start options
-        questions: [], 
-        assets: {}
-    };
-
-    // Default questions
+    let config = { players: 4, time: 300, questions: [], assets: {} };
     const DEFAULT_QS = [
         {text:"都道府県(47)", count:47}, {text:"世界の国(196)", count:196}, {text:"元素記号(118)", count:118},
         {text:"山手線の駅(30)", count:30}, {text:"アルファベット(26)", count:26}, {text:"将棋の駒(8)", count:8},
@@ -348,135 +282,77 @@
         {text:"虹の色(7)", count:7}, {text:"硬貨の種類(6)", count:6}, {text:"五大陸(5)", count:5}, 
         {text:"季節(4)", count:4}, {text:"信号機の色(3)", count:3}, {text:"じゃんけんの手(3)", count:3}
     ];
+    let peer, conn, myId, players = {}, currentFloor = 1, floorQuestions = {}, timerInterval, remainingTime;
 
-    // Game State
-    let peer, conn, myId;
-    let players = {};
-    let currentFloor = 1;
-    let floorQuestions = {}; 
-    let timerInterval, remainingTime;
-
-    // --- INITIALIZATION ---
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('host')) {
-            // Player Mode
-            setupPeer(false, urlParams.get('host'));
-        } else {
-            // Host Mode
-            showScreen('screen-title');
-            initSetupUI(); // Prepare settings UI behind the scenes
-        }
+        if (urlParams.get('host')) setupPeer(false, urlParams.get('host'));
+        else { showScreen('screen-title'); initSetupUI(); }
     };
 
-    // --- SETUP UI LOGIC (Detailed Settings) ---
     function initSetupUI() {
         for(let i=1; i<=MAX_FLOOR; i++) config.assets[i] = { bg: null, enemy: null };
-
         const container = document.getElementById('visual-config-area');
         for(let i=1; i<=MAX_FLOOR; i++) {
             const row = document.createElement('div');
             row.className = 'floor-config-row';
-            row.innerHTML = `
-                <div class="floor-label">${i}F</div>
-                <label style="font-size:12px;">背景:<input type="file" id="bg-${i}" accept="image/*" style="width:150px;"></label>
-                <label style="font-size:12px;">敵:<input type="file" id="enemy-${i}" accept="image/*" style="width:150px;"></label>
-            `;
+            row.innerHTML = `<div class="floor-label">${i}F</div><label style="font-size:12px;">背景:<input type="file" id="bg-${i}" accept="image/*" style="width:150px;"></label><label style="font-size:12px;">敵:<input type="file" id="enemy-${i}" accept="image/*" style="width:150px;"></label>`;
             container.appendChild(row);
         }
     }
 
     function addQuestion() {
-        const txt = document.getElementById('q-text').value;
-        const cnt = parseInt(document.getElementById('q-count').value);
-        if(!txt || !cnt) return alert("お題と回答数を入力してください");
-
+        const txt = document.getElementById('q-text').value, cnt = parseInt(document.getElementById('q-count').value);
+        if(!txt || !cnt) return alert("お題と回答数を入力");
         config.questions.push({ text: txt, count: cnt });
-        
         const list = document.getElementById('question-list');
         const item = document.createElement('div');
         item.className = 'q-list-item';
         item.innerHTML = `<span>${txt}</span><span>(目安:${cnt})</span>`;
         list.appendChild(item);
-
-        document.getElementById('q-text').value = "";
-        document.getElementById('q-count').value = "";
+        document.getElementById('q-text').value = ""; document.getElementById('q-count').value = "";
         document.getElementById('q-status').innerText = `現在 ${config.questions.length} 問`;
     }
 
-    // "Settings" screen: save assets/questions/bgm
     function saveSettingsAndBack() {
-        // 1. Merge Defaults if empty
-        if(config.questions.length < MAX_FLOOR * 2) {
-            config.questions = [...config.questions, ...DEFAULT_QS];
-        }
-
-        // 2. BGM
+        if(config.questions.length < MAX_FLOOR * 2) config.questions = [...config.questions, ...DEFAULT_QS];
         const bgmFile = document.getElementById('file-bgm').files[0];
-        if(bgmFile) {
-            const audio = document.getElementById('bgm-player');
-            audio.src = URL.createObjectURL(bgmFile);
-            audio.volume = 0.3;
-        }
-
-        // 3. Assets
+        if(bgmFile) { document.getElementById('bgm-player').src = URL.createObjectURL(bgmFile); document.getElementById('bgm-player').volume = 0.3; }
         for(let i=1; i<=MAX_FLOOR; i++) {
-            const bgFile = document.getElementById(`bg-${i}`).files[0];
-            const enFile = document.getElementById(`enemy-${i}`).files[0];
-            if(bgFile) config.assets[i].bg = URL.createObjectURL(bgFile);
-            if(enFile) config.assets[i].enemy = URL.createObjectURL(enFile);
+            const bg = document.getElementById(`bg-${i}`).files[0];
+            const en = document.getElementById(`enemy-${i}`).files[0];
+            if(bg) config.assets[i].bg = URL.createObjectURL(bg);
+            if(en) config.assets[i].enemy = URL.createObjectURL(en);
         }
-
         alert("設定を保存しました");
         showScreen('screen-title');
     }
 
-    // --- GAME START FLOW ---
-    function showStartOptions() {
-        showScreen('screen-start-options');
-    }
-
+    function showStartOptions() { showScreen('screen-start-options'); }
     function goToLobby() {
-        // Apply Player Count & Time from Start Options
         config.players = parseInt(document.getElementById('opt-players').value);
         config.time = parseInt(document.getElementById('opt-time').value);
-
-        // Ensure questions exist (if user skipped Settings screen)
-        if(config.questions.length === 0) {
-            config.questions = [...DEFAULT_QS];
-        }
-
-        // Generate Floor Questions based on Player Count
+        if(config.questions.length === 0) config.questions = [...DEFAULT_QS];
         generateFloorQuestions();
-
         showScreen('screen-lobby');
         if(!peer) setupPeer(true);
     }
 
     function generateFloorQuestions() {
         let validQ = config.questions.filter(q => q.count >= config.players);
-        
-        if (validQ.length < MAX_FLOOR) {
-            validQ = [...config.questions]; // Fallback
-        }
-        
-        validQ.sort((a, b) => b.count - a.count); // Descending
-
+        if (validQ.length < MAX_FLOOR) validQ = [...config.questions];
+        validQ.sort((a, b) => b.count - a.count);
         for(let i=1; i<=MAX_FLOOR; i++) {
             const total = validQ.length;
             const startIdx = Math.floor( (i - 1) * total / MAX_FLOOR );
             const endIdx = Math.floor( i * total / MAX_FLOOR );
             let bucket = validQ.slice(startIdx, endIdx);
-            
             if(bucket.length === 0 && startIdx < total) bucket = [validQ[startIdx]];
             if(bucket.length === 0) bucket = [validQ[total - 1]];
-            
-            const pick = bucket[Math.floor(Math.random() * bucket.length)];
-            floorQuestions[i] = pick.text;
+            floorQuestions[i] = bucket[Math.floor(Math.random() * bucket.length)].text;
         }
     }
 
-    // --- PEER JS ---
     function setupPeer(isHost, hostId=null) {
         peer = new Peer();
         peer.on('open', id => {
@@ -485,28 +361,18 @@
                 const url = `${location.href.split('?')[0]}?host=${myId}`;
                 new QRCode(document.getElementById("qrcode"), { text: url, width: 128, height: 128 });
                 document.getElementById('lobby-url').innerText = url;
-            } else {
-                showScreen('screen-login');
-            }
+            } else showScreen('screen-login');
         });
-        peer.on('connection', c => {
-            c.on('open', () => c.on('data', d => handleData(c, d)));
-            connections[c.peer] = c;
-        });
-        peer.on('error', e => alert("Connection Error: " + e));
+        peer.on('connection', c => { c.on('open', () => c.on('data', d => handleData(c, d))); connections[c.peer] = c; });
     }
 
-    // --- HOST GAME LOGIC ---
     function handleData(c, data) {
         if(data.type === 'JOIN') {
             players[c.peer] = { name: data.name, answer: null, id: c.peer };
             updateLobby();
             c.send({ type: 'JOIN_OK' });
         } else if (data.type === 'ANSWER') {
-            if(players[c.peer]) {
-                players[c.peer].answer = data.answer;
-                updateGridHost();
-            }
+            if(players[c.peer]) { players[c.peer].answer = data.answer; updateGridHost(); }
         }
     }
 
@@ -519,51 +385,27 @@
     function startGame() {
         const audio = document.getElementById('bgm-player');
         if(audio.src) audio.play();
-
         broadcast({ type: 'START' });
-        currentFloor = 1;
-        remainingTime = config.time;
-        showScreen('screen-host');
-        startTimer();
-        loadFloor();
+        currentFloor = 1; remainingTime = config.time;
+        showScreen('screen-host'); startTimer(); loadFloor();
     }
 
     function loadFloor() {
-        // Visuals
         const screen = document.getElementById('screen-host');
         screen.classList.remove('shake-screen');
         const asset = config.assets[currentFloor];
-        
-        if (asset && asset.bg) {
-            screen.style.backgroundImage = `url(${asset.bg})`;
-            screen.style.backgroundSize = "cover";
-        } else {
-            screen.style.backgroundImage = "none";
-            screen.style.background = "#222"; 
-        }
-
+        if (asset && asset.bg) { screen.style.backgroundImage = `url(${asset.bg})`; screen.style.backgroundSize = "cover"; }
+        else { screen.style.backgroundImage = "none"; screen.style.background = "#222"; }
         const enemyImg = document.getElementById('enemy-img');
         const enemyPh = document.getElementById('enemy-placeholder');
         enemyImg.style.opacity = "1"; enemyPh.style.opacity = "1";
-
-        if (asset && asset.enemy) {
-            enemyImg.src = asset.enemy;
-            enemyImg.style.display = "block";
-            enemyPh.style.display = "none";
-        } else {
-            enemyImg.style.display = "none";
-            enemyPh.style.display = "block";
-        }
-
-        // Text
+        if (asset && asset.enemy) { enemyImg.src = asset.enemy; enemyImg.style.display = "block"; enemyPh.style.display = "none"; }
+        else { enemyImg.style.display = "none"; enemyPh.style.display = "block"; }
         document.getElementById('disp-floor').innerText = currentFloor;
         document.getElementById('question-text').innerText = floorQuestions[currentFloor];
-
-        // Reset
         Object.keys(players).forEach(id => players[id].answer = null);
         document.getElementById('btn-open').classList.add('hidden');
         document.getElementById('judge-ui').classList.add('hidden');
-        
         updateGridHost();
         broadcast({ type: 'QUESTION', text: floorQuestions[currentFloor] });
     }
@@ -571,86 +413,51 @@
     function updateGridHost() {
         const container = document.getElementById('answers-container');
         if(!document.getElementById('btn-open').classList.contains('hidden') || !document.getElementById('judge-ui').classList.contains('hidden')) return;
-
         container.innerHTML = "";
         let ansCount = 0;
-        
         Object.values(players).forEach(p => {
-            const card = document.createElement('div');
-            card.className = "answer-card";
-            if(p.answer) {
-                ansCount++;
-                card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans" style="color:#f39c12">回答済</div>`;
-            } else {
-                card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans" style="color:#555">...</div>`;
-            }
+            const card = document.createElement('div'); card.className = "answer-card";
+            if(p.answer) { ansCount++; card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans" style="color:#f39c12">回答済</div>`; }
+            else { card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans" style="color:#555">...</div>`; }
             container.appendChild(card);
         });
-
-        if(ansCount === Object.keys(players).length && ansCount > 0) {
-            document.getElementById('btn-open').classList.remove('hidden');
-        }
+        if(ansCount === Object.keys(players).length && ansCount > 0) document.getElementById('btn-open').classList.remove('hidden');
     }
 
     function openAnswers() {
         document.getElementById('btn-open').classList.add('hidden');
         const container = document.getElementById('answers-container');
         container.innerHTML = "";
-
         const counts = {};
+        Object.values(players).forEach(p => { if(!p.answer) return; const v = p.answer.trim().toLowerCase(); counts[v] = (counts[v] || 0) + 1; });
         Object.values(players).forEach(p => {
-            if(!p.answer) return;
-            const v = p.answer.trim().toLowerCase(); 
-            counts[v] = (counts[v] || 0) + 1;
-        });
-
-        Object.values(players).forEach(p => {
-            const card = document.createElement('div');
-            card.className = "answer-card";
+            const card = document.createElement('div'); card.className = "answer-card";
             card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans">${p.answer}</div>`;
-            
-            if(counts[p.answer.trim().toLowerCase()] > 1) {
-                card.classList.add('selected-ng');
-            }
-
+            if(counts[p.answer.trim().toLowerCase()] > 1) card.classList.add('selected-ng');
             card.onclick = () => card.classList.toggle('selected-ng');
             container.appendChild(card);
         });
-
         document.getElementById('judge-ui').classList.remove('hidden');
     }
 
     function confirmJudgement() {
-        const ngCards = document.querySelectorAll('.answer-card.selected-ng');
-        const isFail = ngCards.length > 0;
-
+        const isFail = document.querySelectorAll('.answer-card.selected-ng').length > 0;
         document.getElementById('judge-ui').classList.add('hidden');
-
         if(isFail) {
             document.getElementById('screen-host').classList.add('shake-screen');
             setTimeout(() => {
                 document.getElementById('screen-host').classList.remove('shake-screen');
-                if(currentFloor === 1) {
-                    endGame(false);
-                } else {
-                    currentFloor--;
-                    loadFloor();
-                }
+                if(currentFloor === 1) endGame(false);
+                else { currentFloor--; loadFloor(); }
             }, 1000);
         } else {
             const slash = document.getElementById('slash-layer');
             slash.classList.add('slash-effect');
-            document.getElementById('enemy-img').style.opacity = 0;
-            document.getElementById('enemy-placeholder').style.opacity = 0;
-            
+            document.getElementById('enemy-img').style.opacity = 0; document.getElementById('enemy-placeholder').style.opacity = 0;
             setTimeout(() => {
                 slash.classList.remove('slash-effect');
-                if(currentFloor === MAX_FLOOR) {
-                    endGame(true);
-                } else {
-                    currentFloor++;
-                    loadFloor();
-                }
+                if(currentFloor === MAX_FLOOR) endGame(true);
+                else { currentFloor++; loadFloor(); }
             }, 500);
         }
     }
@@ -664,10 +471,7 @@
             const s = (remainingTime%60).toString().padStart(2,'0');
             el.innerText = `${m}:${s}`;
             if(remainingTime<=30) el.classList.add('timer-warning');
-            if(remainingTime<=0) {
-                clearInterval(timerInterval);
-                endGame(false, "TIME UP");
-            }
+            if(remainingTime<=0) { clearInterval(timerInterval); endGame(false, "TIME UP"); }
         }, 1000);
     }
 
@@ -680,26 +484,18 @@
         broadcast({ type: 'END', isClear: isClear });
     }
 
-    function broadcast(data) {
-        Object.values(connections).forEach(c => c.send(data));
-    }
+    function broadcast(data) { Object.values(connections).forEach(c => c.send(data)); }
 
-    // --- PLAYER LOGIC ---
     let hostConn;
     function joinGame() {
         const name = document.getElementById('p-name-input').value;
         if(!name) return alert("名前を入力");
         const urlParams = new URLSearchParams(window.location.search);
         hostConn = peer.connect(urlParams.get('host'));
-        hostConn.on('open', () => {
-            hostConn.send({ type:'JOIN', name:name });
-            showScreen('screen-player');
-            document.getElementById('p-send-btn').disabled = true;
-        });
+        hostConn.on('open', () => { hostConn.send({ type:'JOIN', name:name }); showScreen('screen-player'); document.getElementById('p-send-btn').disabled = true; });
         hostConn.on('data', d => {
-            if(d.type === 'START') {
-                document.getElementById('p-status').innerText = "ゲーム開始！";
-            } else if(d.type === 'QUESTION') {
+            if(d.type === 'START') document.getElementById('p-status').innerText = "ゲーム開始！";
+            else if(d.type === 'QUESTION') {
                 document.getElementById('p-status').innerText = "回答してください";
                 document.getElementById('p-question').innerText = d.text;
                 document.getElementById('p-ans-input').value = "";
