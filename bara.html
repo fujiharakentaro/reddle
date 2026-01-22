@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>被らないダンジョン V4.5</title>
+    <title>被らないダンジョン V4.7</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -98,27 +98,45 @@
         #lobby-url-container:hover { background: #333; border-color: #fff; }
         #lobby-url-container:active { background: #444; }
 
-        /* Game Screen */
-        .dungeon-header { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px; box-sizing: border-box; z-index: 10; text-shadow: 2px 2px 0 #000; }
+        /* Game Screen Layout */
+        .dungeon-header { 
+            position: absolute; top: 0; left: 0; width: 100%; 
+            display: flex; justify-content: space-between; padding: 20px; box-sizing: border-box; 
+            z-index: 20; text-shadow: 2px 2px 0 #000; 
+        }
         .floor-indicator { font-size: 40px; color: #f1c40f; font-family: 'Noto Serif JP', serif; font-weight: 900; }
         .timer-box { font-size: 32px; border: 2px solid #fff; padding: 5px 15px; background: rgba(0,0,0,0.7); }
         .timer-warning { color: #e74c3c; animation: blink 0.5s infinite; }
         
-        .enemy-area { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; position: relative; z-index: 5; }
-        /* V4.5: Enemy Bigger */
-        .enemy-img { 
-            max-width: 90%; max-height: 55vh; object-fit: contain; 
-            filter: drop-shadow(0 0 20px rgba(0,0,0,0.8)); animation: float 3s ease-in-out infinite; 
+        .enemy-area { 
+            flex: 1; width: 100%; position: relative; 
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end; 
+            padding-bottom: 20px;
         }
-        /* V4.5: Question Box Bigger & Bolder */
-        .question-box { 
-            background: rgba(0,0,0,0.9); border: 4px double #fff; padding: 25px; 
-            font-size: 40px; font-weight: bold; width: 95%; margin-top: 10px; min-height: 80px; 
-            border-radius: 10px; text-align: center; box-shadow: 0 0 25px rgba(0,0,0,0.8);
-            line-height: 1.2;
+
+        .enemy-img { 
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            object-fit: contain; 
+            filter: drop-shadow(0 0 20px rgba(0,0,0,0.8)); 
+            animation: float 3s ease-in-out infinite; 
+            z-index: 5; 
+            opacity: 0; 
+            transition: opacity 0.3s ease-in;
         }
         
-        .answers-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; width: 95%; padding-bottom: 20px; z-index: 10; min-height: 120px; }
+        .question-box { 
+            position: relative; z-index: 10;
+            background: rgba(0,0,0,0.85); border: 4px double #fff; padding: 15px; 
+            font-size: 50px; font-weight: 900;
+            width: 80%; max-width: 600px;
+            margin-bottom: 40px; 
+            border-radius: 12px; text-align: center; box-shadow: 0 0 25px rgba(0,0,0,0.9);
+            line-height: 1.1; 
+            display: flex; align-items: center; justify-content: center;
+            min-height: 120px;
+        }
+        
+        .answers-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; width: 95%; padding-bottom: 20px; z-index: 30; min-height: 120px; }
         .answer-card { background: #222; border: 2px solid #777; padding: 10px; width: 130px; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transition: 0.2s; cursor: pointer; }
         .p-name { font-size: 12px; color: #aaa; }
         .p-ans { font-size: 20px; font-weight: bold; word-break: break-all; }
@@ -137,21 +155,18 @@
         .debug-btn.win { background: #27ae60; }
         .debug-btn.lose { background: #c0392b; }
 
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes float { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-15px); } }
         @keyframes blink { 50% { opacity: 0.5; } }
         .shake-screen { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; background: #300 !important; }
         @keyframes shake { 10%, 90% { transform: translate3d(-5px, 0, 0); } 20%, 80% { transform: translate3d(10px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-10px, 0, 0); } 40%, 60% { transform: translate3d(10px, 0, 0); } }
         
-        /* V4.5: Slash Effect Fixed (Diagonal from start, no horizontal flicker) */
         .slash-effect { 
             position: absolute; top: 50%; left: 50%; 
             width: 150vw; height: 15px; 
             background: #fff; box-shadow: 0 0 25px #fff; 
-            /* Initialize rotation here so it's never horizontal */
             transform: translate(-50%, -50%) rotate(-45deg); 
-            animation: slash 0.2s ease-out forwards; /* Faster, simple cut */
-            z-index: 100;
-            opacity: 0;
+            animation: slash 0.2s ease-out forwards;
+            z-index: 100; opacity: 0;
         }
         @keyframes slash { 
             0% { width: 0; opacity: 1; } 
@@ -261,13 +276,15 @@
         <div class="floor-indicator">B<span id="disp-floor">1</span> <span style="font-size:20px;">/ <span id="max-floor-disp"></span></span></div>
         <div class="timer-box" id="game-timer">00:00</div>
     </div>
+    
     <div class="enemy-area">
         <div id="slash-layer"></div>
         <img src="" id="enemy-img" class="enemy-img" style="display:none;">
         <div id="enemy-placeholder" style="font-size:120px; filter: drop-shadow(0 0 10px #fff);">👾</div>
+        
         <div class="question-box" id="question-text">---</div>
         
-        <div style="margin-top:20px; height: 50px;">
+        <div style="margin-top:10px; height: 50px;">
             <button id="btn-open" onclick="openAnswers()" class="hidden btn-title-start" style="font-size:20px; padding:10px 30px;">回答オープン</button>
             <div id="judge-ui" class="hidden">
                 <span style="font-size:16px; background:#000; padding:5px; color:#e74c3c; border:2px solid #e74c3c;">被り(NG)をタップして選択</span>
@@ -306,7 +323,6 @@
 
 <script>
     const MAX_ASSETS = 7;
-    // Fixed DB Name to allow persistence across file updates
     const DB_NAME = 'AnswerDungeon_Permanent_Data'; 
     let config = { players: 4, time: 300, floors: 7, questions: [], assets: {}, titleBg: null, bgOpacity: 0.5, bgm: null };
     const DEFAULT_QS = [
@@ -353,34 +369,37 @@
     };
 
     async function loadSavedConfig() {
-        const saved = await loadDB('userConfig');
-        if(saved) {
-            config.questions = saved.questions || [];
-            config.bgOpacity = saved.bgOpacity || 0.5;
-            document.getElementById('bg-opacity').value = config.bgOpacity;
-            updateOpacityDisp();
+        try {
+            const saved = await loadDB('userConfig');
+            if(saved) {
+                config.questions = saved.questions || [];
+                config.bgOpacity = saved.bgOpacity || 0.5;
+                document.getElementById('bg-opacity').value = config.bgOpacity;
+                updateOpacityDisp();
 
-            if(saved.titleBg) {
-                config.titleBg = URL.createObjectURL(saved.titleBg);
-                setFileStatus('status-bg-title', true);
-            }
-            if(saved.bgm) {
-                config.bgm = saved.bgm; 
-                document.getElementById('bgm-player').src = URL.createObjectURL(saved.bgm);
-                document.getElementById('bgm-player').volume = 0.3;
-                setFileStatus('status-bgm', true);
-            }
-            if(saved.assets) {
-                for(let i=1; i<=MAX_ASSETS; i++) {
-                    config.assets[i] = { bg: null, enemy: null };
-                    if(saved.assets[i]?.bg) config.assets[i].bg = URL.createObjectURL(saved.assets[i].bg);
-                    if(saved.assets[i]?.enemy) config.assets[i].enemy = URL.createObjectURL(saved.assets[i].enemy);
+                if(saved.titleBg) {
+                    config.titleBg = URL.createObjectURL(saved.titleBg);
+                    setFileStatus('status-bg-title', true);
+                }
+                if(saved.bgm) {
+                    config.bgm = saved.bgm; 
+                    document.getElementById('bgm-player').src = URL.createObjectURL(saved.bgm);
+                    document.getElementById('bgm-player').volume = 0.3;
+                    setFileStatus('status-bgm', true);
+                }
+                if(saved.assets) {
+                    for(let i=1; i<=MAX_ASSETS; i++) {
+                        config.assets[i] = { bg: null, enemy: null };
+                        if(saved.assets[i]?.bg) config.assets[i].bg = URL.createObjectURL(saved.assets[i].bg);
+                        if(saved.assets[i]?.enemy) config.assets[i].enemy = URL.createObjectURL(saved.assets[i].enemy);
+                    }
                 }
             }
+        } catch(e) {
+            console.error("DB Load Error:", e);
         }
     }
 
-    // --- Auto Save Logic ---
     async function saveOpacity() {
         config.bgOpacity = document.getElementById('bg-opacity').value;
         updateOpacityDisp();
@@ -396,14 +415,12 @@
         const cur = await loadDB('userConfig') || {};
         
         if(type === 'bgm') {
-            cur.bgm = file;
-            config.bgm = file;
+            cur.bgm = file; config.bgm = file;
             document.getElementById('bgm-player').src = URL.createObjectURL(file);
             document.getElementById('bgm-player').volume = 0.3;
             setFileStatus('status-bgm', true);
         } else if(type === 'titleBg') {
-            cur.titleBg = file;
-            config.titleBg = URL.createObjectURL(file);
+            cur.titleBg = file; config.titleBg = URL.createObjectURL(file);
             setFileStatus('status-bg-title', true);
             updateBackground(config.titleBg);
         } else if(type === 'floorBg') {
@@ -419,7 +436,6 @@
             config.assets[floorIndex].enemy = URL.createObjectURL(file);
             setFileStatus(`status-en-${floorIndex}`, true);
         }
-
         await saveDB('userConfig', cur);
     }
 
@@ -486,9 +502,13 @@
     function addQuestion() {
         const txt = document.getElementById('q-text').value, cnt = parseInt(document.getElementById('q-count').value);
         if(!txt || !cnt) return alert("お題と回答数を入力");
+        
+        // Remove duplicate text
+        config.questions = config.questions.filter(q => q.text !== txt);
         config.questions.push({ text: txt, count: cnt });
+        
         renderQuestionList();
-        autoSaveQuestions(); // Auto Save
+        autoSaveQuestions(); 
         document.getElementById('q-text').value = ""; document.getElementById('q-count').value = "";
     }
 
@@ -496,13 +516,10 @@
         showScreen('screen-title');
     }
 
-    // --- URL Copy ---
     async function copyUrl() {
         const text = document.getElementById('lobby-url').innerText;
-        try {
-            await navigator.clipboard.writeText(text);
-            alert("URLをコピーしました！");
-        } catch (err) { alert("コピー失敗: " + err); }
+        try { await navigator.clipboard.writeText(text); alert("URLをコピーしました！"); } 
+        catch (err) { alert("コピー失敗: " + err); }
     }
 
     function showStartOptions() { showScreen('screen-start-options'); }
@@ -512,24 +529,50 @@
         config.time = parseInt(document.getElementById('opt-time').value);
         config.floors = parseInt(document.getElementById('opt-floors').value);
         
-        // Ensure defaults if empty
         if(config.questions.length === 0) config.questions = [...DEFAULT_QS];
         
-        generateFloorQuestions();
-        showScreen('screen-lobby');
-        if(!peer) setupPeer(true);
+        try {
+            generateFloorQuestions();
+            showScreen('screen-lobby');
+            if(!peer) setupPeer(true);
+        } catch(e) {
+            alert("初期化エラー: " + e);
+        }
     }
 
     function generateFloorQuestions() {
+        // V4.7: Force fallback if empty or insufficient
+        if(!config.questions || config.questions.length === 0) {
+            console.warn("No questions found, using defaults.");
+            config.questions = [...DEFAULT_QS];
+        }
+
         let validQ = config.questions.filter(q => q.count >= config.players);
-        if (validQ.length < config.floors) validQ = [...config.questions];
+        // Remove duplicates by text
+        validQ = validQ.filter((v,i,a)=>a.findIndex(t=>(t.text===v.text))===i);
+
+        // Fallback: If no valid questions for this player count, use ALL questions
+        if (validQ.length === 0) {
+            console.warn("No valid questions for player count, using all.");
+            validQ = [...config.questions];
+        }
+
+        // Sort: Easy -> Hard
         validQ.sort((a, b) => b.count - a.count);
+
         for(let i=1; i<=config.floors; i++) {
             const total = validQ.length;
             const startIdx = Math.floor( (i - 1) * total / config.floors );
             const endIdx = Math.floor( i * total / config.floors );
             let bucket = validQ.slice(startIdx, endIdx);
-            if(bucket.length === 0) bucket = [validQ[Math.min(startIdx, total-1)]];
+            
+            // Safety bucket logic
+            if(bucket.length === 0) {
+                // If bucket is empty, pick from nearby index
+                const safeIndex = Math.min(startIdx, total - 1);
+                bucket = [validQ[safeIndex]];
+            }
+            
             floorQuestions[i] = bucket[Math.floor(Math.random() * bucket.length)].text;
         }
     }
@@ -578,58 +621,87 @@
         else document.getElementById('btn-start-game').disabled = true;
     }
 
-    // --- GAME CONTROL ---
     function startGame() {
         const cnt = Object.keys(players).length;
         if(cnt === 0) return alert("参加者が0人です。誰も接続していません。");
         
-        // Safety Fallback for questions
-        if(Object.keys(floorQuestions).length === 0) generateFloorQuestions();
+        // Final Safety Check
+        if(Object.keys(floorQuestions).length === 0) {
+            try {
+                generateFloorQuestions();
+            } catch(e) {
+                alert("お題生成エラー: " + e);
+                return;
+            }
+        }
 
         isDebugMode = false;
-        launchGame();
+        try {
+            launchGame();
+        } catch(e) {
+            alert("ゲーム開始エラー: " + e);
+        }
     }
 
     function startDebugGame() {
-        // Setup config for debug
         config.players = 1; 
         config.floors = 7;
         config.time = 999;
-        if(config.questions.length === 0) config.questions = [...DEFAULT_QS];
-        generateFloorQuestions();
         
+        // Force Defaults if empty
+        if(!config.questions || config.questions.length === 0) config.questions = [...DEFAULT_QS];
+        
+        generateFloorQuestions();
         isDebugMode = true;
         launchGame();
     }
 
     function launchGame() {
         const audio = document.getElementById('bgm-player');
-        if(audio.src) audio.play().catch(e=>console.log("Audio play failed (policy):",e));
-        
+        if(audio.src) audio.play().catch(e=>console.log("Audio play failed:",e));
         if(!isDebugMode) broadcast({ type: 'START' });
-        
-        currentFloor = 1; 
-        remainingTime = config.time;
-        showScreen('screen-host'); 
-        startTimer(); 
-        loadFloor();
+        currentFloor = 1; remainingTime = config.time;
+        showScreen('screen-host'); startTimer(); loadFloor();
     }
 
     function loadFloor() {
         document.getElementById('screen-host').classList.remove('shake-screen');
+        
         const assetIndex = (MAX_ASSETS - config.floors) + currentFloor;
         const asset = config.assets[assetIndex] || { bg: null, enemy: null };
         updateBackground(asset.bg);
 
         const enemyImg = document.getElementById('enemy-img');
         const enemyPh = document.getElementById('enemy-placeholder');
-        enemyImg.style.opacity = "1"; enemyPh.style.opacity = "1";
-        if (asset.enemy) { enemyImg.src = asset.enemy; enemyImg.style.display = "block"; enemyPh.style.display = "none"; }
-        else { enemyImg.style.display = "none"; enemyPh.style.display = "block"; }
+        
+        enemyImg.style.opacity = "0"; 
+        
+        let scale = 1.0;
+        if (currentFloor <= 2) scale = 0.6;
+        else if (currentFloor === 3) scale = 0.9;
+        else if (currentFloor === 4) scale = 1.0;
+        else if (currentFloor === 5) scale = 1.1;
+        else scale = 1.2;
+
+        if (asset.enemy) { 
+            enemyImg.src = asset.enemy; 
+            enemyImg.style.display = "block"; 
+            enemyImg.style.height = `${40 * scale}vh`; 
+            enemyImg.style.transform = `translateX(-50%) scale(${scale})`; 
+            enemyImg.onload = () => { enemyImg.style.opacity = "1"; }; 
+            enemyPh.style.display = "none"; 
+        } else { 
+            enemyImg.style.display = "none"; 
+            enemyPh.style.display = "block";
+            enemyPh.style.opacity = "1"; 
+        }
         
         document.getElementById('disp-floor').innerText = currentFloor;
         document.getElementById('max-floor-disp').innerText = config.floors;
-        document.getElementById('question-text').innerText = floorQuestions[currentFloor];
+        
+        // Safer access to question text
+        const qText = floorQuestions[currentFloor] || "お題読み込みエラー";
+        document.getElementById('question-text').innerText = qText;
         
         Object.keys(players).forEach(id => players[id].answer = null);
         
@@ -642,17 +714,15 @@
             document.getElementById('btn-open').classList.add('hidden');
             document.getElementById('judge-ui').classList.add('hidden');
             updateGridHost();
-            broadcast({ type: 'QUESTION', text: floorQuestions[currentFloor] });
+            broadcast({ type: 'QUESTION', text: qText });
         }
     }
 
-    // --- DEBUG TRIGGERS ---
     function debugTrigger(isSuccess) {
         if(isSuccess) {
-            // Success Anim
             const slash = document.getElementById('slash-layer');
-            slash.classList.add('slash-effect');
             slash.style.display = 'block';
+            slash.classList.add('slash-effect');
             document.getElementById('enemy-img').style.opacity = 0; document.getElementById('enemy-placeholder').style.opacity = 0;
             
             setTimeout(() => {
@@ -662,7 +732,6 @@
                 else { currentFloor++; loadFloor(); }
             }, 500);
         } else {
-            // Fail Anim
             document.getElementById('screen-host').classList.add('shake-screen');
             setTimeout(() => {
                 document.getElementById('screen-host').classList.remove('shake-screen');
@@ -714,10 +783,9 @@
             }, 1000);
         } else {
             const slash = document.getElementById('slash-layer');
-            slash.classList.add('slash-effect');
             slash.style.display = 'block';
+            slash.classList.add('slash-effect');
             document.getElementById('enemy-img').style.opacity = 0; document.getElementById('enemy-placeholder').style.opacity = 0;
-            
             setTimeout(() => {
                 slash.classList.remove('slash-effect');
                 slash.style.display = 'none';
