@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>被らないダンジョン V4.9</title>
+    <title>被らないダンジョン V5.0</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,7 +71,7 @@
         }
         .btn-large { padding: 15px 30px; font-size: 20px; background: #c0392b; border: 2px solid #fff; }
         .btn-confirm { background: #e67e22; color: #000; font-weight: bold; }
-        .btn-debug { background: #8e44ad; border-color: #9b59b6; color: #fff; font-weight: bold; }
+        .btn-debug { background: #8e44ad; border-color: #9b59b6; color: #fff; font-weight: bold; margin-top: 20px; }
 
         /* Start Options */
         .start-options-box {
@@ -98,7 +98,7 @@
         #lobby-url-container:hover { background: #333; border-color: #fff; }
         #lobby-url-container:active { background: #444; }
 
-        /* Game Screen Layout (V4.9 Balanced) */
+        /* Game Screen Layout */
         .dungeon-header { 
             position: absolute; top: 0; left: 0; width: 100%; 
             display: flex; justify-content: space-between; padding: 20px; box-sizing: border-box; 
@@ -117,31 +117,27 @@
 
         .enemy-img { 
             position: absolute; 
-            top: 80px; /* 少し上げる */
+            top: 80px; 
             left: 50%; transform: translateX(-50%);
             transform-origin: top center;
             object-fit: contain; 
             filter: drop-shadow(0 0 20px rgba(0,0,0,0.8)); 
             animation: float 3s ease-in-out infinite; 
-            z-index: 5; /* 1番奥 */
+            z-index: 5; 
             opacity: 0; 
             transition: opacity 0.3s ease-in;
         }
         
-        /* V4.9: Tighter Question Box */
         .question-box { 
-            position: relative; z-index: 10; /* 敵より手前 */
-            background: rgba(0,0,0,0.9); 
-            border: 4px double #fff; 
-            padding: 5px 15px; /* 上下のパディングを極小に */
-            font-size: 55px; /* さらに巨大化 */
-            font-weight: 900;
+            position: relative; z-index: 10;
+            background: rgba(0,0,0,0.9); border: 4px double #fff; padding: 5px 15px; 
+            font-size: 55px; font-weight: 900;
             width: 90%; max-width: 800px;
             margin-top: auto; 
             margin-bottom: 20px; 
             border-radius: 12px; text-align: center; box-shadow: 0 0 25px rgba(0,0,0,0.9);
             line-height: 1.1; 
-            min-height: auto; /* 高さは文字に合わせる */
+            min-height: auto;
             display: flex; align-items: center; justify-content: center;
         }
         
@@ -154,23 +150,23 @@
             position: relative; transition: 0.2s; cursor: pointer; 
         }
         .p-name { font-size: 12px; color: #aaa; }
-        /* V4.9: Bigger Answer Text */
         .p-ans { font-size: 28px; font-weight: bold; word-break: break-all; line-height: 1.1; }
         
         .answer-card.selected-ng { background: #c0392b !important; border-color: #e74c3c !important; transform: scale(1.05); }
         .answer-card.selected-ng::after { content: "被り!"; position: absolute; top: -5px; right: -5px; font-weight:bold; background: #fff; color: #c0392b; padding: 2px 6px; font-size: 14px; border: 2px solid #c0392b; }
 
-        /* Debug UI */
-        #debug-panel {
-            position: absolute; bottom: 80px; left: 0; width: 100%;
-            display: flex; justify-content: center; gap: 20px; z-index: 100;
+        /* Debug Controller (Phone) */
+        #screen-debug-controller { 
+            padding: 10px; background: #1a1a1a; 
+            display: flex; flex-direction: column; align-items: center; 
+            overflow-y: auto; height: 100vh; 
         }
-        .debug-btn {
-            padding: 10px 20px; font-size: 18px; border: 2px solid #fff; cursor: pointer;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: 'DotGothic16';
+        .debug-input-row {
+            display: flex; width: 100%; max-width: 400px; margin-bottom: 10px;
+            background: #333; padding: 10px; border-radius: 5px; align-items: center;
         }
-        .debug-btn.win { background: #27ae60; }
-        .debug-btn.lose { background: #c0392b; }
+        .debug-p-label { width: 80px; font-size: 14px; color: #f1c40f; font-weight: bold; }
+        .debug-p-input { flex: 1; padding: 8px; font-size: 18px; border: none; border-radius: 4px; text-align: left; }
 
         @keyframes float { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-15px); } }
         @keyframes blink { 50% { opacity: 0.5; } }
@@ -230,11 +226,26 @@
     </div>
 </div>
 
+<div id="screen-debug-start" class="screen hidden" style="background:rgba(0,0,0,0.9);">
+    <div class="start-options-box" style="border-color:#8e44ad;">
+        <h2 style="color:#8e44ad; margin-top:0;">🛠 デバッグモード設定</h2>
+        <p style="font-size:14px; color:#aaa;">スマホ側で複数人分の回答を入力できます。</p>
+        <div class="option-row">
+            <label>シミュレート人数</label>
+            <div><input type="number" id="debug-opt-players" value="8" min="2" max="20" style="width:60px;"> 人</div>
+        </div>
+        <div style="margin-top:30px;">
+            <button class="btn-debug" onclick="goToDebugLobby()">デバッグロビー作成</button>
+            <br>
+            <button class="btn-title-settings" onclick="showScreen('screen-setup')" style="margin-top:10px;">戻る</button>
+        </div>
+    </div>
+</div>
+
 <div id="screen-setup" class="screen hidden" style="background:none;">
     <div style="display:flex; justify-content:center; align-items:center; height:100vh;">
         <div id="setup-container">
             <h2 style="text-align:center; color:#e74c3c; margin:0 0 20px 0;">素材・詳細設定</h2>
-            
             <div class="setup-section">
                 <h3>1. BGM・背景</h3>
                 <label>BGM: <input type="file" id="file-bgm" accept="audio/*" onchange="autoSaveAsset('bgm', this)"></label>
@@ -245,12 +256,10 @@
                 <br>
                 <label>背景の明るさ: <span id="disp-opacity">50%</span> <input type="range" id="bg-opacity" min="0.1" max="1.0" step="0.1" value="0.5" onchange="saveOpacity()"></label>
             </div>
-            
             <div class="setup-section">
                 <h3>2. 階層ビジュアル (最大7階層分)</h3>
                 <div id="visual-config-area"></div>
             </div>
-            
             <div class="setup-section">
                 <h3>3. お題登録</h3>
                 <div style="display:flex; gap:5px; margin-bottom:10px;">
@@ -261,28 +270,23 @@
                 <div id="question-list" style="max-height:150px; overflow-y:auto; border:1px solid #555;"></div>
                 <div style="text-align:right; font-size:12px; color:#f1c40f;" id="q-status">0 問</div>
             </div>
-            
             <div style="text-align:center; margin-bottom: 20px;">
                 <button class="btn-large" onclick="saveSettingsAndBack()">タイトルへ戻る</button>
             </div>
-            
             <div style="text-align:center; border-top:1px dashed #555; padding-top:20px;">
-                <button class="btn-debug" onclick="startDebugGame()">🛠 デバッグモードで開始</button>
-                <p style="font-size:10px; color:#aaa;">(参加者0人で演出を確認できます)</p>
+                <button class="btn-debug" onclick="showScreen('screen-debug-start')">🛠 デバッグモード設定</button>
             </div>
         </div>
     </div>
 </div>
 
 <div id="screen-lobby" class="screen hidden" style="background:rgba(34,34,34,0.8);">
-    <h2 style="font-family: 'Noto Serif JP', serif; font-weight:900; color:#f1c40f;">冒険者を募集中...</h2>
+    <h2 style="font-family: 'Noto Serif JP', serif; font-weight:900; color:#f1c40f;" id="lobby-title">冒険者を募集中...</h2>
     <div style="background:#fff; padding:10px; border: 4px double #333;"><div id="qrcode"></div></div>
-    
     <div id="lobby-url-container" onclick="copyUrl()">
         <p id="lobby-url" style="font-size:14px; color:#ccc; margin:5px; word-break:break-all;"></p>
         <span style="font-size:12px; color:#e67e22;">(タップしてURLをコピー)</span>
     </div>
-
     <div id="lobby-members" style="margin: 20px; font-size: 28px; color:#2ecc71;">参加者: 0人</div>
     <button class="btn-title-start" id="btn-start-game" onclick="startGame()" disabled>ダンジョンへ挑む</button>
     <br><button class="btn-title-settings" onclick="showScreen('screen-title')">戻る</button>
@@ -293,14 +297,11 @@
         <div class="floor-indicator">B<span id="disp-floor">1</span> <span style="font-size:20px;">/ <span id="max-floor-disp"></span></span></div>
         <div class="timer-box" id="game-timer">00:00</div>
     </div>
-    
     <div class="enemy-area">
         <div id="slash-layer"></div>
         <img src="" id="enemy-img" class="enemy-img" style="display:none;">
         <div id="enemy-placeholder" style="font-size:120px; filter: drop-shadow(0 0 10px #fff);">👾</div>
-        
         <div class="question-box" id="question-text">---</div>
-        
         <div style="margin-top:10px; height: 50px;">
             <button id="btn-open" onclick="openAnswers()" class="hidden btn-title-start" style="font-size:20px; padding:10px 30px;">回答オープン</button>
             <div id="judge-ui" class="hidden">
@@ -309,12 +310,6 @@
             </div>
         </div>
     </div>
-    
-    <div id="debug-panel" class="hidden">
-        <button class="debug-btn win" onclick="debugTrigger(true)">成功 (Next)</button>
-        <button class="debug-btn lose" onclick="debugTrigger(false)">失敗 (Back)</button>
-    </div>
-
     <div class="answers-grid" id="answers-container"></div>
 </div>
 
@@ -328,6 +323,7 @@
     <input type="text" id="p-name-input" placeholder="名前" style="width:250px; font-size:24px; padding:10px;"><br><br>
     <button id="btn-player-join" class="btn-title-start" onclick="joinGame()" style="font-size:24px; padding:15px 40px;">登録</button>
 </div>
+
 <div id="screen-player" class="screen hidden">
     <div class="player-status" id="p-status" style="font-size:28px; color:#f1c40f;">待機中...</div>
     <div style="background:#333; padding:20px; border:4px double #777; width:90%; margin-bottom:30px;">
@@ -336,6 +332,12 @@
     </div>
     <input type="text" id="p-ans-input" placeholder="回答を入力" style="width:90%; font-size:24px; padding:15px;"><br><br>
     <button class="btn-large" id="p-send-btn" onclick="sendAnswer()" style="width:90%; background:#27ae60; font-size:28px; padding:20px;">送信</button>
+</div>
+
+<div id="screen-debug-controller" class="hidden">
+    <h3 style="color:#8e44ad; margin:10px;">🛠 デバッグコントローラー</h3>
+    <div id="debug-inputs-area" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+    <button class="btn-large" style="position:sticky; bottom:20px; width:90%; background:#8e44ad;" onclick="sendDebugAnswers()">全回答を一括送信</button>
 </div>
 
 <script>
@@ -351,36 +353,16 @@
     ];
     let peer, conn, myId, players = {}, connections = {}, currentFloor = 1, floorQuestions = {}, timerInterval, remainingTime;
     let isDebugMode = false;
+    let debugControllerConn = null; // To identify the controller
 
-    function openDB() {
-        return new Promise((resolve, reject) => {
-            const req = indexedDB.open(DB_NAME, 1);
-            req.onupgradeneeded = (e) => { e.target.result.createObjectStore('config'); };
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-    }
-    async function saveDB(key, val) {
-        const db = await openDB();
-        const tx = db.transaction('config', 'readwrite');
-        tx.objectStore('config').put(val, key);
-        return new Promise(resolve => tx.oncomplete = resolve);
-    }
-    async function loadDB(key) {
-        const db = await openDB();
-        const tx = db.transaction('config', 'readonly');
-        const req = tx.objectStore('config').get(key);
-        return new Promise(resolve => req.onsuccess = () => resolve(req.result));
-    }
+    function openDB() { return new Promise((r,j)=>{const q=indexedDB.open(DB_NAME,1);q.onupgradeneeded=e=>e.target.result.createObjectStore('config');q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);}); }
+    async function saveDB(k,v) { const d=await openDB(),t=d.transaction('config','readwrite');t.objectStore('config').put(v,k);return new Promise(r=>t.oncomplete=r); }
+    async function loadDB(k) { const d=await openDB(),t=d.transaction('config','readonly'),r=t.objectStore('config').get(k);return new Promise(s=>r.onsuccess=()=>s(r.result)); }
 
     window.onload = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('host')) setupPeer(false, urlParams.get('host'));
-        else {
-            await loadSavedConfig();
-            initSetupUI(); 
-            showScreen('screen-title');
-        }
+        else { await loadSavedConfig(); initSetupUI(); showScreen('screen-title'); }
     };
 
     async function loadSavedConfig() {
@@ -391,17 +373,8 @@
                 config.bgOpacity = saved.bgOpacity || 0.5;
                 document.getElementById('bg-opacity').value = config.bgOpacity;
                 updateOpacityDisp();
-
-                if(saved.titleBg) {
-                    config.titleBg = URL.createObjectURL(saved.titleBg);
-                    setFileStatus('status-bg-title', true);
-                }
-                if(saved.bgm) {
-                    config.bgm = saved.bgm; 
-                    document.getElementById('bgm-player').src = URL.createObjectURL(saved.bgm);
-                    document.getElementById('bgm-player').volume = 0.3;
-                    setFileStatus('status-bgm', true);
-                }
+                if(saved.titleBg) { config.titleBg = URL.createObjectURL(saved.titleBg); setFileStatus('status-bg-title', true); }
+                if(saved.bgm) { config.bgm = saved.bgm; document.getElementById('bgm-player').src = URL.createObjectURL(saved.bgm); document.getElementById('bgm-player').volume = 0.3; setFileStatus('status-bgm', true); }
                 if(saved.assets) {
                     for(let i=1; i<=MAX_ASSETS; i++) {
                         config.assets[i] = { bg: null, enemy: null };
@@ -410,153 +383,88 @@
                     }
                 }
             }
-        } catch(e) { console.error("DB Load Error:", e); }
+        } catch(e) { console.error(e); }
     }
 
-    async function saveOpacity() {
-        config.bgOpacity = document.getElementById('bg-opacity').value;
-        updateOpacityDisp();
-        const cur = await loadDB('userConfig') || {};
-        cur.bgOpacity = config.bgOpacity;
-        await saveDB('userConfig', cur);
-    }
-
+    async function saveOpacity() { config.bgOpacity = document.getElementById('bg-opacity').value; updateOpacityDisp(); await saveDB('userConfig', {...await loadDB('userConfig'), bgOpacity:config.bgOpacity}); }
     async function autoSaveAsset(type, input, floorIndex) {
-        const file = input.files[0];
-        if(!file) return;
+        const file = input.files[0]; if(!file) return;
         const cur = await loadDB('userConfig') || {};
-        
-        if(type === 'bgm') {
-            cur.bgm = file; config.bgm = file;
-            document.getElementById('bgm-player').src = URL.createObjectURL(file);
-            document.getElementById('bgm-player').volume = 0.3;
-            setFileStatus('status-bgm', true);
-        } else if(type === 'titleBg') {
-            cur.titleBg = file; config.titleBg = URL.createObjectURL(file);
-            setFileStatus('status-bg-title', true);
-            updateBackground(config.titleBg);
-        } else if(type === 'floorBg') {
-            if(!cur.assets) cur.assets = {};
-            if(!cur.assets[floorIndex]) cur.assets[floorIndex] = {};
-            cur.assets[floorIndex].bg = file;
-            config.assets[floorIndex].bg = URL.createObjectURL(file);
-            setFileStatus(`status-bg-${floorIndex}`, true);
-        } else if(type === 'floorEnemy') {
-            if(!cur.assets) cur.assets = {};
-            if(!cur.assets[floorIndex]) cur.assets[floorIndex] = {};
-            cur.assets[floorIndex].enemy = file;
-            config.assets[floorIndex].enemy = URL.createObjectURL(file);
-            setFileStatus(`status-en-${floorIndex}`, true);
-        }
+        if(type==='bgm') { cur.bgm=file; config.bgm=file; document.getElementById('bgm-player').src=URL.createObjectURL(file); setFileStatus('status-bgm',true); }
+        else if(type==='titleBg') { cur.titleBg=file; config.titleBg=URL.createObjectURL(file); setFileStatus('status-bg-title',true); updateBackground(config.titleBg); }
+        else if(type==='floorBg') { if(!cur.assets)cur.assets={}; if(!cur.assets[floorIndex])cur.assets[floorIndex]={}; cur.assets[floorIndex].bg=file; config.assets[floorIndex].bg=URL.createObjectURL(file); setFileStatus(`status-bg-${floorIndex}`,true); }
+        else if(type==='floorEnemy') { if(!cur.assets)cur.assets={}; if(!cur.assets[floorIndex])cur.assets[floorIndex]={}; cur.assets[floorIndex].enemy=file; config.assets[floorIndex].enemy=URL.createObjectURL(file); setFileStatus(`status-en-${floorIndex}`,true); }
         await saveDB('userConfig', cur);
     }
+    async function autoSaveQuestions() { const cur = await loadDB('userConfig') || {}; cur.questions = config.questions; await saveDB('userConfig', cur); }
 
-    async function autoSaveQuestions() {
-        const cur = await loadDB('userConfig') || {};
-        cur.questions = config.questions;
-        await saveDB('userConfig', cur);
-    }
-
-    function setFileStatus(id, isActive) {
-        const el = document.getElementById(id);
-        if(!el) return;
-        el.innerText = isActive ? "✅保存済" : "未設定";
-        if(isActive) el.classList.add('active'); else el.classList.remove('active');
-    }
-
-    function updateOpacityDisp() {
-        const val = document.getElementById('bg-opacity').value;
-        document.getElementById('disp-opacity').innerText = Math.round(val * 100) + "%";
-        document.getElementById('global-bg-img').style.opacity = val;
-    }
-    function updateBackground(src) {
-        const img = document.getElementById('global-bg-img');
-        if(src) { img.src = src; img.style.display = "block"; } else { img.style.display = "none"; }
-        img.style.opacity = config.bgOpacity;
-    }
+    function setFileStatus(id,a){const e=document.getElementById(id);if(e){e.innerText=a?"✅保存済":"未設定";if(a)e.classList.add('active');else e.classList.remove('active');}}
+    function updateOpacityDisp() { const v=document.getElementById('bg-opacity').value; document.getElementById('disp-opacity').innerText=Math.round(v*100)+"%"; document.getElementById('global-bg-img').style.opacity=v; }
+    function updateBackground(src) { const i=document.getElementById('global-bg-img'); if(src){i.src=src;i.style.display="block";}else{i.style.display="none";} i.style.opacity=config.bgOpacity; }
 
     function initSetupUI() {
         if(!config.assets[1]) for(let i=1; i<=MAX_ASSETS; i++) config.assets[i] = { bg: null, enemy: null };
-        const container = document.getElementById('visual-config-area');
-        container.innerHTML = "";
+        const c = document.getElementById('visual-config-area'); c.innerHTML = "";
         for(let i=1; i<=MAX_ASSETS; i++) {
-            const row = document.createElement('div');
-            row.className = 'floor-config-row';
-            const bgStat = config.assets[i]?.bg ? "active" : "";
-            const enStat = config.assets[i]?.enemy ? "active" : "";
-            const bgTxt = bgStat ? "✅保存済" : "未設定";
-            const enTxt = enStat ? "✅保存済" : "未設定";
-            row.innerHTML = `
-                <div class="floor-label">${i}F</div>
-                <label style="font-size:12px;">背景 <span id="status-bg-${i}" class="file-status ${bgStat}">${bgTxt}</span><br>
-                <input type="file" accept="image/*" style="width:130px;" onchange="autoSaveAsset('floorBg', this, ${i})"></label>
-                <label style="font-size:12px;">敵 <span id="status-en-${i}" class="file-status ${enStat}">${enTxt}</span><br>
-                <input type="file" accept="image/*" style="width:130px;" onchange="autoSaveAsset('floorEnemy', this, ${i})"></label>
-            `;
-            container.appendChild(row);
+            const row = document.createElement('div'); row.className = 'floor-config-row';
+            const b = config.assets[i]?.bg ? "active" : ""; const e = config.assets[i]?.enemy ? "active" : "";
+            row.innerHTML = `<div class="floor-label">${i}F</div><label style="font-size:12px;">背景 <span id="status-bg-${i}" class="file-status ${b}">${b?"✅保存済":"未設定"}</span><br><input type="file" accept="image/*" style="width:130px;" onchange="autoSaveAsset('floorBg',this,${i})"></label><label style="font-size:12px;">敵 <span id="status-en-${i}" class="file-status ${e}">${e?"✅保存済":"未設定"}</span><br><input type="file" accept="image/*" style="width:130px;" onchange="autoSaveAsset('floorEnemy',this,${i})"></label>`;
+            c.appendChild(row);
         }
         renderQuestionList();
     }
-
     function renderQuestionList() {
-        const list = document.getElementById('question-list');
-        list.innerHTML = "";
-        config.questions.forEach(q => {
-            const item = document.createElement('div');
-            item.className = 'q-list-item';
-            item.innerHTML = `<span>${q.text}</span><span>(目安:${q.count})</span>`;
-            list.appendChild(item);
-        });
+        const l = document.getElementById('question-list'); l.innerHTML = "";
+        config.questions.forEach(q=>{ const i=document.createElement('div'); i.className='q-list-item'; i.innerHTML=`<span>${q.text}</span><span>(目安:${q.count})</span>`; l.appendChild(i); });
         document.getElementById('q-status').innerText = `${config.questions.length} 問`;
     }
-
     function addQuestion() {
-        const txt = document.getElementById('q-text').value, cnt = parseInt(document.getElementById('q-count').value);
-        if(!txt || !cnt) return alert("お題と回答数を入力");
-        config.questions = config.questions.filter(q => q.text !== txt);
-        config.questions.push({ text: txt, count: cnt });
-        renderQuestionList();
-        autoSaveQuestions(); 
-        document.getElementById('q-text').value = ""; document.getElementById('q-count').value = "";
+        const t = document.getElementById('q-text').value, c = parseInt(document.getElementById('q-count').value);
+        if(!t || !c) return alert("入力してください");
+        config.questions = config.questions.filter(q=>q.text!==t); config.questions.push({text:t,count:c});
+        renderQuestionList(); autoSaveQuestions(); document.getElementById('q-text').value=""; document.getElementById('q-count').value="";
     }
-
     function saveSettingsAndBack() { showScreen('screen-title'); }
-    async function copyUrl() {
-        const text = document.getElementById('lobby-url').innerText;
-        try { await navigator.clipboard.writeText(text); alert("URLをコピーしました！"); } 
-        catch (err) { alert("コピー失敗: " + err); }
-    }
+    async function copyUrl() { const t=document.getElementById('lobby-url').innerText; try{await navigator.clipboard.writeText(t);alert("コピーしました");}catch(e){alert("コピー失敗:"+e);} }
 
     function showStartOptions() { showScreen('screen-start-options'); }
     
+    // --- LOBBY LOGIC ---
     function goToLobby() {
         config.players = parseInt(document.getElementById('opt-players').value);
         config.time = parseInt(document.getElementById('opt-time').value);
         config.floors = parseInt(document.getElementById('opt-floors').value);
-        if(config.questions.length === 0) config.questions = [...DEFAULT_QS];
-        try {
-            generateFloorQuestions();
-            showScreen('screen-lobby');
-            if(!peer) setupPeer(true);
-        } catch(e) { alert("初期化エラー: " + e); }
+        isDebugMode = false;
+        prepareLobby();
+    }
+
+    function goToDebugLobby() {
+        config.players = parseInt(document.getElementById('debug-opt-players').value);
+        config.time = 999;
+        config.floors = 7; // Debug default
+        isDebugMode = true;
+        document.getElementById('lobby-title').innerText = "🛠 デバッグモード待機中...";
+        prepareLobby();
+    }
+
+    function prepareLobby() {
+        if(config.questions.length===0) config.questions=[...DEFAULT_QS];
+        try { generateFloorQuestions(); showScreen('screen-lobby'); if(!peer) setupPeer(true); } catch(e){ alert("初期化エラー:"+e); }
     }
 
     function generateFloorQuestions() {
-        if(!config.questions || config.questions.length === 0) config.questions = [...DEFAULT_QS];
-        let validQ = config.questions.filter(q => q.count >= config.players);
-        validQ = validQ.filter((v,i,a)=>a.findIndex(t=>(t.text===v.text))===i);
-        if (validQ.length === 0) validQ = [...config.questions];
-        validQ.sort((a, b) => b.count - a.count);
+        let v = config.questions.filter(q=>q.count>=config.players);
+        v = v.filter((val,i,a)=>a.findIndex(t=>(t.text===val.text))===i);
+        if(v.length===0) v=[...config.questions];
+        v.sort((a,b)=>b.count-a.count);
         for(let i=1; i<=config.floors; i++) {
-            const total = validQ.length;
-            const startIdx = Math.floor( (i - 1) * total / config.floors );
-            const endIdx = Math.floor( i * total / config.floors );
-            let bucket = validQ.slice(startIdx, endIdx);
-            if(bucket.length === 0) { const safeIndex = Math.min(startIdx, total - 1); bucket = [validQ[safeIndex]]; }
-            floorQuestions[i] = bucket[Math.floor(Math.random() * bucket.length)].text;
+            const t = v.length, s = Math.floor((i-1)*t/config.floors), e = Math.floor(i*t/config.floors);
+            let b = v.slice(s,e); if(b.length===0) b=[v[Math.min(s,t-1)]];
+            floorQuestions[i] = b[Math.floor(Math.random()*b.length)].text;
         }
     }
 
+    // --- PEER JS ---
     function setupPeer(isHost, hostId=null) {
         peer = new Peer();
         peer.on('open', id => {
@@ -572,17 +480,38 @@
                 c.on('data', d => handleData(c, d));
                 c.on('close', () => removePlayer(c.peer));
             });
-            connections[c.peer] = c; 
+            connections[c.peer] = c;
         });
-        peer.on('error', e => alert("Connection Error: " + e));
+        peer.on('error', e => alert("Connection Error: "+e));
     }
 
     function handleData(c, data) {
         if(data.type === 'JOIN') {
-            players[c.peer] = { name: data.name, answer: null, id: c.peer };
-            updateLobby(); c.send({ type: 'JOIN_OK' });
+            // If debug mode, we just need one controller
+            if(isDebugMode) {
+                debugControllerConn = c; // Mark this connection as the controller
+                // Initialize dummy players immediately
+                players = {};
+                for(let i=1; i<=config.players; i++) {
+                    players[`debug_p${i}`] = { name: `プレイヤー${i}`, answer: null, id: `debug_p${i}` };
+                }
+                c.send({ type: 'DEBUG_INIT', count: config.players }); // Tell controller to render inputs
+                updateLobby();
+            } else {
+                players[c.peer] = { name: data.name, answer: null, id: c.peer };
+                updateLobby(); c.send({ type: 'JOIN_OK' });
+            }
         } else if (data.type === 'ANSWER') {
             if(players[c.peer]) { players[c.peer].answer = data.answer; updateGridHost(); }
+        } else if (data.type === 'DEBUG_ANSWERS') {
+            // Handle bulk answers from controller
+            const answers = data.answers; // array of strings
+            let idx = 0;
+            Object.keys(players).forEach(pid => {
+                if(idx < answers.length) players[pid].answer = answers[idx];
+                idx++;
+            });
+            updateGridHost();
         }
     }
 
@@ -593,30 +522,24 @@
     function updateLobby() {
         const cnt = Object.keys(players).length;
         document.getElementById('lobby-members').innerText = `参加者: ${cnt}人 / ${config.players}人`;
+        // In debug mode, if we have players (dummies), we can start
         if(cnt >= 1) document.getElementById('btn-start-game').disabled = false;
         else document.getElementById('btn-start-game').disabled = true;
     }
 
     function startGame() {
-        const cnt = Object.keys(players).length;
-        if(cnt === 0) return alert("参加者が0人です。");
-        if(Object.keys(floorQuestions).length === 0) generateFloorQuestions();
-        isDebugMode = false;
-        launchGame();
-    }
-
-    function startDebugGame() {
-        config.players = 1; config.floors = 7; config.time = 999;
-        if(!config.questions || config.questions.length === 0) config.questions = [...DEFAULT_QS];
-        generateFloorQuestions();
-        isDebugMode = true;
-        launchGame();
-    }
-
-    function launchGame() {
+        if(Object.keys(players).length === 0) return alert("参加者がいません");
+        if(Object.keys(floorQuestions).length === 0) try{generateFloorQuestions()}catch(e){return alert(e)};
+        
         const audio = document.getElementById('bgm-player');
-        if(audio.src) audio.play().catch(e=>console.log("Audio play failed:",e));
-        if(!isDebugMode) broadcast({ type: 'START' });
+        if(audio.src) audio.play().catch(e=>console.log(e));
+        
+        if(isDebugMode) {
+            if(debugControllerConn) debugControllerConn.send({ type: 'START' });
+        } else {
+            broadcast({ type: 'START' });
+        }
+        
         currentFloor = 1; remainingTime = config.time;
         showScreen('screen-host'); startTimer(); loadFloor();
     }
@@ -631,80 +554,53 @@
         const enemyPh = document.getElementById('enemy-placeholder');
         enemyImg.style.opacity = "0"; 
         
-        // V4.9: Massive Scaling (1.5x)
         let scale = 1.0;
         if (currentFloor <= 2) scale = 0.9;
         else if (currentFloor === 3) scale = 1.35;
         else if (currentFloor === 4) scale = 1.5;
         else if (currentFloor === 5) scale = 1.65;
-        else scale = 1.8; // Boss is Huge
+        else scale = 1.8;
 
         if (asset.enemy) { 
-            enemyImg.src = asset.enemy; 
-            enemyImg.style.display = "block"; 
-            enemyImg.style.height = `${55 * scale}vh`; // 40->55 base
-            enemyImg.style.transform = `translateX(-50%) scale(${scale})`; 
-            enemyImg.onload = () => { enemyImg.style.opacity = "1"; }; 
-            enemyPh.style.display = "none"; 
-        } else { 
-            enemyImg.style.display = "none"; enemyPh.style.display = "block"; enemyPh.style.opacity = "1"; 
-        }
+            enemyImg.src = asset.enemy; enemyImg.style.display = "block"; 
+            enemyImg.style.height = `${55 * scale}vh`; enemyImg.style.transform = `translateX(-50%) scale(${scale})`; 
+            enemyImg.onload = () => { enemyImg.style.opacity = "1"; }; enemyPh.style.display = "none"; 
+        } else { enemyImg.style.display = "none"; enemyPh.style.display = "block"; enemyPh.style.opacity = "1"; }
         
         document.getElementById('disp-floor').innerText = currentFloor;
         document.getElementById('max-floor-disp').innerText = config.floors;
-        const qText = floorQuestions[currentFloor] || "お題読み込みエラー";
+        const qText = floorQuestions[currentFloor] || "エラー";
         document.getElementById('question-text').innerText = qText;
         Object.keys(players).forEach(id => players[id].answer = null);
         
+        document.getElementById('btn-open').classList.add('hidden');
+        document.getElementById('judge-ui').classList.add('hidden');
+        updateGridHost();
+        
         if(isDebugMode) {
-            document.getElementById('debug-panel').classList.remove('hidden');
-            document.getElementById('btn-open').classList.add('hidden');
-            document.getElementById('judge-ui').classList.add('hidden');
+            if(debugControllerConn) debugControllerConn.send({ type: 'QUESTION', text: qText });
         } else {
-            document.getElementById('debug-panel').classList.add('hidden');
-            document.getElementById('btn-open').classList.add('hidden');
-            document.getElementById('judge-ui').classList.add('hidden');
-            updateGridHost();
             broadcast({ type: 'QUESTION', text: qText });
         }
     }
 
-    function debugTrigger(isSuccess) {
-        if(isSuccess) {
-            const slash = document.getElementById('slash-layer');
-            slash.style.display = 'block'; slash.classList.add('slash-effect');
-            document.getElementById('enemy-img').style.opacity = 0; document.getElementById('enemy-placeholder').style.opacity = 0;
-            setTimeout(() => {
-                slash.classList.remove('slash-effect'); slash.style.display = 'none';
-                if(currentFloor === config.floors) endGame(true); else { currentFloor++; loadFloor(); }
-            }, 500);
-        } else {
-            document.getElementById('screen-host').classList.add('shake-screen');
-            setTimeout(() => {
-                document.getElementById('screen-host').classList.remove('shake-screen');
-                if(currentFloor === 1) endGame(false); else { currentFloor--; loadFloor(); }
-            }, 1000);
-        }
-    }
-
     function updateGridHost() {
-        const container = document.getElementById('answers-container');
+        const c = document.getElementById('answers-container');
         if(!document.getElementById('btn-open').classList.contains('hidden') || !document.getElementById('judge-ui').classList.contains('hidden')) return;
-        container.innerHTML = "";
-        let ansCount = 0;
+        c.innerHTML = "";
         Object.values(players).forEach(p => {
             const card = document.createElement('div'); card.className = "answer-card";
-            if(p.answer) { ansCount++; card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans" style="color:#f39c12">回答済</div>`; }
+            if(p.answer) { card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans" style="color:#f39c12">回答済</div>`; }
             else { card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans" style="color:#555">...</div>`; }
-            container.appendChild(card);
+            c.appendChild(card);
         });
+        let ansCount = Object.values(players).filter(p => p.answer).length;
         if(ansCount === Object.keys(players).length && ansCount > 0) document.getElementById('btn-open').classList.remove('hidden');
     }
 
     function openAnswers() {
         document.getElementById('btn-open').classList.add('hidden');
-        const container = document.getElementById('answers-container');
-        container.innerHTML = "";
+        const c = document.getElementById('answers-container'); c.innerHTML = "";
         const counts = {};
         Object.values(players).forEach(p => { if(!p.answer) return; const v = p.answer.trim().toLowerCase(); counts[v] = (counts[v] || 0) + 1; });
         Object.values(players).forEach(p => {
@@ -712,7 +608,7 @@
             card.innerHTML = `<div class="p-name">${p.name}</div><div class="p-ans">${p.answer}</div>`;
             if(counts[p.answer.trim().toLowerCase()] > 1) card.classList.add('selected-ng');
             card.onclick = () => card.classList.toggle('selected-ng');
-            container.appendChild(card);
+            c.appendChild(card);
         });
         document.getElementById('judge-ui').classList.remove('hidden');
     }
@@ -727,8 +623,7 @@
                 if(currentFloor === 1) endGame(false); else { currentFloor--; loadFloor(); }
             }, 1000);
         } else {
-            const slash = document.getElementById('slash-layer');
-            slash.style.display = 'block'; slash.classList.add('slash-effect');
+            const slash = document.getElementById('slash-layer'); slash.style.display = 'block'; slash.classList.add('slash-effect');
             document.getElementById('enemy-img').style.opacity = 0; document.getElementById('enemy-placeholder').style.opacity = 0;
             setTimeout(() => {
                 slash.classList.remove('slash-effect'); slash.style.display = 'none';
@@ -742,48 +637,82 @@
         if(timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             remainingTime--;
-            const m = Math.floor(remainingTime/60).toString().padStart(2,'0');
-            const s = (remainingTime%60).toString().padStart(2,'0');
+            const m = Math.floor(remainingTime/60).toString().padStart(2,'0'), s = (remainingTime%60).toString().padStart(2,'0');
             el.innerText = `${m}:${s}`;
             if(remainingTime<=30) el.classList.add('timer-warning');
-            if(remainingTime<=0) { clearInterval(timerInterval); endGame(false, "TIME UP"); }
+            if(remainingTime<=0) { clearInterval(timerInterval); endGame(false); }
         }, 1000);
     }
 
     function endGame(isClear) {
-        clearInterval(timerInterval);
-        showScreen('screen-result');
+        clearInterval(timerInterval); showScreen('screen-result');
         const t = document.getElementById('res-title');
-        t.innerText = isClear ? "GAME CLEAR!!" : "GAME OVER";
-        t.style.color = isClear ? "#f1c40f" : "#e74c3c";
-        if(!isDebugMode) broadcast({ type: 'END', isClear: isClear });
+        t.innerText = isClear ? "GAME CLEAR!!" : "GAME OVER"; t.style.color = isClear ? "#f1c40f" : "#e74c3c";
+        if(isDebugMode) { if(debugControllerConn) debugControllerConn.send({ type: 'END', isClear }); }
+        else broadcast({ type: 'END', isClear });
     }
 
     function broadcast(data) { Object.values(connections).forEach(c => c.send(data)); }
 
+    // --- PLAYER & CONTROLLER LOGIC ---
     let hostConn;
     function joinGame() {
         const name = document.getElementById('p-name-input').value;
         if(!name) return alert("名前を入力");
+        
+        const btn = document.getElementById('btn-player-join'); btn.disabled = true; btn.innerText = "接続中...";
         const urlParams = new URLSearchParams(window.location.search);
-        hostConn = peer.connect(urlParams.get('host'));
-        hostConn.on('open', () => { hostConn.send({ type:'JOIN', name:name }); showScreen('screen-player'); document.getElementById('p-send-btn').disabled = true; });
+        const hId = urlParams.get('host');
+        if(!hId) { alert("ホストIDなし"); btn.disabled = false; return; }
+
+        hostConn = peer.connect(hId);
+        const tm = setTimeout(() => { if(!hostConn.open) { alert("接続失敗"); btn.disabled = false; } }, 5000);
+
+        hostConn.on('open', () => {
+            clearTimeout(tm);
+            hostConn.send({ type:'JOIN', name:name });
+            // Screen handling is done upon receiving data
+        });
+        hostConn.on('error', e => { clearTimeout(tm); alert("接続エラー: "+e); btn.disabled = false; });
+
         hostConn.on('data', d => {
-            if(d.type === 'START') document.getElementById('p-status').innerText = "ゲーム開始！";
-            else if(d.type === 'QUESTION') {
+            if(d.type === 'DEBUG_INIT') {
+                // Switch to controller UI
+                showScreen('screen-debug-controller');
+                initDebugController(d.count);
+            } else if(d.type === 'JOIN_OK') {
+                showScreen('screen-player');
+            } else if(d.type === 'START') {
+                document.getElementById('p-status').innerText = "ゲーム開始！";
+            } else if(d.type === 'QUESTION') {
                 document.getElementById('p-status').innerText = "回答してください";
                 document.getElementById('p-question').innerText = d.text;
-                document.getElementById('p-ans-input').value = "";
-                document.getElementById('p-ans-input').disabled = false;
-                document.getElementById('p-send-btn').disabled = false;
-                document.getElementById('p-send-btn').innerText = "送信";
-                document.getElementById('p-send-btn').style.background = "#27ae60";
+                // For normal player
+                document.getElementById('p-ans-input').value = ""; document.getElementById('p-ans-input').disabled = false;
+                document.getElementById('p-send-btn').disabled = false; document.getElementById('p-send-btn').innerText = "送信"; document.getElementById('p-send-btn').style.background = "#27ae60";
+                // For debug controller
+                document.querySelectorAll('.debug-p-input').forEach(i => { i.value = ""; i.disabled = false; });
             } else if(d.type === 'END') {
                 document.getElementById('p-status').innerText = d.isClear ? "クリア！" : "終了...";
-                document.getElementById('p-ans-input').disabled = true;
-                document.getElementById('p-send-btn').disabled = true;
             }
         });
+    }
+
+    function initDebugController(count) {
+        const area = document.getElementById('debug-inputs-area');
+        area.innerHTML = "";
+        for(let i=1; i<=count; i++) {
+            const div = document.createElement('div'); div.className = "debug-input-row";
+            div.innerHTML = `<div class="debug-p-label">Player ${i}</div><input type="text" class="debug-p-input" id="dbg-in-${i}" placeholder="回答">`;
+            area.appendChild(div);
+        }
+    }
+
+    function sendDebugAnswers() {
+        const inputs = document.querySelectorAll('.debug-p-input');
+        const answers = Array.from(inputs).map(i => i.value);
+        hostConn.send({ type: 'DEBUG_ANSWERS', answers: answers });
+        inputs.forEach(i => i.disabled = true);
     }
 
     function sendAnswer() {
