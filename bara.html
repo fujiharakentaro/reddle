@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>被らないダンジョン V3.3</title>
+    <title>被らないダンジョン V3.5</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    @import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Reggae+One&display=swap');
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Reggae+One&display=swap');
+
         body {
             font-family: 'DotGothic16', sans-serif;
             background-color: #111;
@@ -29,35 +30,54 @@
             transition: background 0.5s;
         }
 
-        /* --- Title Screen Styles --- */
+        /* --- Title Screen Styles (Updated V3.5) --- */
         #screen-title { background: #000; background-image: radial-gradient(circle, #333 1px, transparent 1px); background-size: 20px 20px; }
         
         .title-logo {
             font-family: 'Reggae One', cursive;
-            font-size: 90px;
-            color: #d32f2f; /* 赤文字 */
+            font-size: 100px; /* 迫力を出すため少し大きく */
+            color: #d32f2f; /* 文字本体は赤 */
             position: relative;
-            margin-bottom: 60px;
-            /* 黄色〜オレンジのグラデーション枠（影で表現） */
-            text-shadow: 
-                3px 3px 0 #f1c40f, -3px -3px 0 #f1c40f, 3px -3px 0 #f1c40f, -3px 3px 0 #f1c40f,
-                6px 6px 0 #e67e22, -6px -6px 0 #e67e22, 6px -6px 0 #e67e22, -6px 6px 0 #e67e22,
-                10px 10px 20px rgba(0,0,0,0.8); /* 立体感の影 */
+            margin-bottom: 40px;
+            line-height: 1.2;
+            
+            /* 1. 滑らかな太い枠線（黄色） */
+            -webkit-text-stroke: 4px #f1c40f;
+            
+            /* 2. 枠の外側の発光（オレンジ）と立体感の影 */
+            /* drop-shadowは輪郭に対してかかるので、黄色の枠の外側にオレンジの発光が広がる */
+            filter: 
+                drop-shadow(0 0 4px #e67e22)  /* 枠のすぐ外側の強いオレンジ光 */
+                drop-shadow(0 0 15px #e67e22) /* 外側に広がるオレンジのぼかし */
+                drop-shadow(8px 8px 15px rgba(0,0,0,0.9)); /* 全体の立体的な影 */
+        }
+        @media (max-width: 600px) { 
+            .title-logo { 
+                font-size: 60px; 
+                -webkit-text-stroke: 3px #f1c40f;
+            } 
         }
 
         .btn-title-start {
             padding: 20px 50px; font-size: 28px; background: #c0392b; border: 4px solid #f1c40f;
             color: #fff; text-shadow: 2px 2px 0 #000; box-shadow: 0 8px 0 #8e2a1f;
-            transition: all 0.1s; cursor: pointer; font-family: 'Reggae One', cursive;
+            transition: all 0.1s; cursor: pointer; font-family: 'Reggae One', cursive; margin-bottom: 20px;
         }
         .btn-title-start:active { transform: translateY(5px); box-shadow: 0 3px 0 #8e2a1f; }
 
         .btn-title-settings {
-            padding: 10px 30px; font-size: 18px; background: #555; border: 2px solid #aaa;
-            margin-top: 40px; cursor: pointer; color: #ccc; font-family: 'DotGothic16', sans-serif;
+            padding: 10px 30px; font-size: 16px; background: #333; border: 1px solid #777;
+            cursor: pointer; color: #aaa; font-family: 'DotGothic16', sans-serif;
         }
-        .btn-title-settings:hover { color: #fff; border-color: #fff; }
+        .btn-title-settings:hover { color: #fff; border-color: #fff; background: #444; }
 
+        /* --- Start Options Modal --- */
+        .start-options-box {
+            background: rgba(0,0,0,0.9); border: 4px double #fff; padding: 30px; border-radius: 10px;
+            width: 90%; max-width: 500px;
+        }
+        .option-row { margin: 20px 0; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .option-row input { width: 80px; font-size: 20px; padding: 5px; }
 
         /* --- Other UI Components --- */
         button {
@@ -172,29 +192,57 @@
 <audio id="bgm-player" loop></audio>
 
 <div id="screen-title" class="screen">
-    <h1 class="title-logo" data-text="被らないダンジョン">被らないダンジョン</h1>
-    <button class="btn-title-start" onclick="goToLobby()">ゲームスタート</button>
+    <h1 class="title-logo">被らないダンジョン</h1>
+    
+    <button class="btn-title-start" onclick="showStartOptions()">ゲームスタート</button>
+    
     <br>
-    <button class="btn-title-settings" onclick="showScreen('screen-setup')">設定</button>
+    
+    <button class="btn-title-settings" onclick="showScreen('screen-setup')">設定（素材・BGM・お題）</button>
+</div>
+
+
+<div id="screen-start-options" class="screen hidden" style="background:rgba(0,0,0,0.8);">
+    <div class="start-options-box">
+        <h2 style="color:#f1c40f; margin-top:0;">ミッション設定</h2>
+        
+        <div class="option-row">
+            <label>参加人数</label>
+            <div>
+                <input type="number" id="opt-players" value="4" min="2" style="width:60px;"> 人
+            </div>
+        </div>
+        
+        <div class="option-row">
+            <label>制限時間</label>
+            <div>
+                <input type="number" id="opt-time" value="300" step="30" style="width:60px;"> 秒
+            </div>
+        </div>
+
+        <div style="margin-top:30px;">
+            <button class="btn-large" onclick="goToLobby()">ロビーを作成</button>
+            <br>
+            <button class="btn-title-settings" onclick="showScreen('screen-title')" style="margin-top:10px;">戻る</button>
+        </div>
+    </div>
 </div>
 
 
 <div id="screen-setup" class="screen hidden" style="background:#111; overflow: auto; display:block; position:relative;">
     <div style="display:flex; justify-content:center; align-items:center; height:100vh;">
         <div id="setup-container">
-            <h2 style="text-align:center; color:#e74c3c; margin:0 0 20px 0;">設定</h2>
+            <h2 style="text-align:center; color:#e74c3c; margin:0 0 20px 0;">詳細設定</h2>
             
             <div class="setup-section">
-                <h3>1. 基本設定 & BGM</h3>
-                <label>参加人数: <input type="number" id="conf-players" value="4" min="2" style="width:50px;"> 人</label>
-                <label style="margin-left:15px;">制限時間: <input type="number" id="conf-time" value="300" style="width:60px;"> 秒</label>
-                <br><br>
-                <label>BGMファイル (任意): <input type="file" id="file-bgm" accept="audio/*"></label>
+                <h3>1. BGM設定</h3>
+                <label>BGMファイル (MP3等): <input type="file" id="file-bgm" accept="audio/*"></label>
+                <p style="font-size:12px; color:#aaa;">※設定するとゲーム中にループ再生されます</p>
             </div>
 
             <div class="setup-section">
                 <h3>2. 階層ビジュアル (背景・敵画像)</h3>
-                <p style="font-size:12px; color:#aaa;">※設定しない場合は黒背景・文字のみになります</p>
+                <p style="font-size:12px; color:#aaa;">※設定しない場合はデフォルト表示になります</p>
                 <div id="visual-config-area">
                     </div>
             </div>
@@ -203,7 +251,7 @@
                 <h3>3. お題登録</h3>
                 <p style="font-size:12px; color:#aaa;">
                     お題と「有効回答数(目安)」を登録してください。<br>
-                    参加人数に応じて、適切なお題を区間ごとにランダム選出します。<br>
+                    <strong>参加人数に応じて、適切なお題を区間ごとにランダム選出します。</strong><br>
                     ※お題がたくさんあるほど、毎回違う問題が出やすくなります。
                 </p>
                 <div style="display:flex; gap:5px; margin-bottom:10px;">
@@ -216,9 +264,9 @@
             </div>
 
             <div style="text-align:center; margin-top: 20px;">
-                <button class="btn-large" onclick="saveSettingsAndBack()">設定を保存して戻る</button>
+                <button class="btn-large" onclick="saveSettingsAndBack()">保存してタイトルへ</button>
                 <br>
-                <button class="btn-title-settings" onclick="showScreen('screen-title')" style="margin-top:10px;">キャンセルして戻る</button>
+                <button class="btn-title-settings" onclick="showScreen('screen-title')" style="margin-top:10px;">キャンセル</button>
             </div>
         </div>
     </div>
@@ -286,10 +334,10 @@
     // --- Data Management ---
     const MAX_FLOOR = 7;
     let config = {
-        players: 4,
-        time: 300,
-        questions: [], // { text: "", count: 100 }
-        assets: {}     // { 1: { bg: url, enemy: url }, ... }
+        players: 4, // Default, overwritten by start options
+        time: 300,  // Default, overwritten by start options
+        questions: [], 
+        assets: {}
     };
 
     // Default questions
@@ -315,18 +363,16 @@
             // Player Mode
             setupPeer(false, urlParams.get('host'));
         } else {
-            // Host Mode: Show Title & Init Setup
+            // Host Mode
             showScreen('screen-title');
-            initSetupUI();
+            initSetupUI(); // Prepare settings UI behind the scenes
         }
     };
 
-    // --- SETUP UI LOGIC ---
+    // --- SETUP UI LOGIC (Detailed Settings) ---
     function initSetupUI() {
-        // Initialize assets config
         for(let i=1; i<=MAX_FLOOR; i++) config.assets[i] = { bg: null, enemy: null };
 
-        // Generate Floor Config Rows
         const container = document.getElementById('visual-config-area');
         for(let i=1; i<=MAX_FLOOR; i++) {
             const row = document.createElement('div');
@@ -347,7 +393,6 @@
 
         config.questions.push({ text: txt, count: cnt });
         
-        // Render List
         const list = document.getElementById('question-list');
         const item = document.createElement('div');
         item.className = 'q-list-item';
@@ -359,18 +404,14 @@
         document.getElementById('q-status').innerText = `現在 ${config.questions.length} 問`;
     }
 
-    // Applies current setup form values to config object
-    function applySettings() {
-        // 1. Basic Config
-        config.players = parseInt(document.getElementById('conf-players').value);
-        config.time = parseInt(document.getElementById('conf-time').value);
-
-        // Merge defaults if too few questions
+    // "Settings" screen: save assets/questions/bgm
+    function saveSettingsAndBack() {
+        // 1. Merge Defaults if empty
         if(config.questions.length < MAX_FLOOR * 2) {
             config.questions = [...config.questions, ...DEFAULT_QS];
         }
 
-        // 2. BGM (Only update if file selected)
+        // 2. BGM
         const bgmFile = document.getElementById('file-bgm').files[0];
         if(bgmFile) {
             const audio = document.getElementById('bgm-player');
@@ -378,7 +419,7 @@
             audio.volume = 0.3;
         }
 
-        // 3. Assets (Only update if file selected)
+        // 3. Assets
         for(let i=1; i<=MAX_FLOOR; i++) {
             const bgFile = document.getElementById(`bg-${i}`).files[0];
             const enFile = document.getElementById(`enemy-${i}`).files[0];
@@ -386,46 +427,67 @@
             if(enFile) config.assets[i].enemy = URL.createObjectURL(enFile);
         }
 
-        // --- Question Selection Logic (V3.2) ---
-        let validQ = config.questions.filter(q => q.count >= config.players);
-        if (validQ.length < MAX_FLOOR) {
-            // alert("注意: 有効なお題が不足しています。"); // title flow makes alert annoying
-            validQ = [...config.questions];
+        alert("設定を保存しました");
+        showScreen('screen-title');
+    }
+
+    // --- GAME START FLOW ---
+    function showStartOptions() {
+        showScreen('screen-start-options');
+    }
+
+    function goToLobby() {
+        // Apply Player Count & Time from Start Options
+        config.players = parseInt(document.getElementById('opt-players').value);
+        config.time = parseInt(document.getElementById('opt-time').value);
+
+        // Ensure questions exist (if user skipped Settings screen)
+        if(config.questions.length === 0) {
+            config.questions = [...DEFAULT_QS];
         }
-        validQ.sort((a, b) => b.count - a.count);
+
+        // Generate Floor Questions based on Player Count
+        generateFloorQuestions();
+
+        showScreen('screen-lobby');
+        if(!peer) setupPeer(true);
+    }
+
+    function generateFloorQuestions() {
+        let validQ = config.questions.filter(q => q.count >= config.players);
+        
+        if (validQ.length < MAX_FLOOR) {
+            validQ = [...config.questions]; // Fallback
+        }
+        
+        validQ.sort((a, b) => b.count - a.count); // Descending
 
         for(let i=1; i<=MAX_FLOOR; i++) {
             const total = validQ.length;
             const startIdx = Math.floor( (i - 1) * total / MAX_FLOOR );
             const endIdx = Math.floor( i * total / MAX_FLOOR );
             let bucket = validQ.slice(startIdx, endIdx);
+            
             if(bucket.length === 0 && startIdx < total) bucket = [validQ[startIdx]];
             if(bucket.length === 0) bucket = [validQ[total - 1]];
+            
             const pick = bucket[Math.floor(Math.random() * bucket.length)];
             floorQuestions[i] = pick.text;
         }
     }
-
-    // --- Navigation Functions ---
-    function saveSettingsAndBack() {
-        applySettings();
-        showScreen('screen-title');
-    }
-
-    function goToLobby() {
-        applySettings(); // Apply settings (defaults or changed) before going to lobby
-        showScreen('screen-lobby');
-        if(!peer) setupPeer(true); // Initialize Peer only when needed
-    }
-
 
     // --- PEER JS ---
     function setupPeer(isHost, hostId=null) {
         peer = new Peer();
         peer.on('open', id => {
             myId = id;
-            if(isHost) initLobby();
-            else showScreen('screen-login');
+            if(isHost) {
+                const url = `${location.href.split('?')[0]}?host=${myId}`;
+                new QRCode(document.getElementById("qrcode"), { text: url, width: 128, height: 128 });
+                document.getElementById('lobby-url').innerText = url;
+            } else {
+                showScreen('screen-login');
+            }
         });
         peer.on('connection', c => {
             c.on('open', () => c.on('data', d => handleData(c, d)));
@@ -435,13 +497,6 @@
     }
 
     // --- HOST GAME LOGIC ---
-    function initLobby() {
-        showScreen('screen-lobby');
-        const url = `${location.href.split('?')[0]}?host=${myId}`;
-        new QRCode(document.getElementById("qrcode"), { text: url, width: 128, height: 128 });
-        document.getElementById('lobby-url').innerText = url;
-    }
-
     function handleData(c, data) {
         if(data.type === 'JOIN') {
             players[c.peer] = { name: data.name, answer: null, id: c.peer };
@@ -489,7 +544,7 @@
 
         const enemyImg = document.getElementById('enemy-img');
         const enemyPh = document.getElementById('enemy-placeholder');
-        enemyImg.style.opacity = "1"; enemyPh.style.opacity = "1"; // reset opacity
+        enemyImg.style.opacity = "1"; enemyPh.style.opacity = "1";
 
         if (asset && asset.enemy) {
             enemyImg.src = asset.enemy;
@@ -574,11 +629,11 @@
         if(isFail) {
             document.getElementById('screen-host').classList.add('shake-screen');
             setTimeout(() => {
+                document.getElementById('screen-host').classList.remove('shake-screen');
                 if(currentFloor === 1) {
                     endGame(false);
                 } else {
                     currentFloor--;
-                    // alert("被り発生！前の階層へ戻ります"); // Removed alert for smoother flow
                     loadFloor();
                 }
             }, 1000);
