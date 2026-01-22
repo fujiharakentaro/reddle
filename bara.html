@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>被らないダンジョン V3.6</title>
+    <title>被らないダンジョン V3.7</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Reggae+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Reggae+One&family=Noto+Serif+JP:wght@900&display=swap" rel="stylesheet">
     
     <style>
         body {
@@ -32,7 +32,7 @@
             transition: background 0.5s;
         }
 
-        /* --- Title Logo Design (The "Top Line" Style) --- */
+        /* --- Title Logo Design (V3.7 Updated) --- */
         #screen-title { 
             background: #000; 
             background-image: radial-gradient(circle, #333 1px, transparent 1px); 
@@ -40,59 +40,41 @@
         }
         
         .title-logo {
-            font-family: 'Reggae One', cursive;
-            font-size: 110px; /* PC向け特大サイズ */
+            /* フォントを明朝体の極太に変更 */
+            font-family: 'Noto Serif JP', serif;
+            font-weight: 900; /* 中を太く */
+            
+            font-size: 120px; /* サイズも少し大きくして迫力を出す */
             line-height: 1.1;
             margin-bottom: 60px;
             position: relative;
             z-index: 1;
             
-            /* 文字の中身（赤グラデーション） */
-            background: linear-gradient(to bottom, #ff5e62 0%, #c0392b 50%, #800000 100%);
+            /* 文字の中身（より鮮明な赤グラデーションに変更し視認性向上） */
+            background: linear-gradient(to bottom, #ff3333 10%, #cc0000 60%, #800000 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             
-            /* 金色の縁取りと、分厚い立体の土台（影） */
-            /* strokeで縁取りしつつ、shadowで厚みを出す */
+            /* 金色の縁取り（太さはそのまま4px）と、境界を際立たせる影 */
             -webkit-text-stroke: 4px #f1c40f;
-            filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
-        }
-
-        /* 立体感を出すためのレイヤー（擬似要素で厚みを表現） */
-        .title-logo::before {
-            content: "被らないダンジョン";
-            position: absolute;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            z-index: -1;
-            
-            /* 中身の色を無効化 */
-            -webkit-text-fill-color: transparent;
-            -webkit-text-stroke: 8px #f39c12; /* 外側の太い枠（オレンジ金） */
-            
-            /* 影を重ねて厚みを表現 */
-            text-shadow: 
-                0px 4px 0 #d35400,  /* 1段目 */
-                0px 8px 0 #d35400,  /* 2段目 */
-                0px 12px 0 #a04000, /* 3段目 */
-                0px 16px 0 #a04000, /* 4段目 */
-                0px 20px 10px rgba(0,0,0,0.8); /* 接地影 */
+            filter: drop-shadow(0 0 8px rgba(0,0,0,0.9));
         }
 
         /* スマホ対応 */
         @media (max-width: 800px) { 
-            .title-logo { font-size: 60px; -webkit-text-stroke: 2px #f1c40f; }
-            .title-logo::before { -webkit-text-stroke: 5px #f39c12; text-shadow: 0px 4px 0 #d35400, 0px 8px 5px rgba(0,0,0,0.8); }
+            .title-logo { font-size: 70px; -webkit-text-stroke: 3px #f1c40f; }
         }
 
-        /* ボタン類のデザイン */
+        /* ボタン類のデザイン（タイトルの雰囲気に合わせて調整） */
         .btn-title-start {
             padding: 20px 60px; font-size: 32px; 
             background: linear-gradient(to bottom, #c0392b, #8e2a1f);
             border: 4px solid #f1c40f; border-radius: 10px;
             color: #fff; text-shadow: 2px 2px 0 #000; 
             box-shadow: 0 10px 0 #5a1a15, 0 15px 10px rgba(0,0,0,0.5);
-            transition: all 0.1s; cursor: pointer; font-family: 'Reggae One', cursive; margin-bottom: 20px;
+            transition: all 0.1s; cursor: pointer; 
+            font-family: 'Noto Serif JP', serif; font-weight: 900; /* ボタンも明朝体に合わせる */
+            margin-bottom: 20px;
         }
         .btn-title-start:active { transform: translateY(6px); box-shadow: 0 4px 0 #5a1a15; }
 
@@ -128,7 +110,7 @@
 
         /* --- Game Screen --- */
         .dungeon-header { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px; box-sizing: border-box; z-index: 10; text-shadow: 2px 2px 0 #000; }
-        .floor-indicator { font-size: 40px; color: #f1c40f; font-family: 'Reggae One', cursive; }
+        .floor-indicator { font-size: 40px; color: #f1c40f; font-family: 'Noto Serif JP', serif; font-weight: 900; }
         .timer-box { font-size: 32px; border: 2px solid #fff; padding: 5px 15px; background: rgba(0,0,0,0.7); }
         .timer-warning { color: #e74c3c; animation: blink 0.5s infinite; }
         .enemy-area { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; position: relative; z-index: 5; }
@@ -217,12 +199,12 @@
 </div>
 
 <div id="screen-lobby" class="screen hidden" style="background:#222;">
-    <h2 style="font-family: 'Reggae One', cursive; color:#f1c40f;">冒険者を募集中...</h2>
+    <h2 style="font-family: 'Noto Serif JP', serif; font-weight:900; color:#f1c40f;">冒険者を募集中...</h2>
     <div style="background:#fff; padding:10px; border: 4px double #333;">
         <div id="qrcode"></div>
     </div>
     <p id="lobby-url" style="font-size:14px; color:#aaa; margin-top:10px; user-select: text;"></p>
-    <div id="lobby-members" style="margin: 20px; font-size: 28px; color:#2ecc71; font-family: 'Reggae One', cursive;">参加者: 0人</div>
+    <div id="lobby-members" style="margin: 20px; font-size: 28px; color:#2ecc71; font-family: 'Noto Serif JP', serif; font-weight:900;">参加者: 0人</div>
     <button class="btn-title-start" id="btn-start-game" onclick="startGame()" disabled>ダンジョンへ挑む</button>
     <br>
     <button class="btn-title-settings" onclick="showScreen('screen-title')" style="margin-top:20px;">タイトルへ戻る</button>
@@ -250,19 +232,19 @@
 </div>
 
 <div id="screen-result" class="screen hidden" style="background:#000;">
-    <h1 id="res-title" style="font-family: 'Reggae One', cursive; font-size: 80px; color: #f1c40f; text-shadow: 5px 5px 0 #000;">CLEAR</h1>
+    <h1 id="res-title" style="font-family: 'Noto Serif JP', serif; font-weight:900; font-size: 80px; color: #f1c40f; text-shadow: 5px 5px 0 #000;">CLEAR</h1>
     <button class="btn-title-settings" onclick="location.reload()" style="font-size:24px; padding:15px 30px;">タイトルへ戻る</button>
 </div>
 
 <div id="screen-login" class="screen hidden" style="background:#222;">
-    <h2 style="font-family: 'Reggae One', cursive; color:#e67e22;">冒険者ギルド</h2>
+    <h2 style="font-family: 'Noto Serif JP', serif; font-weight:900; color:#e67e22;">冒険者ギルド</h2>
     <input type="text" id="p-name-input" placeholder="名前を入力" style="width:250px; font-size:24px; padding:10px;">
     <br><br>
     <button class="btn-title-start" onclick="joinGame()" style="font-size:24px; padding:15px 40px;">登録</button>
 </div>
 
 <div id="screen-player" class="screen hidden">
-    <div class="player-status" id="p-status" style="font-size:28px; color:#f1c40f; font-family: 'Reggae One', cursive;">待機中...</div>
+    <div class="player-status" id="p-status" style="font-size:28px; color:#f1c40f; font-family: 'Noto Serif JP', serif; font-weight:900;">待機中...</div>
     <div style="background:#333; padding:20px; border:4px double #777; border-radius:10px; width:90%; margin-bottom:30px;">
         <div style="color:#aaa; font-size:14px; margin-bottom:5px;">今回のお題</div>
         <div id="p-question" style="font-size:24px; font-weight:bold;"></div>
