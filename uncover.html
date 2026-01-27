@@ -119,21 +119,20 @@
         .solved-mark { color: #22aa22; font-weight: bold; margin-left: 10px; }
         .failed-mark { color: #aa2222; font-weight: bold; margin-left: 10px; }
 
-        /* PLAYER STYLES (MOBILE OPTIMIZED) */
+        /* PLAYER STYLES (NEW) */
         .p-container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; height: 100%; }
         .p-status { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; border: 1px solid #444; font-size: 18px; }
         .p-pt-select { display: flex; justify-content: space-between; gap: 5px; margin-bottom: 20px; }
         .btn-pt { flex: 1; aspect-ratio: 1.2; border-radius: 8px; border: none; font-size: 18px; font-weight: bold; font-family: 'Black Ops One'; opacity: 0.6; transition: 0.2s; }
         .btn-pt.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.5); border: 2px solid #fff; }
+        .btn-pt.disabled { opacity: 0.2; pointer-events: none; }
         .p-input { width: 100%; height: 60px; padding: 0 15px; font-size: 24px; box-sizing: border-box; margin-bottom: 20px; border-radius: 10px; border: 2px solid #555; background: #000; color: #fff; text-align: center; line-height: 60px; }
-        .btn-send { width: 100%; padding: 15px; font-size: 24px; font-weight: bold; background: #fff; color: #000; border: none; border-radius: 10px; }
+        .p-input:disabled { background: #222; color: #555; }
+        .btn-send { width: 100%; padding: 15px; font-size: 24px; font-weight: bold; background: #fff; color: #000; border: none; border-radius: 10px; margin-top: auto; }
         .btn-send:disabled { background: #555; color: #888; }
-        
-        /* DISABLED STATE UI */
-        .ui-disabled { opacity: 0.4; pointer-events: none; filter: grayscale(100%); }
-
         .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: none; z-index: 100; align-items: center; justify-content: center; }
         .modal-content { background: #222; padding: 30px; border-radius: 15px; border: 2px solid #fff; text-align: center; max-width: 90%; }
+        #p-info-text { margin-top: 20px; color: #888; font-weight: bold; }
 
     </style>
 </head>
@@ -142,7 +141,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V6.0 Fixed</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V6.0 Online</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
         </div>
@@ -234,9 +233,9 @@
         <div id="screen-debug" class="screen hidden" style="background:#222; align-items:stretch;">
             <div class="debug-container">
                 <div class="debug-header">
-                    <h3 style="margin:0;">MULTI-DEBUGGER</h3>
+                    <h3 style="margin:0; color:#fff;">MULTI-DEBUGGER</h3>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <label>生成人数(2-10):</label>
+                        <label style="color:#aaa;">生成人数(2-10):</label>
                         <input type="number" id="debug-count" value="5" min="2" max="10" style="width:60px;">
                         <button class="btn-action" onclick="Debugger.spawnPlayers()">生成 & エントリー</button>
                     </div>
@@ -292,7 +291,7 @@
                     <span style="font-weight: bold;"><span id="p-score">0</span> pts</span>
                 </div>
                 
-                <div id="p-game-area" class="ui-disabled" style="margin-top: 20px;">
+                <div id="p-game-area" style="flex:1; display:flex; flex-direction:column; margin-top:20px;">
                     <div style="text-align: left; margin-bottom: 5px; color: #aaa;">問題を選択:</div>
                     <div class="p-pt-select">
                         <button class="btn-pt color-1" onclick="Player.selectPt(1)" id="p-btn-1">1</button>
@@ -301,12 +300,12 @@
                         <button class="btn-pt color-4" onclick="Player.selectPt(4)" id="p-btn-4">4</button>
                         <button class="btn-pt color-5" onclick="Player.selectPt(5)" id="p-btn-5">5</button>
                     </div>
-                    <input type="text" id="p-answer-input" class="p-input" placeholder="答えを入力...">
-                    <button id="p-submit-btn" class="btn-send" onclick="Player.confirmSend()">送信する</button>
-                </div>
-                
-                <div id="p-status-msg" style="padding: 20px 0; color: #888; font-weight: bold;">
-                    問題出題までお待ちください
+                    <div style="text-align: left; margin-bottom: 5px; color: #aaa;">解答欄:</div>
+                    <input type="text" id="p-answer-input" class="p-input" placeholder="答えを入力..." disabled>
+                    
+                    <div id="p-info-text">問題出題までお待ちください</div>
+
+                    <button id="p-submit-btn" class="btn-send" onclick="Player.confirmSend()" disabled>送信する</button>
                 </div>
             </div>
         </div>
@@ -328,7 +327,7 @@
     <audio id="se-timeup-player"></audio>
 
 <script>
-/* DATA KEY (Same as V6) */
+/* DATA KEY */
 const DATA_KEY = 'quiz_royale_sets_v5'; 
 const CONF_KEY = 'quiz_royale_conf_v5'; 
 
@@ -336,19 +335,60 @@ const CONF_KEY = 'quiz_royale_conf_v5';
 const DB = {
     state: { phase: 'LOBBY', currentSet: null },
     players: {}, answers: [], solved: [false, false, false, false, false, false],
-    // Reset answers
     resetAnswers: () => { DB.answers = []; DB.solved = [false, false, false, false, false, false]; }
 };
 
-/* SOUND (SINGLE CONTEXT FIX) */
+const params = new URLSearchParams(window.location.search);
+const ROLE = params.get('role');
+
+/* NETWORK: PeerJS */
+const Net = {
+    peer: null, conn: null, conns: [], isHost: false,
+    initHost: () => {
+        Net.isHost = true;
+        Net.peer = new Peer();
+        Net.peer.on('open', (id) => {
+            const url = location.href.split('?')[0] + "?role=player&host=" + id;
+            new QRCode(document.getElementById("qrcode"), { text: url, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
+        });
+        Net.peer.on('connection', (c) => {
+            Net.conns.push(c);
+            c.on('data', (d) => Host.handleData(d, c.peer));
+            c.on('close', () => { 
+                if(DB.players[c.peer]) delete DB.players[c.peer];
+                Net.conns = Net.conns.filter(conn => conn !== c);
+                Host.refreshCount();
+            });
+            c.send({ type: 'SYNC', db: DB });
+        });
+    },
+    initPlayer: (hostId) => {
+        Net.peer = new Peer();
+        Net.peer.on('open', () => {
+            Net.conn = Net.peer.connect(hostId);
+            Net.conn.on('data', (d) => Player.handleData(d));
+            Net.conn.on('close', () => { alert("接続が切れました"); location.reload(); });
+        });
+    },
+    initDebugger: (hostId) => {
+        Net.peer = new Peer();
+        Net.peer.on('open', () => {
+            Net.conn = Net.peer.connect(hostId);
+            Net.conn.on('data', (d) => Debugger.handleData(d));
+        });
+    },
+    broadcast: (data) => { if(Net.isHost) Net.conns.forEach(c => c.send(data)); },
+    send: (data) => { if(Net.conn) Net.conn.send(data); }
+};
+
+/* SOUND (FIX) */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let volBgm = 0.5;
 let volSe = 0.5;
 
 function playSe(type) {
-    // Resume context if needed
     if(audioCtx.state === 'suspended') audioCtx.resume();
-
+    
     if(type === 'timeup') {
         const audio = document.getElementById('se-timeup-player');
         if(audio.src) { audio.volume = volSe; audio.play().catch(e=>{}); return; }
@@ -357,31 +397,29 @@ function playSe(type) {
     const osc = audioCtx.createOscillator(); 
     const gain = audioCtx.createGain();
     const gainVal = 0.3 * volSe;
-    
     const t = audioCtx.currentTime;
     
     if(type === 'count') { 
         osc.frequency.setValueAtTime(800, t); 
-        osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.1); 
+        osc.frequency.exponentialRampToValueAtTime(0.01, t+0.1); 
         gain.gain.setValueAtTime(gainVal, t); 
-        osc.start(); osc.stop(t + 0.1); 
+        osc.start(); osc.stop(t+0.1); 
     } 
     else if(type === 'start') { 
         osc.type = 'square'; 
         osc.frequency.setValueAtTime(1200, t); 
         gain.gain.setValueAtTime(gainVal, t); 
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.8); 
-        osc.start(); osc.stop(t + 0.8); 
+        gain.gain.exponentialRampToValueAtTime(0.01, t+0.8); 
+        osc.start(); osc.stop(t+0.8); 
     }
     else if(type === 'timeup') { 
         osc.type = 'sawtooth'; 
         osc.frequency.setValueAtTime(800, t); 
-        osc.frequency.linearRampToValueAtTime(400, t + 0.5);
+        osc.frequency.linearRampToValueAtTime(400, t+0.5); 
         gain.gain.setValueAtTime(gainVal, t); 
-        gain.gain.linearRampToValueAtTime(0, t + 0.5);
-        osc.start(); osc.stop(t + 0.5);
+        gain.gain.linearRampToValueAtTime(0, t+0.5); 
+        osc.start(); osc.stop(t+0.5); 
     }
-    
     osc.connect(gain); gain.connect(audioCtx.destination);
 }
 
@@ -396,50 +434,6 @@ function stopBgm() {
     audio.pause(); audio.currentTime = 0; 
 }
 
-/* NETWORK: PeerJS */
-const Net = {
-    peer: null, conn: null, conns: [], isHost: false,
-    initHost: () => {
-        Net.isHost = true;
-        Net.peer = new Peer();
-        Net.peer.on('open', (id) => {
-            // URL with host param
-            const url = location.href.split('?')[0] + "?role=player&host=" + id;
-            new QRCode(document.getElementById("qrcode"), { text: url, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
-        });
-        Net.peer.on('connection', (c) => {
-            Net.conns.push(c);
-            c.on('data', (d) => Host.handleData(d, c.peer));
-            c.on('close', () => {
-                // Remove player on disconnect
-                if(DB.players[c.peer]) delete DB.players[c.peer];
-                Net.conns = Net.conns.filter(conn => conn !== c);
-                Host.refreshCount();
-            });
-            // Send initial state
-            c.send({ type: 'SYNC', db: DB });
-        });
-    },
-    initPlayer: (hostId) => {
-        Net.peer = new Peer();
-        Net.peer.on('open', () => {
-            Net.conn = Net.peer.connect(hostId);
-            Net.conn.on('data', (d) => Player.handleData(d));
-            Net.conn.on('close', () => { alert("接続が切れました"); location.reload(); });
-        });
-    },
-    // Debugger uses Player logic but sends via proxy
-    initDebugger: (hostId) => {
-        Net.peer = new Peer();
-        Net.peer.on('open', () => {
-            Net.conn = Net.peer.connect(hostId);
-            Net.conn.on('data', (d) => Debugger.handleData(d));
-        });
-    },
-    broadcast: (data) => { if(Net.isHost) Net.conns.forEach(c => c.send(data)); },
-    send: (data) => { if(Net.conn) Net.conn.send(data); }
-};
-
 /* HOST LOGIC */
 const Host = {
     sets: [], config: {fontSize: 24, barWidth: 90, volBgm: 50, volSe: 50},
@@ -447,35 +441,30 @@ const Host = {
     judgeIndex: 0, sortedAnswers: [], isJudgingActive: false,
 
     init: () => {
-        const p = new URLSearchParams(window.location.search);
-        const role = p.get('role');
-        const hid = p.get('host');
-
-        if(role === 'player') {
+        if(ROLE === 'player') {
             document.getElementById('host-app').classList.add('hidden');
             document.getElementById('player-app').classList.remove('hidden');
-            if(!hid) return alert("QRコードからアクセスしてください");
-            Player.init(hid);
+            const hId = params.get('host');
+            if(!hId) return alert("QRコードからアクセスしてください");
+            Player.init(hId);
             return;
         }
-        if(role === 'debug') {
+        if(ROLE === 'debug') {
             document.getElementById('host-app').classList.add('hidden');
             document.getElementById('debug-app').classList.remove('hidden');
-            if(!hid) return alert("Host ID Missing");
-            Debugger.init(hid);
+            Debugger.init(params.get('host'));
             return;
         }
-
+        
         // Host Init
         Net.initHost();
 
-        // Audio Setup
         document.getElementById('bgm-file').addEventListener('change', (e) => { const f=e.target.files[0]; if(f) document.getElementById('bgm-player').src=URL.createObjectURL(f); });
         document.getElementById('se-timeup-file').addEventListener('change', (e) => { const f=e.target.files[0]; if(f) document.getElementById('se-timeup-player').src=URL.createObjectURL(f); });
+        
         document.getElementById('vol-bgm').addEventListener('input', (e)=>{ Host.config.volBgm=parseInt(e.target.value); volBgm=Host.config.volBgm/100; document.getElementById('bgm-player').volume=volBgm; });
         document.getElementById('vol-se').addEventListener('input', (e)=>{ Host.config.volSe=parseInt(e.target.value); volSe=Host.config.volSe/100; });
 
-        // Load Data
         let savedSets = localStorage.getItem(DATA_KEY);
         if(!savedSets) {
             const v4 = localStorage.getItem('quiz_royale_sets_v4');
@@ -489,7 +478,6 @@ const Host = {
         if(Host.config.volBgm!==undefined) { document.getElementById('vol-bgm').value=Host.config.volBgm; volBgm=Host.config.volBgm/100; }
         if(Host.config.volSe!==undefined) { document.getElementById('vol-se').value=Host.config.volSe; volSe=Host.config.volSe/100; }
 
-        // Init Inputs
         const qInputs = document.getElementById('q-inputs');
         qInputs.innerHTML = "";
         for(let i=1; i<=5; i++) {
@@ -521,30 +509,27 @@ const Host = {
                     Net.broadcast({ type: 'SYNC', db: DB });
                 }
             }
-        }
-        // DEBUGGER PROXY
-        else if(data.type === 'DEBUG_PROXY') {
-            const inner = data.payload; const dPid = inner.playerId; 
-            if(data.action === 'LOGIN') { DB.players[dPid] = { name: inner.name, score: 0 }; } 
-            else if(data.action === 'ANSWER') {
-                if(DB.state.phase === 'ACTIVE' && !DB.answers.find(a => a.playerId === dPid)) {
-                    DB.answers.push({ playerId: dPid, name: inner.name, pt: inner.pt, text: inner.text, timestamp: Date.now() });
+        } else if(data.type === 'DEBUG_PROXY') {
+            const pl = data.payload; const did = pl.id;
+            if(data.action === 'LOGIN') {
+                DB.players[did] = { name: pl.name, score: 0 };
+            } else if(data.action === 'ANSWER') {
+                if(DB.state.phase === 'ACTIVE' && !DB.answers.find(a => a.playerId === did)) {
+                    DB.answers.push({ playerId: did, name: pl.name, pt: pl.pt, text: pl.text, timestamp: Date.now() });
                 }
             }
             Net.broadcast({ type: 'SYNC', db: DB });
         }
         Host.refreshCount();
     },
+
     refreshCount: () => {
         document.getElementById('host-player-count').innerText = Object.keys(DB.players).length;
     },
 
-    /* NAVIGATION */
-    showScreen: (id) => { document.querySelectorAll('#host-app .screen').forEach(el => el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); },
-    
     goToLobby: () => {
         Host.showScreen('screen-lobby');
-        // Reset Players on Start
+        // RESET PLAYERS
         DB.players = {};
         DB.state.phase = 'LOBBY'; 
         Host.refreshCount();
@@ -567,12 +552,10 @@ const Host = {
 
     /* SETTINGS */
     goToSettings: () => { Host.showScreen('screen-settings'); Host.renderSetList(); Host.createNewSet(); },
-    
-    // New Tab Debugger
     goToDebugMode: () => { 
         window.open(location.href.split('?')[0] + "?role=debug&host=" + Net.peer.id, "_blank"); 
     },
-
+    
     renderSetList: () => {
         const list = document.getElementById('settings-list');
         list.innerHTML = "";
@@ -632,12 +615,12 @@ const Host = {
         Host.sets.splice(idx, 1); localStorage.setItem(DATA_KEY, JSON.stringify(Host.sets)); Host.createNewSet();
     },
 
-    /* GAME FLOW (FIXED) */
+    /* GAME FLOW */
     startSet: (idx) => {
-        // **BUG FIX**: AudioContext must be resumed by user interaction to play sound
+        // Fix: Resume Audio Context
         if(audioCtx.state === 'suspended') audioCtx.resume();
-
-        // **BUG FIX**: Clear previous intervals to prevent double speed or freezes
+        
+        // Fix: Clear previous intervals
         clearInterval(Host.activeInterval);
         clearInterval(Host.timerInterval);
 
@@ -654,15 +637,12 @@ const Host = {
         });
 
         DB.state.phase = 'COUNTDOWN'; Net.broadcast({ type: 'SYNC', db: DB });
-        
         const overlay = document.getElementById('host-count-overlay'); overlay.style.display = 'flex';
         let count = 3; overlay.innerText = count; playSe('count');
         
         Host.activeInterval = setInterval(() => {
-            count--; 
-            if(count > 0) { 
-                overlay.innerText = count; playSe('count'); 
-            }
+            count--;
+            if(count > 0) { overlay.innerText = count; playSe('count'); }
             else { 
                 clearInterval(Host.activeInterval); 
                 overlay.style.display = 'none'; 
@@ -682,9 +662,7 @@ const Host = {
         document.getElementById('timeup-msg').classList.remove('hidden');
     },
     forceQuit: () => {
-        clearInterval(Host.timerInterval);
-        clearInterval(Host.activeInterval);
-        stopBgm();
+        clearInterval(Host.timerInterval); clearInterval(Host.activeInterval); stopBgm();
         document.getElementById('host-count-overlay').style.display = 'none';
         Host.goToSelect();
         DB.state.phase = 'SELECT'; Net.broadcast({ type: 'SYNC', db: DB });
@@ -719,7 +697,7 @@ const Host = {
         DB.save();
         document.getElementById('judge-ui-top').classList.remove('active'); document.getElementById('judge-ui-bottom').classList.remove('active'); document.getElementById('judge-already-msg').classList.add('hidden');
         Host.isJudgingActive = false;
-        Net.broadcast({ type: 'SYNC', db: DB }); // Sync Score
+        Net.broadcast({ type: 'SYNC', db: DB });
     },
     finishJudging: () => { Host.goToSelect(); DB.state.phase = 'SELECT'; Net.broadcast({ type: 'SYNC', db: DB }); },
     showScreen: (id) => { document.querySelectorAll('#host-app .screen').forEach(el => el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
@@ -728,11 +706,11 @@ const Host = {
 /* PLAYER LOGIC */
 const Player = {
     id: null, name: null, selectedPt: null,
-    init: (hostId) => {
-        // ID persistence for reconnect
+    init: (hid) => {
+        // ID Persistence
         Player.id = sessionStorage.getItem('p_id') || 'p_' + Date.now() + Math.random().toString(36).substr(2,9); 
         sessionStorage.setItem('p_id', Player.id);
-        Net.initPlayer(hostId);
+        Net.initPlayer(hid);
     },
     handleData: (data) => {
         if(data.type === 'SYNC') {
@@ -745,53 +723,53 @@ const Player = {
                 if(!document.getElementById('p-screen-login').classList.contains('hidden')) Player.showScreen('p-screen-main');
             }
 
-            // Sync Screen Logic (Modified as per instruction)
-            const phase = db.state.phase;
-            const gameArea = document.getElementById('p-game-area');
-            const statusMsg = document.getElementById('p-wait-msg'); // We'll use this for status text now
-            const inputs = [document.getElementById('p-answer-input'), document.getElementById('p-submit-btn')];
-            const ptBtns = document.querySelectorAll('.btn-pt');
+            // Screen/State Update
+            const ph = db.state.phase;
+            const game = document.getElementById('p-game-area');
+            const statusMsg = document.getElementById('p-info-text');
+            const submitBtn = document.getElementById('p-submit-btn');
 
-            // Always show UI after login
-            gameArea.classList.remove('hidden');
-            
-            if(phase === 'ACTIVE') {
-                // Check if answered
+            // Force show Game UI (but disabled)
+            game.classList.remove('hidden');
+
+            if(ph === 'ACTIVE') {
                 const myAns = db.answers.find(a => a.playerId === myId);
                 if(myAns) {
-                    // Disable inputs
-                    inputs.forEach(el => el.disabled = true);
-                    ptBtns.forEach(el => el.style.pointerEvents = 'none');
-                    statusMsg.innerHTML = "回答送信済み<br>結果発表をお待ちください";
+                    Player.toggleUI(false);
+                    statusMsg.innerText = "回答送信済み - 結果発表をお待ちください";
+                    submitBtn.innerText = "送信済み";
                 } else {
-                    // Enable inputs
-                    inputs.forEach(el => el.disabled = false);
-                    ptBtns.forEach(el => el.style.pointerEvents = 'auto');
-                    statusMsg.innerHTML = "解答を受け付けています";
+                    Player.toggleUI(true);
+                    statusMsg.innerText = "解答を受け付けています";
+                    submitBtn.innerText = "送信する";
                 }
             } else {
-                // Disable inputs
-                inputs.forEach(el => el.disabled = true);
-                ptBtns.forEach(el => el.style.pointerEvents = 'none');
-                
-                if (phase === 'TIMEUP') statusMsg.innerHTML = "TIME UP!";
-                else if (phase === 'JUDGING') statusMsg.innerHTML = "集計中...";
+                Player.toggleUI(false);
+                if (ph === 'TIMEUP') statusMsg.innerText = "TIME UP!";
+                else if (ph === 'JUDGING') statusMsg.innerText = "集計中...";
                 else {
-                    statusMsg.innerHTML = "問題出題まで<br>お待ちください";
+                    statusMsg.innerText = "問題出題までお待ちください";
                     // Reset inputs
-                    if(phase === 'LOBBY' || phase === 'SELECT') { 
-                        Player.selectedPt = null; 
-                        document.getElementById('p-answer-input').value = ""; 
-                        Player.updatePtBtns(); 
+                    if(ph==='LOBBY' || ph==='SELECT' || ph==='COUNTDOWN') {
+                        Player.selectedPt = null; document.getElementById('p-answer-input').value = ""; Player.updatePtBtns();
                     }
                 }
             }
         }
     },
+    toggleUI: (enable) => {
+        document.getElementById('p-answer-input').disabled = !enable;
+        document.getElementById('p-submit-btn').disabled = !enable;
+        const pts = document.querySelectorAll('.btn-pt');
+        pts.forEach(p => {
+            if(enable) { p.style.pointerEvents = 'auto'; p.style.opacity = 1; }
+            else { p.style.pointerEvents = 'none'; p.style.opacity = 0.3; }
+        });
+    },
     login: () => {
         const name = document.getElementById('p-name-input').value; if(!name) return;
         Player.name = name; sessionStorage.setItem('p_name', name);
-        // UI Change immediately
+        // Instant Switch
         Player.showScreen('p-screen-main');
         document.getElementById('p-disp-name').innerText = name;
         Net.send({ type: 'LOGIN', name: name });
@@ -817,24 +795,21 @@ const Player = {
     showScreen: (id) => { document.querySelectorAll('#player-app .screen').forEach(el => el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
 };
 
-/* DEBUGGER LOGIC */
+/* DEBUGGER (NEW TAB LOGIC) */
 const Debugger = {
     vPlayers: [],
     init: (hid) => { Net.initDebugger(hid); },
     handleData: (d) => { if(d.type === 'SYNC') Debugger.onUpdate(d.db); },
     spawnPlayers: () => {
         const count = Math.max(2, Math.min(10, parseInt(document.getElementById('debug-count').value)));
-        const grid = document.getElementById('debug-grid');
-        grid.innerHTML = "";
+        const grid = document.getElementById('debug-grid'); grid.innerHTML = "";
         Debugger.vPlayers = [];
         
         for(let i=0; i<count; i++) {
-            const pid = 'debug_' + Date.now() + '_' + i;
-            const name = `Test ${i+1}`;
+            const pid = 'debug_' + Date.now() + '_' + i; const name = `Test ${i+1}`;
             Debugger.vPlayers.push({ id: pid, name: name, selectedPt: null });
-            
-            // Proxy Login
-            Net.send({ type: 'DEBUG_PROXY', action: 'LOGIN', payload: { playerId: pid, name: name } });
+            // Login via Proxy
+            Net.send({ type: 'DEBUG_PROXY', action: 'LOGIN', payload: { id: pid, name: name } });
             
             grid.innerHTML += `
                 <div class="debug-card" id="d-card-${i}">
@@ -852,21 +827,20 @@ const Debugger = {
                 </div>`;
         }
     },
-    sel: (idx, pt) => {
-        Debugger.vPlayers[idx].selectedPt = pt;
+    sel: (i, pt) => {
+        Debugger.vPlayers[i].selectedPt = pt;
         for(let p=1; p<=5; p++) {
-            const btn = document.getElementById(`d-btn-${idx}-${p}`);
+            const btn = document.getElementById(`d-btn-${i}-${p}`);
             if(p === pt) btn.classList.add('selected'); else btn.classList.remove('selected');
         }
     },
-    send: (idx) => {
-        const p = Debugger.vPlayers[idx];
-        const text = document.getElementById(`d-input-${idx}`).value;
-        if(!p.selectedPt || !text) return;
-        Net.send({ type: 'DEBUG_PROXY', action: 'ANSWER', payload: { playerId: p.id, name: p.name, pt: p.selectedPt, text: text } });
+    send: (i) => {
+        const p = Debugger.vPlayers[i]; const t = document.getElementById(`d-input-${i}`).value;
+        if(!p.selectedPt || !t) return;
+        Net.send({ type: 'DEBUG_PROXY', action: 'ANSWER', payload: { id: p.id, name: p.name, pt: p.selectedPt, text: t } });
     },
     onUpdate: (db) => {
-        const phase = db.state.phase;
+        const ph = db.state.phase;
         Debugger.vPlayers.forEach((p, i) => {
             if(db.players[p.id]) document.getElementById(`d-score-${i}`).innerText = db.players[p.id].score + "pt";
             const ans = db.answers.find(a => a.playerId === p.id);
@@ -878,10 +852,10 @@ const Debugger = {
                 card.classList.add('done'); stat.innerText = "Done"; btn.classList.remove('active');
             } else {
                 card.classList.remove('done');
-                if(phase === 'ACTIVE') { stat.innerText = "ACTIVE"; btn.classList.add('active'); }
+                if(ph === 'ACTIVE') { stat.innerText = "ACTIVE"; btn.classList.add('active'); }
                 else { 
                     stat.innerText = "Wait"; btn.classList.remove('active');
-                    if(phase === 'LOBBY' || phase === 'SELECT') {
+                    if(ph === 'LOBBY' || ph === 'SELECT') {
                         p.selectedPt = null; document.getElementById(`d-input-${i}`).value = "";
                         for(let b=1; b<=5; b++) document.getElementById(`d-btn-${i}-${b}`).classList.remove('selected');
                     }
