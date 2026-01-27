@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V6.0 (Online Fix)</title>
+    <title>QUIZ ROYALE V6.0 (Online)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -119,20 +119,22 @@
         .solved-mark { color: #22aa22; font-weight: bold; margin-left: 10px; }
         .failed-mark { color: #aa2222; font-weight: bold; margin-left: 10px; }
 
-        /* PLAYER STYLES (NEW) */
-        .p-container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; height: 100%; }
+        /* PLAYER SPECIFIC UI (DISABLED STATE) */
+        .ui-disabled {
+            opacity: 0.3;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+        .p-container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; text-align: center; }
         .p-status { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; border: 1px solid #444; font-size: 18px; }
         .p-pt-select { display: flex; justify-content: space-between; gap: 5px; margin-bottom: 20px; }
         .btn-pt { flex: 1; aspect-ratio: 1.2; border-radius: 8px; border: none; font-size: 18px; font-weight: bold; font-family: 'Black Ops One'; opacity: 0.6; transition: 0.2s; }
         .btn-pt.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.5); border: 2px solid #fff; }
-        .btn-pt.disabled { opacity: 0.2; pointer-events: none; }
         .p-input { width: 100%; height: 60px; padding: 0 15px; font-size: 24px; box-sizing: border-box; margin-bottom: 20px; border-radius: 10px; border: 2px solid #555; background: #000; color: #fff; text-align: center; line-height: 60px; }
-        .p-input:disabled { background: #222; color: #555; }
-        .btn-send { width: 100%; padding: 15px; font-size: 24px; font-weight: bold; background: #fff; color: #000; border: none; border-radius: 10px; margin-top: auto; }
+        .btn-send { width: 100%; padding: 15px; font-size: 24px; font-weight: bold; background: #fff; color: #000; border: none; border-radius: 10px; }
         .btn-send:disabled { background: #555; color: #888; }
         .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: none; z-index: 100; align-items: center; justify-content: center; }
         .modal-content { background: #222; padding: 30px; border-radius: 15px; border: 2px solid #fff; text-align: center; max-width: 90%; }
-        #p-info-text { margin-top: 20px; color: #888; font-weight: bold; }
 
     </style>
 </head>
@@ -176,7 +178,7 @@
                     <div class="config-block">
                         <div class="config-title">
                             <span>システム・音響設定</span>
-                            <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面へ (別タブ)</button>
+                            <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面へ</button>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:12px;">
                             <div>
@@ -230,17 +232,23 @@
             </div>
         </div>
 
-        <div id="screen-debug" class="screen hidden" style="background:#222; align-items:stretch;">
+        <div id="screen-debug" class="screen hidden">
             <div class="debug-container">
                 <div class="debug-header">
-                    <h3 style="margin:0; color:#fff;">MULTI-DEBUGGER</h3>
+                    <h3 style="margin:0;">MULTI-DEBUGGER</h3>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <label style="color:#aaa;">生成人数(2-10):</label>
-                        <input type="number" id="debug-count" value="5" min="2" max="10" style="width:60px;">
+                        <label>生成人数:</label>
+                        <input type="number" id="debug-count" value="5" style="width:60px;">
                         <button class="btn-action" onclick="Debugger.spawnPlayers()">生成 & エントリー</button>
                     </div>
+                    <div style="margin-left:auto;">
+                        <button class="btn-sub" onclick="Host.showScreen('screen-settings')">設定へ戻る</button>
+                        <button class="btn-sub" onclick="window.open(window.location.href, '_blank')">※ 別窓でホスト画面を開く</button>
+                    </div>
                 </div>
-                <div id="debug-grid" class="debug-grid"></div>
+                
+                <div id="debug-grid" class="debug-grid">
+                    </div>
             </div>
         </div>
 
@@ -278,7 +286,7 @@
 
     <div id="player-app" class="hidden">
         <div id="p-screen-login" class="screen">
-            <div class="p-container" style="justify-content: center;">
+            <div class="p-container">
                 <h2>ENTRY</h2>
                 <input type="text" id="p-name-input" placeholder="名前を入力" style="width:100%; margin: 20px 0;">
                 <button class="btn-send" onclick="Player.login()">参加する</button>
@@ -290,8 +298,7 @@
                     <span id="p-disp-name">名無し</span>
                     <span style="font-weight: bold;"><span id="p-score">0</span> pts</span>
                 </div>
-                
-                <div id="p-game-area" style="flex:1; display:flex; flex-direction:column; margin-top:20px;">
+                <div id="p-game-area" class="ui-disabled">
                     <div style="text-align: left; margin-bottom: 5px; color: #aaa;">問題を選択:</div>
                     <div class="p-pt-select">
                         <button class="btn-pt color-1" onclick="Player.selectPt(1)" id="p-btn-1">1</button>
@@ -300,13 +307,10 @@
                         <button class="btn-pt color-4" onclick="Player.selectPt(4)" id="p-btn-4">4</button>
                         <button class="btn-pt color-5" onclick="Player.selectPt(5)" id="p-btn-5">5</button>
                     </div>
-                    <div style="text-align: left; margin-bottom: 5px; color: #aaa;">解答欄:</div>
-                    <input type="text" id="p-answer-input" class="p-input" placeholder="答えを入力..." disabled>
-                    
-                    <div id="p-info-text">問題出題までお待ちください</div>
-
-                    <button id="p-submit-btn" class="btn-send" onclick="Player.confirmSend()" disabled>送信する</button>
+                    <input type="text" id="p-answer-input" class="p-input" placeholder="答えを入力...">
+                    <button id="p-submit-btn" class="btn-send" onclick="Player.confirmSend()">送信する</button>
                 </div>
+                <div id="p-status-text" style="color: #888; margin-top: 20px;">問題出題までお待ちください</div>
             </div>
         </div>
         <div id="p-modal" class="modal">
@@ -327,27 +331,14 @@
     <audio id="se-timeup-player"></audio>
 
 <script>
-/* DATA KEY */
-const DATA_KEY = 'quiz_royale_sets_v5'; 
-const CONF_KEY = 'quiz_royale_conf_v5'; 
-
-/* DB */
-const DB = {
-    state: { phase: 'LOBBY', currentSet: null },
-    players: {}, answers: [], solved: [false, false, false, false, false, false],
-    resetAnswers: () => { DB.answers = []; DB.solved = [false, false, false, false, false, false]; }
-};
-
-const params = new URLSearchParams(window.location.search);
-const ROLE = params.get('role');
-
-/* NETWORK: PeerJS */
+/* NETWORK: PeerJS Wrapper */
 const Net = {
     peer: null, conn: null, conns: [], isHost: false,
     initHost: () => {
         Net.isHost = true;
         Net.peer = new Peer();
         Net.peer.on('open', (id) => {
+            // URLにhostパラメータをつける
             const url = location.href.split('?')[0] + "?role=player&host=" + id;
             new QRCode(document.getElementById("qrcode"), { text: url, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
         });
@@ -355,10 +346,12 @@ const Net = {
             Net.conns.push(c);
             c.on('data', (d) => Host.handleData(d, c.peer));
             c.on('close', () => { 
-                if(DB.players[c.peer]) delete DB.players[c.peer];
+                // 切断時処理: 配列から削除して人数更新
                 Net.conns = Net.conns.filter(conn => conn !== c);
-                Host.refreshCount();
+                if(DB.players[c.peer]) delete DB.players[c.peer]; // DBからも消す
+                Host.updateCount();
             });
+            // 接続時に現状を送信
             c.send({ type: 'SYNC', db: DB });
         });
     },
@@ -367,92 +360,60 @@ const Net = {
         Net.peer.on('open', () => {
             Net.conn = Net.peer.connect(hostId);
             Net.conn.on('data', (d) => Player.handleData(d));
-            Net.conn.on('close', () => { alert("接続が切れました"); location.reload(); });
-        });
-    },
-    initDebugger: (hostId) => {
-        Net.peer = new Peer();
-        Net.peer.on('open', () => {
-            Net.conn = Net.peer.connect(hostId);
-            Net.conn.on('data', (d) => Debugger.handleData(d));
+            Net.conn.on('close', () => { alert("ホストとの接続が切れました"); location.reload(); });
         });
     },
     broadcast: (data) => { if(Net.isHost) Net.conns.forEach(c => c.send(data)); },
     send: (data) => { if(Net.conn) Net.conn.send(data); }
 };
 
-/* SOUND (FIX) */
+/* STORAGE & DB */
+const DATA_KEY = 'quiz_royale_sets_v5'; 
+const CONF_KEY = 'quiz_royale_conf_v5'; 
+const CHANNEL = 'quiz_royale_v6';
+
+const DB = {
+    state: { phase: 'LOBBY', currentSet: null },
+    players: {}, answers: [], solved: [false, false, false, false, false, false],
+    save: () => { /* LocalStorage not used for sync anymore */ },
+    load: () => { /* Not used for sync */ },
+    resetAnswers: () => { DB.answers = []; DB.solved = [false, false, false, false, false, false]; }
+};
+
+const params = new URLSearchParams(window.location.search);
+const ROLE = params.get('role') === 'player' ? 'player' : 'host';
+
+/* SOUND */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let volBgm = 0.5;
-let volSe = 0.5;
+let volBgm = 0.5, volSe = 0.5;
 
 function playSe(type) {
-    if(audioCtx.state === 'suspended') audioCtx.resume();
-    
     if(type === 'timeup') {
         const audio = document.getElementById('se-timeup-player');
         if(audio.src) { audio.volume = volSe; audio.play().catch(e=>{}); return; }
     }
-    
-    const osc = audioCtx.createOscillator(); 
-    const gain = audioCtx.createGain();
-    const gainVal = 0.3 * volSe;
-    const t = audioCtx.currentTime;
-    
-    if(type === 'count') { 
-        osc.frequency.setValueAtTime(800, t); 
-        osc.frequency.exponentialRampToValueAtTime(0.01, t+0.1); 
-        gain.gain.setValueAtTime(gainVal, t); 
-        osc.start(); osc.stop(t+0.1); 
-    } 
-    else if(type === 'start') { 
-        osc.type = 'square'; 
-        osc.frequency.setValueAtTime(1200, t); 
-        gain.gain.setValueAtTime(gainVal, t); 
-        gain.gain.exponentialRampToValueAtTime(0.01, t+0.8); 
-        osc.start(); osc.stop(t+0.8); 
-    }
-    else if(type === 'timeup') { 
-        osc.type = 'sawtooth'; 
-        osc.frequency.setValueAtTime(800, t); 
-        osc.frequency.linearRampToValueAtTime(400, t+0.5); 
-        gain.gain.setValueAtTime(gainVal, t); 
-        gain.gain.linearRampToValueAtTime(0, t+0.5); 
-        osc.start(); osc.stop(t+0.5); 
-    }
-    osc.connect(gain); gain.connect(audioCtx.destination);
-}
-
-function playBgm() { 
     if(audioCtx.state === 'suspended') audioCtx.resume();
-    const audio = document.getElementById('bgm-player'); 
-    audio.volume = volBgm; 
-    if(audio.src) audio.play().catch(e=>{}); 
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    const gainVal = 0.3 * volSe;
+    if(type === 'count') { osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); } 
+    else if(type === 'start') { osc.type = 'square'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8); }
+    else if(type === 'timeup') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); }
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type==='start'?0.8:0.5));
 }
-function stopBgm() { 
-    const audio = document.getElementById('bgm-player'); 
-    audio.pause(); audio.currentTime = 0; 
-}
+function playBgm() { const audio = document.getElementById('bgm-player'); audio.volume = volBgm; if(audio.src) audio.play().catch(e=>{}); }
+function stopBgm() { const audio = document.getElementById('bgm-player'); audio.pause(); audio.currentTime = 0; }
 
 /* HOST LOGIC */
 const Host = {
     sets: [], config: {fontSize: 24, barWidth: 90, volBgm: 50, volSe: 50},
-    editingIndex: -1, timerInterval: null, activeInterval: null, 
-    judgeIndex: 0, sortedAnswers: [], isJudgingActive: false,
+    editingIndex: -1, timerInterval: null, judgeIndex: 0, sortedAnswers: [], isJudgingActive: false,
 
     init: () => {
         if(ROLE === 'player') {
             document.getElementById('host-app').classList.add('hidden');
             document.getElementById('player-app').classList.remove('hidden');
-            const hId = params.get('host');
-            if(!hId) return alert("QRコードからアクセスしてください");
-            Player.init(hId);
-            return;
-        }
-        if(ROLE === 'debug') {
-            document.getElementById('host-app').classList.add('hidden');
-            document.getElementById('debug-app').classList.remove('hidden');
-            Debugger.init(params.get('host'));
+            const hostId = params.get('host');
+            if(hostId) Player.init(hostId); else alert("QRコードからアクセスしてください");
             return;
         }
         
@@ -478,19 +439,11 @@ const Host = {
         if(Host.config.volBgm!==undefined) { document.getElementById('vol-bgm').value=Host.config.volBgm; volBgm=Host.config.volBgm/100; }
         if(Host.config.volSe!==undefined) { document.getElementById('vol-se').value=Host.config.volSe; volSe=Host.config.volSe/100; }
 
-        const qInputs = document.getElementById('q-inputs');
-        qInputs.innerHTML = "";
-        for(let i=1; i<=5; i++) {
-            qInputs.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;">
-                <span class="color-${i}" style="padding:5px; width:30px; text-align:center; font-weight:bold; border-radius:3px;">${i}</span>
-                <input type="text" id="q-in-${i}" placeholder="Q${i} (${i}pt)" style="flex:1;">
-            </div>`;
-        }
+        const qInputs = document.getElementById('q-inputs'); qInputs.innerHTML = "";
+        for(let i=1; i<=5; i++) qInputs.innerHTML += `<div style="display:flex;gap:5px;margin-bottom:5px;"><span class="color-${i}" style="padding:5px;width:30px;text-align:center;font-weight:bold;border-radius:3px;">${i}</span><input type="text" id="q-in-${i}" placeholder="Q${i}" style="flex:1;"></div>`;
 
         DB.state.phase = 'LOBBY'; 
         
-        setInterval(() => { Host.refreshCount(); }, 1000);
-
         document.addEventListener('keydown', (e) => {
             if(e.code === 'Escape' && DB.state.phase!=='LOBBY' && DB.state.phase!=='SELECT') { e.preventDefault(); Host.forceQuit(); return; }
             if(DB.state.phase === 'TIMEUP' && e.code === 'Space') { e.preventDefault(); Host.startJudging(); } 
@@ -498,371 +451,164 @@ const Host = {
         });
     },
 
-    handleData: (data, pid) => {
+    // PeerJS Data Handling
+    handleData: (data, peerId) => {
         if(data.type === 'LOGIN') {
-            DB.players[pid] = { name: data.name, score: 0 };
+            DB.players[peerId] = { name: data.name, score: 0 };
+            Host.updateCount();
             Net.broadcast({ type: 'SYNC', db: DB });
         } else if(data.type === 'ANSWER') {
             if(DB.state.phase === 'ACTIVE') {
-                if(!DB.answers.find(a => a.playerId === pid)) {
-                    DB.answers.push({ playerId: pid, name: data.name, pt: data.pt, text: data.text, timestamp: Date.now() });
+                if(!DB.answers.find(a => a.playerId === peerId)) {
+                    DB.answers.push({ playerId: peerId, name: data.name, pt: data.pt, text: data.text, timestamp: Date.now() });
                     Net.broadcast({ type: 'SYNC', db: DB });
                 }
             }
-        } else if(data.type === 'DEBUG_PROXY') {
-            const pl = data.payload; const did = pl.id;
-            if(data.action === 'LOGIN') {
-                DB.players[did] = { name: pl.name, score: 0 };
-            } else if(data.action === 'ANSWER') {
-                if(DB.state.phase === 'ACTIVE' && !DB.answers.find(a => a.playerId === did)) {
-                    DB.answers.push({ playerId: did, name: pl.name, pt: pl.pt, text: pl.text, timestamp: Date.now() });
-                }
-            }
-            Net.broadcast({ type: 'SYNC', db: DB });
         }
-        Host.refreshCount();
     },
-
-    refreshCount: () => {
+    updateCount: () => {
         document.getElementById('host-player-count').innerText = Object.keys(DB.players).length;
     },
 
-    goToLobby: () => {
-        Host.showScreen('screen-lobby');
-        // RESET PLAYERS
+    goToLobby: () => { 
+        Host.showScreen('screen-lobby'); 
+        // 参加者をリセット
         DB.players = {};
-        DB.state.phase = 'LOBBY'; 
-        Host.refreshCount();
+        DB.state.phase='LOBBY'; 
+        Host.updateCount();
         Net.broadcast({ type: 'SYNC', db: DB });
     },
-    goToSelect: () => {
-        Host.showScreen('screen-select');
-        const list = document.getElementById('set-list');
-        list.innerHTML = "";
-        Host.sets.forEach((set, idx) => {
-            const btn = document.createElement('button');
-            btn.className = 'btn-large';
-            btn.innerText = set.title;
-            btn.onclick = () => Host.startSet(idx);
-            list.appendChild(btn);
-        });
-        DB.state.phase = 'SELECT'; 
-        Net.broadcast({ type: 'SYNC', db: DB });
-    },
-
-    /* SETTINGS */
-    goToSettings: () => { Host.showScreen('screen-settings'); Host.renderSetList(); Host.createNewSet(); },
-    goToDebugMode: () => { 
-        window.open(location.href.split('?')[0] + "?role=debug&host=" + Net.peer.id, "_blank"); 
-    },
+    goToSelect: () => { Host.showScreen('screen-select'); const list=document.getElementById('set-list'); list.innerHTML=""; Host.sets.forEach((set,idx)=>{ const btn=document.createElement('button'); btn.className='btn-large'; btn.innerText=set.title; btn.onclick=()=>Host.startSet(idx); list.appendChild(btn); }); DB.state.phase='SELECT'; Net.broadcast({type:'SYNC', db:DB}); },
     
+    goToSettings: () => { Host.showScreen('screen-settings'); Host.renderSetList(); Host.createNewSet(); },
+    goToDebugMode: () => { Host.showScreen('screen-debug'); }, 
+
     renderSetList: () => {
-        const list = document.getElementById('settings-list');
-        list.innerHTML = "";
-        Host.sets.forEach((set, i) => {
-            const li = document.createElement('li');
-            li.className = `set-item ${i === Host.editingIndex ? 'active' : ''}`;
-            li.innerHTML = `
-                <div style="flex:1;">${set.title}</div>
-                <div class="set-controls">
-                    <button class="btn-action" onclick="event.stopPropagation(); Host.moveSet(${i}, -1)">▲</button>
-                    <button class="btn-action" onclick="event.stopPropagation(); Host.moveSet(${i}, 1)">▼</button>
-                    <button class="btn-action" style="background:#a33;" onclick="event.stopPropagation(); Host.deleteSet(${i})">×</button>
-                </div>`;
-            li.onclick = () => Host.loadSetForEdit(i);
-            list.appendChild(li);
-        });
+        const list=document.getElementById('settings-list'); list.innerHTML="";
+        Host.sets.forEach((set,i)=>{ const li=document.createElement('li'); li.className=`set-item ${i===Host.editingIndex?'active':''}`; li.innerHTML=`<div style="flex:1;">${set.title}</div><div class="set-controls"><button class="btn-action" onclick="event.stopPropagation();Host.moveSet(${i},-1)">▲</button><button class="btn-action" onclick="event.stopPropagation();Host.moveSet(${i},1)">▼</button><button class="btn-action" style="background:#a33;" onclick="event.stopPropagation();Host.deleteSet(${i})">×</button></div>`; li.onclick=()=>Host.loadSetForEdit(i); list.appendChild(li); });
     },
-    moveSet: (idx, direction) => {
-        if (idx + direction < 0 || idx + direction >= Host.sets.length) return;
-        const temp = Host.sets[idx]; Host.sets[idx] = Host.sets[idx + direction]; Host.sets[idx + direction] = temp;
-        if(Host.editingIndex === idx) Host.editingIndex += direction;
-        else if(Host.editingIndex === idx + direction) Host.editingIndex -= direction;
-        localStorage.setItem(DATA_KEY, JSON.stringify(Host.sets)); Host.renderSetList();
-    },
-    createNewSet: () => {
-        Host.editingIndex = -1; Host.renderSetList();
-        document.getElementById('set-genre').value = ""; document.getElementById('set-time').value = 30;
-        document.getElementById('set-font').value = 24; document.getElementById('set-width').value = 90;
-        for(let i=1; i<=5; i++) document.getElementById(`q-in-${i}`).value = "";
-    },
-    loadSetForEdit: (idx) => {
-        Host.editingIndex = idx; Host.renderSetList();
-        const set = Host.sets[idx];
-        document.getElementById('set-genre').value = set.title; document.getElementById('set-time').value = set.time;
-        document.getElementById('set-font').value = set.fontSize || 24;
-        document.getElementById('set-width').value = set.width || 90;
-        for(let i=1; i<=5; i++) document.getElementById(`q-in-${i}`).value = set.qs[i-1];
-    },
+    moveSet: (idx, dir) => { if(idx+dir<0||idx+dir>=Host.sets.length)return; const t=Host.sets[idx]; Host.sets[idx]=Host.sets[idx+dir]; Host.sets[idx+dir]=t; localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.renderSetList(); },
+    createNewSet: () => { Host.editingIndex=-1; Host.renderSetList(); document.getElementById('set-genre').value=""; document.getElementById('set-time').value=30; document.getElementById('set-font').value=24; document.getElementById('set-width').value=90; for(let i=1;i<=5;i++)document.getElementById(`q-in-${i}`).value=""; },
+    loadSetForEdit: (idx) => { Host.editingIndex=idx; Host.renderSetList(); const set=Host.sets[idx]; document.getElementById('set-genre').value=set.title; document.getElementById('set-time').value=set.time; document.getElementById('set-font').value=set.fontSize||24; document.getElementById('set-width').value=set.width||90; for(let i=1;i<=5;i++)document.getElementById(`q-in-${i}`).value=set.qs[i-1]; },
     saveCurrentSet: () => {
-        const title = document.getElementById('set-genre').value;
-        const time = parseInt(document.getElementById('set-time').value);
-        const fontSize = parseInt(document.getElementById('set-font').value) || 24;
-        const width = parseInt(document.getElementById('set-width').value) || 90;
-        const qs = []; for(let i=1; i<=5; i++) qs.push(document.getElementById(`q-in-${i}`).value);
-        if(!title) return alert("タイトルを入力してください");
-        
-        localStorage.setItem(CONF_KEY, JSON.stringify(Host.config));
-
-        const newSet = {title, time, fontSize, width, qs};
-        if(Host.editingIndex >= 0) Host.sets[Host.editingIndex] = newSet;
-        else { Host.sets.push(newSet); Host.editingIndex = Host.sets.length - 1; }
-        localStorage.setItem(DATA_KEY, JSON.stringify(Host.sets));
-        Host.renderSetList(); alert("保存しました");
+        const t=document.getElementById('set-genre').value; const tm=parseInt(document.getElementById('set-time').value); const fs=parseInt(document.getElementById('set-font').value)||24; const w=parseInt(document.getElementById('set-width').value)||90; const qs=[]; for(let i=1;i<=5;i++)qs.push(document.getElementById(`q-in-${i}`).value);
+        if(!t)return alert("タイトルを入力してください");
+        localStorage.setItem(CONF_KEY,JSON.stringify(Host.config));
+        const ns={title:t, time:tm, fontSize:fs, width:w, qs:qs};
+        if(Host.editingIndex>=0) Host.sets[Host.editingIndex]=ns; else { Host.sets.push(ns); Host.editingIndex=Host.sets.length-1; }
+        localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.renderSetList(); alert("保存しました");
     },
-    deleteSet: (idx) => {
-        if(!confirm("削除しますか？")) return;
-        Host.sets.splice(idx, 1); localStorage.setItem(DATA_KEY, JSON.stringify(Host.sets)); Host.createNewSet();
-    },
+    deleteSet: (idx) => { if(!confirm("削除しますか？"))return; Host.sets.splice(idx,1); localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.createNewSet(); },
 
-    /* GAME FLOW */
     startSet: (idx) => {
-        // Fix: Resume Audio Context
-        if(audioCtx.state === 'suspended') audioCtx.resume();
-        
-        // Fix: Clear previous intervals
-        clearInterval(Host.activeInterval);
-        clearInterval(Host.timerInterval);
+        const set=Host.sets[idx]; DB.state.currentSet=set; DB.resetAnswers();
+        Host.showScreen('screen-game'); document.getElementById('game-genre-title').innerText=set.title; document.getElementById('timeup-msg').classList.add('hidden');
+        const list=document.getElementById('host-q-list'); list.innerHTML=""; list.style.width=(set.width||90)+"%"; const fs=set.fontSize||24;
+        set.qs.forEach((q,i)=>list.innerHTML+=`<div class="q-bar"><div class="q-bar-pt color-${i+1}">${i+1}pt</div><div class="q-bar-text" style="font-size:${fs}px">${q}</div></div>`);
+        DB.state.phase='COUNTDOWN'; Net.broadcast({type:'SYNC', db:DB});
+        const ol=document.getElementById('host-count-overlay'); ol.style.display='flex'; let c=3; ol.innerText=c; playSe('count');
+        const ct=setInterval(()=>{ c--; if(c>0){ol.innerText=c;playSe('count');}else{clearInterval(ct);ol.style.display='none';playSe('start');playBgm();Host.startGameLoop(set.time);} },1000);
+        Host.activeInterval=ct;
+    },
+    startGameLoop: (sec) => {
+        DB.state.phase='ACTIVE'; Net.broadcast({type:'SYNC', db:DB}); let left=sec; const el=document.getElementById('game-timer'); el.innerText=left;
+        Host.timerInterval=setInterval(()=>{ left--; el.innerText=left; if(left<=0)Host.timeUp(); },1000);
+    },
+    timeUp: () => { clearInterval(Host.timerInterval); stopBgm(); playSe('timeup'); DB.state.phase='TIMEUP'; Net.broadcast({type:'SYNC', db:DB}); document.getElementById('timeup-msg').classList.remove('hidden'); },
+    forceQuit: () => { clearInterval(Host.timerInterval); clearInterval(Host.activeInterval); stopBgm(); document.getElementById('host-count-overlay').style.display='none'; Host.goToSelect(); DB.state.phase='SELECT'; Net.broadcast({type:'SYNC', db:DB}); },
 
-        const set = Host.sets[idx];
-        DB.state.currentSet = set; DB.resetAnswers();
-        Host.showScreen('screen-game');
-        document.getElementById('game-genre-title').innerText = set.title;
-        document.getElementById('timeup-msg').classList.add('hidden');
-        const list = document.getElementById('host-q-list'); list.innerHTML = "";
-        list.style.width = (set.width || 90) + "%";
-        const fs = set.fontSize || 24;
-        set.qs.forEach((q, i) => {
-            list.innerHTML += `<div class="q-bar"><div class="q-bar-pt color-${i+1}">${i+1}pt</div><div class="q-bar-text" style="font-size:${fs}px">${q}</div></div>`;
-        });
-
-        DB.state.phase = 'COUNTDOWN'; Net.broadcast({ type: 'SYNC', db: DB });
-        const overlay = document.getElementById('host-count-overlay'); overlay.style.display = 'flex';
-        let count = 3; overlay.innerText = count; playSe('count');
-        
-        Host.activeInterval = setInterval(() => {
-            count--;
-            if(count > 0) { overlay.innerText = count; playSe('count'); }
-            else { 
-                clearInterval(Host.activeInterval); 
-                overlay.style.display = 'none'; 
-                playSe('start'); playBgm(); 
-                Host.startGameLoop(set.time); 
-            }
-        }, 1000);
-    },
-    startGameLoop: (seconds) => {
-        DB.state.phase = 'ACTIVE'; Net.broadcast({ type: 'SYNC', db: DB });
-        let left = seconds; const timerEl = document.getElementById('game-timer'); timerEl.innerText = left;
-        Host.timerInterval = setInterval(() => { left--; timerEl.innerText = left; if(left <= 0) Host.timeUp(); }, 1000);
-    },
-    timeUp: () => {
-        clearInterval(Host.timerInterval); stopBgm(); playSe('timeup');
-        DB.state.phase = 'TIMEUP'; Net.broadcast({ type: 'SYNC', db: DB });
-        document.getElementById('timeup-msg').classList.remove('hidden');
-    },
-    forceQuit: () => {
-        clearInterval(Host.timerInterval); clearInterval(Host.activeInterval); stopBgm();
-        document.getElementById('host-count-overlay').style.display = 'none';
-        Host.goToSelect();
-        DB.state.phase = 'SELECT'; Net.broadcast({ type: 'SYNC', db: DB });
-    },
-
-    /* JUDGING FLOW */
     startJudging: () => {
-        DB.state.phase = 'JUDGING'; Net.broadcast({ type: 'SYNC', db: DB });
-        Host.showScreen('screen-judge');
-        Host.sortedAnswers = [...DB.answers].sort((a,b) => a.timestamp - b.timestamp);
-        Host.judgeIndex = -1; Host.isJudgingActive = false;
-        const list = document.getElementById('rank-list'); list.innerHTML = "";
-        Host.sortedAnswers.forEach((ans, i) => {
-            list.innerHTML += `<div class="rank-row" id="rank-item-${i}"><div class="rank-order">#${i+1}</div><div class="rank-name">${ans.name}</div><div class="rank-detail" id="rank-detail-${i}"><span class="rank-pt-badge color-${ans.pt}">${ans.pt}pt</span><span class="rank-ans">${ans.text}</span><span id="rank-result-${i}"></span></div></div>`;
-        });
+        DB.state.phase='JUDGING'; Net.broadcast({type:'SYNC', db:DB}); Host.showScreen('screen-judge');
+        Host.sortedAnswers=[...DB.answers].sort((a,b)=>a.timestamp-b.timestamp); Host.judgeIndex=-1; Host.isJudgingActive=false;
+        const list=document.getElementById('rank-list'); list.innerHTML="";
+        Host.sortedAnswers.forEach((ans,i)=>list.innerHTML+=`<div class="rank-row" id="rank-item-${i}"><div class="rank-order">#${i+1}</div><div class="rank-name">${ans.name}</div><div class="rank-detail" id="rank-detail-${i}"><span class="rank-pt-badge color-${ans.pt}">${ans.pt}pt</span><span class="rank-ans">${ans.text}</span><span id="rank-result-${i}"></span></div></div>`);
     },
     revealNext: () => {
-        Host.judgeIndex++; if(Host.judgeIndex >= Host.sortedAnswers.length) { Host.finishJudging(); return; }
-        const ans = Host.sortedAnswers[Host.judgeIndex]; const qText = DB.state.currentSet.qs[ans.pt - 1];
-        document.querySelectorAll('.rank-row').forEach(e => e.classList.remove('focused'));
-        document.getElementById(`rank-item-${Host.judgeIndex}`).classList.add('focused');
-        document.getElementById(`rank-detail-${Host.judgeIndex}`).classList.add('visible');
-        document.getElementById('j-q-pt').innerText = ans.pt; document.getElementById('j-q-text').innerText = qText;
+        Host.judgeIndex++; if(Host.judgeIndex>=Host.sortedAnswers.length){ Host.finishJudging(); return; }
+        const ans=Host.sortedAnswers[Host.judgeIndex]; const qText=DB.state.currentSet.qs[ans.pt-1];
+        document.querySelectorAll('.rank-row').forEach(e=>e.classList.remove('focused')); document.getElementById(`rank-item-${Host.judgeIndex}`).classList.add('focused'); document.getElementById(`rank-detail-${Host.judgeIndex}`).classList.add('visible');
+        document.getElementById('j-q-pt').innerText=ans.pt; document.getElementById('j-q-text').innerText=qText;
         document.getElementById('judge-ui-top').classList.add('active'); document.getElementById('judge-ui-bottom').classList.add('active');
-        Host.isJudgingActive = true;
-        if(DB.solved[ans.pt]) document.getElementById('judge-already-msg').classList.remove('hidden'); else document.getElementById('judge-already-msg').classList.add('hidden');
+        Host.isJudgingActive=true; if(DB.solved[ans.pt])document.getElementById('judge-already-msg').classList.remove('hidden'); else document.getElementById('judge-already-msg').classList.add('hidden');
     },
-    judge: (isCorrect) => {
-        const ans = Host.sortedAnswers[Host.judgeIndex]; const resSpan = document.getElementById(`rank-result-${Host.judgeIndex}`);
-        if(isCorrect) { DB.solved[ans.pt] = true; if(DB.players[ans.playerId]) DB.players[ans.playerId].score += parseInt(ans.pt); resSpan.innerHTML = '<span class="solved-mark">◎ GET!</span>'; } 
-        else resSpan.innerHTML = '<span class="failed-mark">×</span>';
-        DB.save();
-        document.getElementById('judge-ui-top').classList.remove('active'); document.getElementById('judge-ui-bottom').classList.remove('active'); document.getElementById('judge-already-msg').classList.add('hidden');
-        Host.isJudgingActive = false;
-        Net.broadcast({ type: 'SYNC', db: DB });
+    judge: (isOk) => {
+        const ans=Host.sortedAnswers[Host.judgeIndex]; const rs=document.getElementById(`rank-result-${Host.judgeIndex}`);
+        if(isOk){ DB.solved[ans.pt]=true; if(DB.players[ans.playerId])DB.players[ans.playerId].score+=parseInt(ans.pt); rs.innerHTML='<span class="solved-mark">◎ GET!</span>'; }
+        else rs.innerHTML='<span class="failed-mark">×</span>';
+        DB.save(); document.getElementById('judge-ui-top').classList.remove('active'); document.getElementById('judge-ui-bottom').classList.remove('active'); document.getElementById('judge-already-msg').classList.add('hidden'); Host.isJudgingActive=false;
+        Net.broadcast({type:'SYNC', db:DB}); // 得点更新を通知
     },
-    finishJudging: () => { Host.goToSelect(); DB.state.phase = 'SELECT'; Net.broadcast({ type: 'SYNC', db: DB }); },
-    showScreen: (id) => { document.querySelectorAll('#host-app .screen').forEach(el => el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
+    finishJudging: () => { Host.goToSelect(); DB.state.phase='SELECT'; Net.broadcast({type:'SYNC', db:DB}); },
+    showScreen: (id) => { document.querySelectorAll('#host-app .screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); },
+    onUpdate: () => {}
 };
 
 /* PLAYER LOGIC */
 const Player = {
     id: null, name: null, selectedPt: null,
-    init: (hid) => {
-        // ID Persistence
-        Player.id = sessionStorage.getItem('p_id') || 'p_' + Date.now() + Math.random().toString(36).substr(2,9); 
-        sessionStorage.setItem('p_id', Player.id);
-        Net.initPlayer(hid);
+    init: (hostId) => {
+        Net.initPlayer(hostId);
     },
     handleData: (data) => {
         if(data.type === 'SYNC') {
-            const db = data.db; const myId = Net.peer.id || Player.id;
+            const db = data.db;
+            const myData = db.players[Net.peer.id];
             
-            // Sync Score
-            if(db.players[myId]) {
-                document.getElementById('p-disp-name').innerText = db.players[myId].name;
-                document.getElementById('p-score').innerText = db.players[myId].score;
-                if(!document.getElementById('p-screen-login').classList.contains('hidden')) Player.showScreen('p-screen-main');
+            // スコア表示更新
+            if(myData) {
+                document.getElementById('p-score').innerText = myData.score;
             }
 
-            // Screen/State Update
-            const ph = db.state.phase;
-            const game = document.getElementById('p-game-area');
-            const statusMsg = document.getElementById('p-info-text');
-            const submitBtn = document.getElementById('p-submit-btn');
+            const phase = db.state.phase;
+            const gameArea = document.getElementById('p-game-area');
+            const statusText = document.getElementById('p-status-text');
 
-            // Force show Game UI (but disabled)
-            game.classList.remove('hidden');
-
-            if(ph === 'ACTIVE') {
-                const myAns = db.answers.find(a => a.playerId === myId);
+            // 画面制御：常にGameAreaを表示するが、無効化を切り替える
+            if (phase === 'ACTIVE') {
+                // アクティブ：入力可能
+                gameArea.classList.remove('ui-disabled');
+                statusText.innerText = "解答を受け付けています";
+                
+                // すでに回答済みかチェック
+                const myAns = db.answers.find(a => a.playerId === Net.peer.id);
                 if(myAns) {
-                    Player.toggleUI(false);
-                    statusMsg.innerText = "回答送信済み - 結果発表をお待ちください";
-                    submitBtn.innerText = "送信済み";
-                } else {
-                    Player.toggleUI(true);
-                    statusMsg.innerText = "解答を受け付けています";
-                    submitBtn.innerText = "送信する";
+                    gameArea.classList.add('ui-disabled');
+                    statusText.innerText = "回答を送信しました。結果をお待ちください。";
                 }
             } else {
-                Player.toggleUI(false);
-                if (ph === 'TIMEUP') statusMsg.innerText = "TIME UP!";
-                else if (ph === 'JUDGING') statusMsg.innerText = "集計中...";
-                else {
-                    statusMsg.innerText = "問題出題までお待ちください";
-                    // Reset inputs
-                    if(ph==='LOBBY' || ph==='SELECT' || ph==='COUNTDOWN') {
-                        Player.selectedPt = null; document.getElementById('p-answer-input').value = ""; Player.updatePtBtns();
-                    }
+                // 非アクティブ：入力不可
+                gameArea.classList.add('ui-disabled');
+                
+                if (phase === 'TIMEUP') statusText.innerText = "TIME UP!";
+                else if (phase === 'JUDGING') statusText.innerText = "集計中...";
+                else if (phase === 'LOBBY' || phase === 'SELECT' || phase === 'COUNTDOWN') {
+                    statusText.innerText = "問題出題までお待ちください";
+                    // リセット
+                    Player.selectedPt = null;
+                    document.getElementById('p-answer-input').value = "";
+                    Player.updatePtBtns();
                 }
             }
         }
-    },
-    toggleUI: (enable) => {
-        document.getElementById('p-answer-input').disabled = !enable;
-        document.getElementById('p-submit-btn').disabled = !enable;
-        const pts = document.querySelectorAll('.btn-pt');
-        pts.forEach(p => {
-            if(enable) { p.style.pointerEvents = 'auto'; p.style.opacity = 1; }
-            else { p.style.pointerEvents = 'none'; p.style.opacity = 0.3; }
-        });
     },
     login: () => {
-        const name = document.getElementById('p-name-input').value; if(!name) return;
-        Player.name = name; sessionStorage.setItem('p_name', name);
-        // Instant Switch
+        const n=document.getElementById('p-name-input').value; if(!n)return; 
+        Player.name=n; 
+        // 画面遷移
         Player.showScreen('p-screen-main');
-        document.getElementById('p-disp-name').innerText = name;
-        Net.send({ type: 'LOGIN', name: name });
+        document.getElementById('p-disp-name').innerText = n;
+        // ホストへ通知
+        Net.send({type:'LOGIN', name:n});
     },
-    selectPt: (pt) => { Player.selectedPt = pt; Player.updatePtBtns(); },
-    updatePtBtns: () => {
-        for(let i=1; i<=5; i++) { 
-            const btn = document.getElementById(`p-btn-${i}`); 
-            if(i === Player.selectedPt) { btn.classList.add('selected'); btn.style.opacity=1; }
-            else { btn.classList.remove('selected'); btn.style.opacity=0.6; }
-        }
+    selectPt: (pt) => { Player.selectedPt=pt; Player.updatePtBtns(); },
+    updatePtBtns: () => { for(let i=1;i<=5;i++){ const b=document.getElementById(`p-btn-${i}`); if(i===Player.selectedPt)b.classList.add('selected'); else b.classList.remove('selected'); } },
+    confirmSend: () => { const t=document.getElementById('p-answer-input').value; if(!Player.selectedPt||!t)return; document.getElementById('m-pt').innerText=Player.selectedPt; document.getElementById('m-ans').innerText=t; document.getElementById('p-modal').style.display='flex'; },
+    sendAnswer: () => { 
+        const t=document.getElementById('p-answer-input').value; 
+        Net.send({type:'ANSWER', name:Player.name, pt:Player.selectedPt, text:t}); 
+        document.getElementById('p-modal').style.display='none'; 
     },
-    confirmSend: () => {
-        const text = document.getElementById('p-answer-input').value; if(!Player.selectedPt || !text) return;
-        document.getElementById('m-pt').innerText = Player.selectedPt; document.getElementById('m-ans').innerText = text;
-        document.getElementById('p-modal').style.display = 'flex';
-    },
-    sendAnswer: () => {
-        const text = document.getElementById('p-answer-input').value;
-        Net.send({ type: 'ANSWER', name: Player.name, pt: Player.selectedPt, text: text });
-        document.getElementById('p-modal').style.display = 'none';
-    },
-    showScreen: (id) => { document.querySelectorAll('#player-app .screen').forEach(el => el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-};
-
-/* DEBUGGER (NEW TAB LOGIC) */
-const Debugger = {
-    vPlayers: [],
-    init: (hid) => { Net.initDebugger(hid); },
-    handleData: (d) => { if(d.type === 'SYNC') Debugger.onUpdate(d.db); },
-    spawnPlayers: () => {
-        const count = Math.max(2, Math.min(10, parseInt(document.getElementById('debug-count').value)));
-        const grid = document.getElementById('debug-grid'); grid.innerHTML = "";
-        Debugger.vPlayers = [];
-        
-        for(let i=0; i<count; i++) {
-            const pid = 'debug_' + Date.now() + '_' + i; const name = `Test ${i+1}`;
-            Debugger.vPlayers.push({ id: pid, name: name, selectedPt: null });
-            // Login via Proxy
-            Net.send({ type: 'DEBUG_PROXY', action: 'LOGIN', payload: { id: pid, name: name } });
-            
-            grid.innerHTML += `
-                <div class="debug-card" id="d-card-${i}">
-                    <div class="debug-name-row"><span>${name}</span><span id="d-score-${i}">0pt</span></div>
-                    <div class="debug-status-text" id="d-status-${i}">Wait</div>
-                    <div class="debug-pt-row">
-                        <button class="d-pt-btn color-1" onclick="Debugger.sel(${i}, 1)" id="d-btn-${i}-1">1</button>
-                        <button class="d-pt-btn color-2" onclick="Debugger.sel(${i}, 2)" id="d-btn-${i}-2">2</button>
-                        <button class="d-pt-btn color-3" onclick="Debugger.sel(${i}, 3)" id="d-btn-${i}-3">3</button>
-                        <button class="d-pt-btn color-4" onclick="Debugger.sel(${i}, 4)" id="d-btn-${i}-4">4</button>
-                        <button class="d-pt-btn color-5" onclick="Debugger.sel(${i}, 5)" id="d-btn-${i}-5">5</button>
-                    </div>
-                    <input type="text" class="d-input" id="d-input-${i}" placeholder="Ans">
-                    <div class="d-send" onclick="Debugger.send(${i})" id="d-send-${i}">SEND</div>
-                </div>`;
-        }
-    },
-    sel: (i, pt) => {
-        Debugger.vPlayers[i].selectedPt = pt;
-        for(let p=1; p<=5; p++) {
-            const btn = document.getElementById(`d-btn-${i}-${p}`);
-            if(p === pt) btn.classList.add('selected'); else btn.classList.remove('selected');
-        }
-    },
-    send: (i) => {
-        const p = Debugger.vPlayers[i]; const t = document.getElementById(`d-input-${i}`).value;
-        if(!p.selectedPt || !t) return;
-        Net.send({ type: 'DEBUG_PROXY', action: 'ANSWER', payload: { id: p.id, name: p.name, pt: p.selectedPt, text: t } });
-    },
-    onUpdate: (db) => {
-        const ph = db.state.phase;
-        Debugger.vPlayers.forEach((p, i) => {
-            if(db.players[p.id]) document.getElementById(`d-score-${i}`).innerText = db.players[p.id].score + "pt";
-            const ans = db.answers.find(a => a.playerId === p.id);
-            const card = document.getElementById(`d-card-${i}`);
-            const stat = document.getElementById(`d-status-${i}`);
-            const btn = document.getElementById(`d-send-${i}`);
-            
-            if(ans) {
-                card.classList.add('done'); stat.innerText = "Done"; btn.classList.remove('active');
-            } else {
-                card.classList.remove('done');
-                if(ph === 'ACTIVE') { stat.innerText = "ACTIVE"; btn.classList.add('active'); }
-                else { 
-                    stat.innerText = "Wait"; btn.classList.remove('active');
-                    if(ph === 'LOBBY' || ph === 'SELECT') {
-                        p.selectedPt = null; document.getElementById(`d-input-${i}`).value = "";
-                        for(let b=1; b<=5; b++) document.getElementById(`d-btn-${i}-${b}`).classList.remove('selected');
-                    }
-                }
-            }
-        });
-    }
+    showScreen: (id) => { document.querySelectorAll('#player-app .screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
 };
 
 Host.init();
