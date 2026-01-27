@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V6.2 (Stable)</title>
+    <title>QUIZ ROYALE V6.3 (Final Fix)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -146,7 +146,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V6.2 Online (Stable)</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V6.3 Online (Final Fix)</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
         </div>
@@ -348,15 +348,15 @@ const Net = {
             new QRCode(document.getElementById("qrcode"), { text: url, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
         });
         Net.peer.on('connection', (c) => {
-            // ★【修正点】即座にリストに追加せず、通信準備完了(open)を待ってから追加する
-            c.on('open', () => {
-                Net.conns.push(c);
-                c.send({ type: 'SYNC', db: DB }); // 接続完了時に現在の状態を送る
-            });
+            // ★修正: 接続時は即座に追加（削除はcloseに任せる）
+            Net.conns.push(c);
             
+            c.on('open', () => {
+                c.send({ type: 'SYNC', db: DB });
+            });
             c.on('data', (d) => Host.handleData(d, c.peer));
             c.on('close', () => { 
-                // ★【修正点】明確な切断イベントでのみ削除する
+                // 切断イベントでのみ削除
                 Net.conns = Net.conns.filter(conn => conn !== c);
                 if(DB.players[c.peer]) delete DB.players[c.peer]; 
                 Host.updateCount();
@@ -376,40 +376,22 @@ const Net = {
         });
         Net.peer.on('error', (err) => { console.error(err); alert("通信エラー: " + err.type); });
     },
-    // ★【修正点】ブロードキャスト時に接続状態を厳密にチェックする
-    broadcast: (data) => {
-
-    if (Net.isHost) {
-
-        Net.conns.forEach(c => {
-
-            // 接続が開いている場合のみ送信を試みる
-
-            if (c.open) {
-
-                try {
-
-                    c.send(data);
-
-                } catch (e) {
-
-                    // 送信エラーがあっても、リストから即座に削除はしない
-
-                    console.error("Broadcast error for peer:", c.peer, e);
-
+    // ★修正: 送信エラー時に削除しないように変更（他のGeminiの提案通り）
+    broadcast: (data) => { 
+        if(Net.isHost) {
+            Net.conns.forEach(c => {
+                // 接続が開いている場合のみ送信
+                if (c.open) {
+                    try {
+                        c.send(data);
+                    } catch (e) {
+                        // エラーがあっても削除はしない
+                        console.error("Broadcast error:", e);
+                    }
                 }
-
-            }
-
-        });
-
-        // ここで行っていた Net.conns = activeConns; による上書き削除を廃止
-
-        // ※ 実際の切断処理は c.on('close') が担当するため
-
-    }
-
-},
+            });
+        }
+    },
     send: (data) => { if(Net.conn) Net.conn.send(data); }
 };
 
