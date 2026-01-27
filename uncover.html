@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V6.1 (Fixed)</title>
+    <title>QUIZ ROYALE V6.2 (Stable)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -146,7 +146,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V6.1 Online (Fixed)</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V6.2 Online (Stable)</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
         </div>
@@ -348,15 +348,20 @@ const Net = {
             new QRCode(document.getElementById("qrcode"), { text: url, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
         });
         Net.peer.on('connection', (c) => {
-            Net.conns.push(c);
+            // ★【修正点】即座にリストに追加せず、通信準備完了(open)を待ってから追加する
+            c.on('open', () => {
+                Net.conns.push(c);
+                c.send({ type: 'SYNC', db: DB }); // 接続完了時に現在の状態を送る
+            });
+            
             c.on('data', (d) => Host.handleData(d, c.peer));
             c.on('close', () => { 
+                // ★【修正点】明確な切断イベントでのみ削除する
                 Net.conns = Net.conns.filter(conn => conn !== c);
                 if(DB.players[c.peer]) delete DB.players[c.peer]; 
                 Host.updateCount();
             });
-            // 接続成功時にDBを送信
-            c.send({ type: 'SYNC', db: DB });
+            c.on('error', (err) => { console.error(err); });
         });
     },
     initPlayer: (hostId) => {
@@ -364,31 +369,23 @@ const Net = {
         Net.peer.on('open', () => {
             Net.conn = Net.peer.connect(hostId);
             Net.conn.on('open', () => {
-                document.getElementById('p-conn-status').classList.add('on'); // 接続インジケーターON
+                document.getElementById('p-conn-status').classList.add('on');
             });
             Net.conn.on('data', (d) => Player.handleData(d));
             Net.conn.on('close', () => { alert("ホストとの接続が切れました"); location.reload(); });
         });
-        Net.peer.on('error', (err) => {
-            console.error(err);
-            alert("通信エラー: " + err.type);
-        });
+        Net.peer.on('error', (err) => { console.error(err); alert("通信エラー: " + err.type); });
     },
-    // 【重要修正点】 エラーハンドリングを追加したブロードキャスト
+    // ★【修正点】ブロードキャスト時に接続状態を厳密にチェックする
     broadcast: (data) => { 
         if(Net.isHost) {
-            // 切断された接続を検知して削除するためのフィルタリング用配列
-            const activeConns = [];
             Net.conns.forEach(c => { 
-                try { 
-                    c.send(data); 
-                    activeConns.push(c); // 送信成功したものだけ残す
-                } catch(e) {
-                    // 送信失敗（切断済み）の場合は配列から除外する
-                    console.log("Dead connection removed:", c.peer);
-                } 
+                // openプロパティがtrue（通信可能）な相手にのみ送信を試みる
+                if(c.open) {
+                    try { c.send(data); } catch(e) { console.error(e); }
+                }
             }); 
-            Net.conns = activeConns; // 有効な接続リストを更新
+            // ※ここでリストからの削除は行わない（closeイベントに任せる）
         }
     },
     send: (data) => { if(Net.conn) Net.conn.send(data); }
@@ -402,8 +399,8 @@ const CHANNEL = 'quiz_royale_v6';
 const DB = {
     state: { phase: 'LOBBY', currentSet: null },
     players: {}, answers: [], solved: [false, false, false, false, false, false],
-    save: () => { /* LocalStorage not used for sync anymore */ },
-    load: () => { /* Not used for sync */ },
+    save: () => { },
+    load: () => { },
     resetAnswers: () => { DB.answers = []; DB.solved = [false, false, false, false, false, false]; }
 };
 
@@ -591,7 +588,6 @@ const Player = {
 
             // 画面制御：常にGameAreaを表示するが、無効化を切り替える
             if (phase === 'ACTIVE') {
-                // アクティブ：入力可能
                 statusText.innerText = "解答を受け付けています";
                 
                 // すでに回答済みかチェック
