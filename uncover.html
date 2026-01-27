@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V13.0</title>
+    <title>QUIZ ROYALE V13.1</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -40,11 +40,15 @@
         .btn-sub { padding: 10px 20px; font-size: 14px; border-radius: 5px; background: #333; color: #aaa; border: 1px solid #555; }
         .btn-action { padding: 5px 10px; background: #555; color: #fff; border-radius: 4px; font-size: 12px; margin-left: 2px;}
         
-        .settings-panel { width: 90%; max-width: 1000px; height: 85vh; background: var(--panel); border: 1px solid #333; border-radius: 12px; display: flex; overflow: hidden; }
+        /* SETTINGS LAYOUT (FIXED) */
+        .settings-container { display: flex; width: 95%; max-width: 1000px; height: 85vh; background: var(--panel); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
         .settings-sidebar { width: 250px; background: #181818; border-right: 1px solid #333; display: flex; flex-direction: column; }
         .settings-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .set-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         .set-item { padding: 10px 15px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .set-item:hover { background: #252525; }
         .set-item.active { background: #333; border-left: 4px solid var(--c1); }
+        .set-controls { display: flex; align-items: center; }
 
         /* GAMEPLAY HOST */
         .timer-box { position: absolute; top: 20px; right: 20px; font-size: 48px; font-family: 'Black Ops One'; color: #fff; }
@@ -94,7 +98,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V13.0 STABLE</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V13.1 STABLE</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
             <div style="margin-top:20px; font-size:12px; color:#666;">※スマホ参加対応</div>
@@ -124,7 +128,7 @@
                         <button class="btn-action" style="width:100%; padding:10px; font-size:16px;" onclick="Host.createNewSet()">＋ 新規作成</button>
                     </div>
                 </div>
-                <div class="settings-main">
+                <div class="settings-content">
                     <h2 style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:20px;">EDIT MISSION</h2>
                     <div style="background:#252525; padding:15px; border-radius:8px; margin-bottom:20px; display:flex; gap:20px; align-items:center;">
                         <div style="flex:1;">
@@ -305,7 +309,7 @@ const Net = {
             Net.conn = Net.peer.connect(hostId);
             Net.conn.on('open', () => { console.log("Connected"); });
             Net.conn.on('data', d => Player.handleData(d));
-            Net.conn.on('close', () => { alert("接続が切れました"); });
+            Net.conn.on('close', () => { alert("接続が切れました"); location.reload(); });
         });
     },
     // For Debugger Tab
@@ -343,7 +347,6 @@ const Sound = {
 
 /* COLORS (5 Fixed) */
 function getPtColor(i) {
-    // 5 colors gradient blue->red
     const colors = ["#42a5f5", "#66bb6a", "#ffee58", "#ffa726", "#ef5350"];
     return colors[i % 5];
 }
@@ -450,16 +453,16 @@ const Host = {
     createNewSet: () => { Host.editIdx=-1; Host.renderList(); document.getElementById('conf-title').value=""; Host.initInputs(); },
     loadSet: (i) => {
         Host.editIdx=i; Host.renderList(); const s=Host.data.sets[i];
-        document.getElementById('conf-title').value=s.title; document.getElementById('conf-time').value=s.time;
-        document.getElementById('conf-font').value=s.fontSize||24; document.getElementById('conf-width').value=s.width||90;
+        document.getElementById('conf-title').value=s.title; document.getElementById('set-time').value=s.time;
+        document.getElementById('set-font').value=s.fontSize||24; document.getElementById('set-width').value=s.width||90;
         Host.initInputs(s.qs);
     },
     saveCurrentSet: () => {
         const t=document.getElementById('conf-title').value; if(!t)return alert("タイトルを入力");
-        const qs=[]; document.getElementById('conf-questions').querySelectorAll('input').forEach(i=>qs.push(i.value));
+        const qs=[]; document.getElementById('q-inputs').querySelectorAll('input').forEach(i=>qs.push(i.value));
         const ns={
-            title:t, time:parseInt(document.getElementById('conf-time').value),
-            fontSize:parseInt(document.getElementById('conf-font').value), width:parseInt(document.getElementById('conf-width').value), qs:qs
+            title:t, time:parseInt(document.getElementById('set-time').value),
+            fontSize:parseInt(document.getElementById('set-font').value), width:parseInt(document.getElementById('set-width').value), qs:qs
         };
         if(Host.editIdx<0) Host.data.sets.push(ns); else Host.data.sets[Host.editIdx]=ns;
         Host.saveAll(); Host.renderList(); alert("保存しました");
@@ -470,7 +473,7 @@ const Host = {
     importData: () => { const s=prompt("データを貼り付けてください"); if(s){ try{ Host.data=JSON.parse(s); Host.saveAll(); Host.renderList(); alert("読み込みました"); }catch(e){alert("エラー");} } },
     
     initInputs: (vals=[]) => {
-        const div=document.getElementById('conf-questions'); div.innerHTML="";
+        const div=document.getElementById('q-inputs'); div.innerHTML="";
         for(let i=0;i<5;i++){ // Fixed 5
             const v=vals[i]||"";
             div.innerHTML+=`<div style="display:flex;gap:5px;margin-bottom:5px;"><span class="color-${i+1}" style="padding:5px;width:30px;text-align:center;font-weight:bold;border-radius:3px;color:#000;">${i+1}</span><input type="text" id="q-in-${i+1}" value="${v}" style="flex:1;"></div>`;
@@ -547,7 +550,7 @@ const Host = {
         document.getElementById('judge-ui-top').classList.remove('active'); document.getElementById('judge-ui-bottom').classList.remove('active'); document.getElementById('judge-already-msg').classList.add('hidden');
         Host.isJudgingActive=false; Net.broadcast({type:'STATE', db:DB});
     },
-    finishJudging: () => { Host.goToSelect(); }
+    finishJudging: () => { Host.goToSelect(); DB.state.phase='SELECT'; Net.broadcast({type:'STATE', db:DB}); }
 };
 
 /* PLAYER LOGIC */
@@ -573,21 +576,31 @@ const Player = {
             const ph = db.state.phase;
             const wait = document.getElementById('p-wait-msg'); const game = document.getElementById('p-game-area'); const txt = document.getElementById('p-wait-text');
             const submitBtn = document.getElementById('p-submit-btn'); const inputs = document.querySelectorAll('.p-input'); const pts = document.querySelectorAll('.btn-pt');
+            const info = document.getElementById('p-info-text');
 
             if(ph === 'ACTIVE') {
                 const myAns = db.answers.find(a=>a.playerId===myId);
                 if(myAns) {
-                    wait.classList.remove('hidden'); game.classList.add('hidden');
-                    txt.innerText = "回答送信済み";
+                    // Show disabled game screen instead of wait screen
+                    wait.classList.add('hidden'); game.classList.remove('hidden');
+                    
+                    submitBtn.disabled = true; submitBtn.innerText = "送信済み";
+                    inputs.forEach(el => { el.disabled = true; el.value = myAns.text; });
+                    pts.forEach(el => {
+                        el.classList.add('disabled');
+                        if(parseInt(el.innerText) === myAns.pt) el.classList.add('selected');
+                    });
+                    info.innerText = "結果発表をお待ちください";
                 } else {
                     wait.classList.add('hidden'); game.classList.remove('hidden');
                     // Enable UI
-                    submitBtn.disabled = false;
+                    submitBtn.disabled = false; submitBtn.innerText = "送信する";
                     inputs.forEach(el => el.disabled = false);
                     pts.forEach(el => el.classList.remove('disabled'));
+                    info.innerText = "";
                 }
             } else {
-                // Show Game Area BUT Disable it
+                // Always show game area but disabled (except login)
                 wait.classList.add('hidden'); game.classList.remove('hidden');
                 
                 // Disable UI
@@ -595,14 +608,13 @@ const Player = {
                 inputs.forEach(el => el.disabled = true);
                 pts.forEach(el => el.classList.add('disabled'));
 
-                // Info Text
-                const info = document.getElementById('p-info-text');
                 if(ph==='TIMEUP') info.innerText = "TIME UP!";
                 else if(ph==='JUDGING') info.innerText = "集計中...";
                 else {
                     info.innerText = "問題出題までお待ちください";
                     if(ph==='LOBBY'||ph==='SELECT'||ph==='COUNTDOWN') {
                         Player.selPt = null; document.getElementById('p-answer-input').value = ""; Player.updateBtns();
+                        submitBtn.innerText = "送信する";
                     }
                 }
             }
