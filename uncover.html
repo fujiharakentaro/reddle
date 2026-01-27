@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V14.1</title>
+    <title>QUIZ ROYALE V14.2</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -40,19 +40,15 @@
         .btn-sub { padding: 10px 20px; font-size: 14px; border-radius: 5px; background: #333; color: #aaa; border: 1px solid #555; }
         .btn-action { padding: 5px 10px; background: #555; color: #fff; border-radius: 4px; font-size: 12px; margin-left: 2px;}
         
-        /* SETTINGS LAYOUT */
+        /* SETTINGS LAYOUT (RESTORED TO V13 STYLE) */
         .settings-container { display: flex; width: 95%; max-width: 1000px; height: 85vh; background: var(--panel); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
         .settings-sidebar { width: 250px; background: #181818; border-right: 1px solid #333; display: flex; flex-direction: column; }
-        .settings-content { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; } /* Simplified layout */
-        
+        .settings-content { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; }
         .set-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         .set-item { padding: 10px 15px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .set-item:hover { background: #252525; }
         .set-item.active { background: #333; border-left: 4px solid var(--c1); }
         .set-controls { display: flex; align-items: center; }
-
-        .config-section { background:#252525; padding:15px; border-radius:8px; border:1px solid #333; }
-        .config-label { font-size:12px; color:#aaa; margin-bottom:5px; font-weight:bold; }
 
         /* GAMEPLAY HOST */
         .timer-box { position: absolute; top: 20px; right: 20px; font-size: 48px; font-family: 'Black Ops One'; color: #fff; }
@@ -70,7 +66,7 @@
         .rank-pt-badge { padding: 5px 15px; border-radius: 20px; font-weight: bold; font-family: 'Black Ops One'; font-size: 20px; color:#000; }
         .rank-ans { font-weight: bold; font-size: 28px; color: #ffeb3b; }
 
-        /* DEBUGGER (NEW TAB) */
+        /* DEBUGGER STYLES */
         .debug-container { width: 100%; height: 100%; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; background: #222; overflow-y: auto; }
         .debug-header { background: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; border: 1px solid #555; }
         .debug-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
@@ -81,7 +77,7 @@
         .d-send { width: 100%; background: #555; color: #fff; padding: 5px; cursor: pointer; border-radius: 4px; text-align: center; }
         .d-send.active { background: var(--c1); }
 
-        /* PLAYER MOBILE */
+        /* PLAYER STYLES */
         .p-container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; height: 100%; }
         .p-status { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; border: 1px solid #444; font-size: 18px; color: #fff; }
         .p-pt-select { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
@@ -102,7 +98,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V14.1 STABLE</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V14.2 STABLE</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
             <div style="margin-top:20px; font-size:12px; color:#666;">※スマホ参加対応</div>
@@ -133,35 +129,35 @@
                     </div>
                 </div>
                 <div class="settings-content">
-                    <h2 style="border-bottom:1px solid #444; padding-bottom:10px; margin:0;">EDIT MISSION</h2>
+                    <h2 style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:20px;">EDIT MISSION</h2>
                     
-                    <div class="config-section">
-                        <div class="config-label">システム・音響設定</div>
-                        <div style="display:flex; gap:20px; align-items:center;">
-                            <div style="flex:1;">
-                                <label style="font-size:12px; color:#aaa;">BGMファイル</label>
-                                <input type="file" id="bgm-file" accept="audio/*" style="width:100%;">
+                    <div style="background:#252525; padding:15px; border-radius:8px; margin-bottom:20px; display:flex; gap:20px; align-items:center;">
+                        <div style="flex:1;">
+                            <label style="font-size:12px; color:#aaa;">BGMファイル / 音量</label>
+                            <input type="file" id="bgm-file" accept="audio/*" style="width:100%;">
+                            <div style="margin-top:5px; display:flex; gap:10px;">
+                                BGM:<input type="range" id="vol-bgm" min="0" max="100" value="50">
+                                SE:<input type="range" id="vol-se" min="0" max="100" value="50">
                             </div>
-                            <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面へ</button>
                         </div>
+                        <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面へ (別タブ)</button>
                     </div>
 
-                    <div class="config-section" style="flex:1; display:flex; flex-direction:column;">
-                        <div class="config-label">問題セット内容</div>
-                        <label style="font-size:12px; color:#aaa;">ジャンル名</label>
+                    <div style="flex:1; display:flex; flex-direction:column;">
+                        <label style="color:#aaa;">ジャンル名</label>
                         <input type="text" id="set-genre" placeholder="例: 一般常識" style="width:100%; margin-bottom:15px;">
                         
-                        <div style="display:flex; gap:10px; margin-bottom:10px;">
-                            <div><label style="font-size:12px; color:#aaa;">制限時間(秒)</label><input type="number" id="set-time" value="30"></div>
-                            <div><label style="font-size:12px; color:#aaa;">文字サイズ</label><input type="number" id="set-font" value="24"></div>
-                            <div><label style="font-size:12px; color:#aaa;">枠の幅(%)</label><input type="number" id="set-width" value="90"></div>
+                        <div style="display:flex; gap:10px; margin-bottom:15px;">
+                            <div><label style="font-size:12px; color:#aaa;">制限時間(秒)</label><input type="number" id="set-time" value="30" style="width:80px;"></div>
+                            <div><label style="font-size:12px; color:#aaa;">文字サイズ</label><input type="number" id="set-font" value="24" style="width:80px;"></div>
+                            <div><label style="font-size:12px; color:#aaa;">枠の幅(%)</label><input type="number" id="set-width" value="90" style="width:80px;"></div>
                         </div>
 
-                        <div id="q-inputs" style="overflow-y:auto; flex:1; border:1px solid #333; padding:10px; border-radius:5px;">
+                        <div id="q-inputs" style="overflow-y:auto; flex:1; border:1px solid #333; padding:10px; border-radius:5px; min-height:200px;">
                             </div>
                     </div>
                     
-                    <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
                         <button class="btn-sub" onclick="Host.exportData()">保存データ書出</button>
                         <button class="btn-sub" onclick="Host.importData()">保存データ読込</button>
                         <button class="btn-sub" onclick="Host.showScreen('screen-title')">戻る</button>
@@ -276,12 +272,9 @@ const MASTER_KEY = 'QUIZ_ROYALE_MASTER_DATA';
 function migrateData() {
     let data = localStorage.getItem(MASTER_KEY);
     if (!data) {
-        // Migration from V12/V13 keys
         const v13 = localStorage.getItem('quiz_royale_sets_v13');
-        const v12 = localStorage.getItem('quiz_royale_sets_v12');
-        const old = v13 || v12;
-        if (old) {
-            data = JSON.stringify({ sets: JSON.parse(old), config: {} });
+        if (v13) {
+            data = JSON.stringify({ sets: JSON.parse(v13), config: {} });
             localStorage.setItem(MASTER_KEY, data);
         } else {
             return { sets: [{ title: "サンプル", time: 30, qs: ["首都", "果物", "計算", "干支", "山"] }], config: {} };
@@ -344,6 +337,8 @@ const Sound = {
     init: () => {
         if(document.getElementById('bgm-file')){
             document.getElementById('bgm-file').onchange = e => { const f=e.target.files[0]; if(f) document.getElementById('bgm-player').src=URL.createObjectURL(f); };
+            document.getElementById('vol-bgm').oninput = e => { Sound.bgmVol = e.target.value/100; document.getElementById('bgm-player').volume = Sound.bgmVol; };
+            document.getElementById('vol-se').oninput = e => { Sound.seVol = e.target.value/100; };
         }
     },
     playBGM: () => { const a=document.getElementById('bgm-player'); a.volume=Sound.bgmVol; if(a.src) a.play().catch(()=>{}); },
@@ -446,15 +441,15 @@ const Host = {
         const t=Host.data.sets[i]; Host.data.sets[i]=Host.data.sets[i+d]; Host.data.sets[i+d]=t;
         Host.saveAll(); Host.renderList();
     },
-    createNewSet: () => { Host.editIdx=-1; Host.renderList(); document.getElementById('set-genre').value=""; document.getElementById('set-time').value=30; Host.initInputs(); },
+    createNewSet: () => { Host.editIdx=-1; Host.renderList(); document.getElementById('conf-title').value=""; Host.initInputs(); },
     loadSet: (i) => {
         Host.editIdx=i; Host.renderList(); const s=Host.data.sets[i];
-        document.getElementById('set-genre').value=s.title; document.getElementById('set-time').value=s.time;
+        document.getElementById('conf-title').value=s.title; document.getElementById('set-time').value=s.time;
         document.getElementById('set-font').value=s.fontSize||24; document.getElementById('set-width').value=s.width||90;
         Host.initInputs(s.qs);
     },
     saveCurrentSet: () => {
-        const t=document.getElementById('set-genre').value; if(!t)return alert("タイトルを入力");
+        const t=document.getElementById('conf-title').value; if(!t)return alert("タイトルを入力");
         const qs=[]; document.getElementById('q-inputs').querySelectorAll('input').forEach(i=>qs.push(i.value));
         const ns={
             title:t, time:parseInt(document.getElementById('set-time').value),
@@ -482,7 +477,8 @@ const Host = {
     startSet: (i) => {
         const s = Host.data.sets[i]; DB.state.currentSet = s; DB.resetAnswers();
         
-        clearInterval(Host.activeInterval); clearInterval(Host.timer);
+        clearInterval(Host.activeInterval);
+        clearInterval(Host.timer);
 
         Host.showScreen('screen-game'); 
         document.getElementById('game-genre-title').innerText=s.title;
