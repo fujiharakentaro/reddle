@@ -363,7 +363,7 @@ const Net = {
             Net.conn.on('close', () => { alert("ホストとの接続が切れました"); location.reload(); });
         });
     },
-    broadcast: (data) => { if(Net.isHost) Net.conns.forEach(c => c.send(data)); },
+    broadcast: (data) => { if(Net.isHost) Net.conns.forEach(c => { try { c.send(data); } catch(e){} }); },
     send: (data) => { if(Net.conn) Net.conn.send(data); }
 };
 
