@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V7.1 (Force Broadcast)</title>
+    <title>QUIZ ROYALE V9.0 (Start Signal Ver)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -146,7 +146,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V7.1 Online (Stable Broadcast)</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V9.0 (START Signal)</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
         </div>
@@ -349,6 +349,7 @@ const Net = {
         });
         Net.peer.on('connection', (c) => {
             Net.conns.push(c);
+            // 接続時はSYNCを送っておく（途中参加用）
             c.on('open', () => { c.send({ type: 'SYNC', db: DB }); });
             c.on('data', (d) => Host.handleData(d, c.peer));
             c.on('close', () => { 
@@ -371,17 +372,16 @@ const Net = {
         });
         Net.peer.on('error', (err) => { console.error(err); alert("通信エラー: " + err.type); });
     },
-    // ★【決定版修正】c.openのチェックを廃止し、try-catchのみで送信を試みる
+    // ★【修正】過剰なエラーハンドリングを廃止
     broadcast: (data) => { 
         if(Net.isHost) {
             Net.conns.forEach(c => {
-                // c.openがfalseでも、内部的にバッファリングされる可能性や
-                // ステータス反映遅れを考慮し、強制的に送信を試みる。
+                // c.openがfalseでも送信を試みる（遅延やバッファリング対応）
                 try {
                     c.send(data);
                 } catch (e) {
                     console.error("Broadcast failed for:", c.peer, e);
-                    // エラーが出てもリストからは削除しない（closeイベントに任せる）
+                    // 送信エラーでもリストからは削除しない
                 }
             });
         }
@@ -526,13 +526,26 @@ const Host = {
         Host.showScreen('screen-game'); document.getElementById('game-genre-title').innerText=set.title; document.getElementById('timeup-msg').classList.add('hidden');
         const list=document.getElementById('host-q-list'); list.innerHTML=""; list.style.width=(set.width||90)+"%"; const fs=set.fontSize||24;
         set.qs.forEach((q,i)=>list.innerHTML+=`<div class="q-bar"><div class="q-bar-pt color-${i+1}">${i+1}pt</div><div class="q-bar-text" style="font-size:${fs}px">${q}</div></div>`);
-        DB.state.phase='COUNTDOWN'; Net.broadcast({type:'SYNC', db:DB});
+        
+        DB.state.phase='COUNTDOWN'; 
+        // 待機状態を同期
+        Net.broadcast({type:'SYNC', db:DB});
+        
         const ol=document.getElementById('host-count-overlay'); ol.style.display='flex'; let c=3; ol.innerText=c; playSe('count');
         const ct=setInterval(()=>{ c--; if(c>0){ol.innerText=c;playSe('count');}else{clearInterval(ct);ol.style.display='none';playSe('start');playBgm();Host.startGameLoop(set.time);} },1000);
         Host.activeInterval=ct;
     },
     startGameLoop: (sec) => {
-        DB.state.phase='ACTIVE'; Net.broadcast({type:'SYNC', db:DB}); let left=sec; const el=document.getElementById('game-timer'); el.innerText=left;
+        DB.state.phase='ACTIVE'; 
+        
+        // ★【最重要修正】 V39と同じく「START信号」を明示的に送る
+        // これによりクライアントは状態確認をスキップして強制的に画面を切り替える
+        Net.broadcast({type:'START'});
+        
+        // 念のため状態も同期（途中参加者用）
+        Net.broadcast({type:'SYNC', db:DB}); 
+        
+        let left=sec; const el=document.getElementById('game-timer'); el.innerText=left;
         Host.timerInterval=setInterval(()=>{ left--; el.innerText=left; if(left<=0)Host.timeUp(); },1000);
     },
     timeUp: () => { clearInterval(Host.timerInterval); stopBgm(); playSe('timeup'); DB.state.phase='TIMEUP'; Net.broadcast({type:'SYNC', db:DB}); document.getElementById('timeup-msg').classList.remove('hidden'); },
@@ -571,11 +584,28 @@ const Player = {
         Net.initPlayer(hostId);
     },
     handleData: (data) => {
+        // ★【最重要修正】 START信号を受け取ったら無条件で解答画面を表示
+        if(data.type === 'START') {
+            const gameArea = document.getElementById('p-game-area');
+            const statusText = document.getElementById('p-status-text');
+            
+            // 強制表示
+            gameArea.classList.remove('hidden');
+            gameArea.classList.remove('ui-disabled');
+            statusText.innerText = "解答を受け付けています！";
+            
+            // リセット処理
+            Player.selectedPt = null;
+            document.getElementById('p-answer-input').value = "";
+            Player.updatePtBtns();
+            return; // 処理終了
+        }
+
+        // 通常の状態同期（途中参加や画面復帰用）
         if(data.type === 'SYNC') {
             const db = data.db;
             const myData = db.players[Net.peer.id];
             
-            // スコア表示更新
             if(myData) {
                 document.getElementById('p-score').innerText = myData.score;
             }
@@ -596,6 +626,7 @@ const Player = {
                     gameArea.classList.remove('ui-disabled');
                 }
             } else {
+                // ACTIVE以外は隠す
                 gameArea.classList.add('hidden');
                 
                 if (phase === 'TIMEUP') statusText.innerText = "TIME UP!";
