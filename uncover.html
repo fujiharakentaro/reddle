@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V6.0 (Multi-Debug)</title>
+    <title>QUIZ ROYALE V9.0 (Online)</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -27,14 +28,11 @@
         button { cursor: pointer; border: none; outline: none; transition: 0.2s; font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: bold; }
         button:active { transform: scale(0.98); }
         input, select, textarea { background: #333; border: 1px solid #555; color: #fff; padding: 10px; border-radius: 5px; font-size: 16px; }
-        input[type="range"] { -webkit-appearance: none; background: #444; height: 8px; border-radius: 5px; outline: none; padding: 0; border: none; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #fff; border-radius: 50%; cursor: pointer; }
 
         /* HOST STYLES */
         .btn-large { padding: 20px 60px; font-size: 24px; border-radius: 50px; background: linear-gradient(45deg, #444, #666); color: #fff; border: 2px solid #fff; margin: 15px; }
         .btn-sub { padding: 10px 20px; font-size: 14px; border-radius: 5px; background: #333; color: #aaa; border: 1px solid #555; }
         .btn-action { padding: 5px 10px; background: #555; color: #fff; border-radius: 4px; font-size: 12px; margin-left: 2px;}
-        .btn-action:hover { background: #777; }
         
         /* SETTINGS LAYOUT */
         .settings-container { display: flex; width: 95%; max-width: 1000px; height: 85vh; background: var(--panel); border-radius: 10px; overflow: hidden; border: 1px solid #444; }
@@ -43,18 +41,14 @@
         .set-item { padding: 10px 15px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .set-item:hover { background: #252525; }
         .set-item.active { background: #333; border-left: 4px solid var(--c1); }
-        .set-controls { display: flex; align-items: center; }
         .settings-main { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; }
         
-        .config-block { background:#252525; padding:15px; border-radius:8px; margin-bottom:20px; }
-        .config-title { font-size:14px; color:#aaa; margin-bottom:10px; font-weight:bold; border-bottom:1px solid #444; padding-bottom:5px; display:flex; justify-content:space-between; }
-
         /* GAMEPLAY HOST */
         .timer-box { position: absolute; top: 20px; right: 20px; font-size: 48px; font-family: 'Black Ops One'; color: #fff; }
         .question-list { display: flex; flex-direction: column; gap: 15px; width: 90%; max-width: 1600px; margin: 20px auto; height: 80vh; justify-content: center; }
         .q-bar { display: flex; align-items: center; background: #222; border-radius: 8px; overflow: hidden; height: 15%; border: 1px solid #444; transition: 0.3s; }
         .q-bar-pt { width: 80px; height: 100%; display: flex; align-items: center; justify-content: center; font-family: 'Black Ops One'; font-size: 32px; flex-shrink: 0; }
-        .q-bar-text { flex: 1; padding: 0 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .q-bar-text { flex: 1; padding: 0 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 24px; }
         .q-bar.solved { opacity: 0.3; filter: grayscale(100%); text-decoration: line-through; }
 
         /* JUDGING */
@@ -80,43 +74,51 @@
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
 
         /* DEBUGGER STYLES */
-        .debug-container { 
-            width: 100%; height: 100%; padding: 20px; box-sizing: border-box; 
-            display: flex; flex-direction: column; background: #222;
-        }
-        .debug-header { 
-            background: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 20px; border: 1px solid #555;
-        }
-        .debug-grid {
-            flex: 1; overflow-y: auto; 
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
-            gap: 10px; align-content: start;
-        }
-        .debug-card {
-            background: #1a1a1a; border: 1px solid #444; border-radius: 8px; padding: 10px;
-            display: flex; flex-direction: column; gap: 5px;
-        }
+        .debug-container { width: 100%; height: 100%; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; background: #222; }
+        .debug-header { background: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; border: 1px solid #555; }
+        .debug-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; align-content: start; }
+        .debug-card { background: #1a1a1a; border: 1px solid #444; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
         .debug-card.done { opacity: 0.5; border-color: var(--c2); }
-        
-        .debug-name-row { display: flex; justify-content: space-between; font-weight: bold; color: #aaa; font-size: 14px; }
-        .debug-status-text { font-size: 10px; color: #666; }
-        
         .debug-pt-row { display: flex; gap: 5px; }
-        .d-pt-btn { 
-            flex: 1; aspect-ratio: 1; background: #333; border: 1px solid #555; color: #888; 
-            font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer;
-        }
+        .d-pt-btn { flex: 1; aspect-ratio: 1; background: #333; border: 1px solid #555; color: #888; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; }
         .d-pt-btn.selected { color: #000; border: 2px solid #fff; }
-        
         .d-input { width: 100%; background: #000; border: 1px solid #555; color: #fff; padding: 5px; box-sizing: border-box; text-align: center; }
-        .d-send { width: 100%; background: #555; color: #fff; padding: 5px; cursor: pointer; border-radius: 4px; }
+        .d-send { width: 100%; background: #555; color: #fff; padding: 5px; cursor: pointer; border-radius: 4px; text-align:center; }
         .d-send.active { background: var(--c1); }
 
         /* OVERLAYS */
         .count-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index: 50; display: none; align-items: center; justify-content: center; font-size: 200px; color: #fff; font-family: 'Black Ops One'; }
         .solved-mark { color: #22aa22; font-weight: bold; margin-left: 10px; }
         .failed-mark { color: #aa2222; font-weight: bold; margin-left: 10px; }
+
+        /* --- PLAYER STYLES (MOBILE) --- */
+        .p-container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; height: 100%; }
+        .p-status { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; border: 1px solid #444; font-size: 18px; }
+        
+        /* 5 Buttons Horizontal */
+        .p-pt-select { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
+        .btn-pt { 
+            flex: 1; aspect-ratio: 1; 
+            border-radius: 8px; border: 2px solid #444; 
+            font-size: 20px; font-weight: bold; font-family: 'Black Ops One'; 
+            opacity: 0.5; transition: 0.2s; color: #000; cursor: pointer;
+        }
+        .btn-pt.selected { opacity: 1; transform: scale(1.1); border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.3); }
+
+        /* Adjusted Input */
+        .p-input { 
+            width: 100%; height: 50px; 
+            padding: 0 10px; font-size: 20px; 
+            box-sizing: border-box; margin-bottom: 20px; 
+            border-radius: 8px; border: 2px solid #555; 
+            background: #000; color: #fff; text-align: center;
+        }
+        
+        .btn-send { width: 100%; padding: 15px; font-size: 20px; font-weight: bold; background: #fff; color: #000; border: none; border-radius: 10px; margin-top: auto; }
+        .btn-send:disabled { background: #555; color: #888; }
+
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: none; z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: #222; padding: 30px; border-radius: 15px; border: 2px solid #fff; text-align: center; width: 85%; max-width: 400px; }
 
     </style>
 </head>
@@ -125,7 +127,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V6.0</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V9.0 (ONLINE)</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
         </div>
@@ -157,56 +159,24 @@
                 <div class="settings-main">
                     <h2 style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:20px;">EDIT MISSION</h2>
                     
-                    <div class="config-block">
-                        <div class="config-title">
-                            <span>システム・音響設定</span>
-                            <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面へ</button>
+                    <div style="background:#252525; padding:15px; border-radius:8px; margin-bottom:20px; display:flex; gap:20px; align-items:center;">
+                        <div style="flex:1;">
+                            <label style="font-size:12px; color:#aaa;">ID連携デバッグ (PC内で完結する場合)</label>
+                            <div id="debug-link-container" style="margin-top:5px; font-size:12px; color:#888;">ホスト未接続</div>
                         </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:12px;">
-                            <div>
-                                <label>BGMファイル</label>
-                                <input type="file" id="bgm-file" accept="audio/*" style="width:100%; margin-bottom:5px;">
-                                <div style="display:flex; align-items:center; gap:5px;">
-                                    <span>BGM音量</span>
-                                    <input type="range" id="vol-bgm" min="0" max="100" value="50" style="flex:1;">
-                                </div>
-                            </div>
-                            <div>
-                                <label>終了時SE (TimeUp)</label>
-                                <input type="file" id="se-timeup-file" accept="audio/*" style="width:100%; margin-bottom:5px;">
-                                <div style="display:flex; align-items:center; gap:5px;">
-                                    <span>SE音量</span>
-                                    <input type="range" id="vol-se" min="0" max="100" value="50" style="flex:1;">
-                                </div>
-                            </div>
-                        </div>
+                        <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面</button>
                     </div>
 
-                    <div class="config-block" style="flex:1; display:flex; flex-direction:column;">
-                        <div class="config-title"><span>問題セット編集</span></div>
-                        <label style="font-size:12px; color:#aaa;">ジャンル名 (タイトル)</label>
+                    <div style="flex:1;">
+                        <label>ジャンル名</label>
                         <input type="text" id="set-genre" placeholder="例: 一般常識" style="width:100%; margin-bottom:15px;">
-                        
-                        <div style="display:flex; gap:15px; margin-bottom:15px; padding-bottom:10px; border-bottom:1px dashed #444;">
-                            <div>
-                                <label style="font-size:12px; color:#aaa;">制限時間(秒)</label>
-                                <input type="number" id="set-time" value="30" style="width: 80px;">
+                        <div id="q-inputs">
                             </div>
-                            <div>
-                                <label style="font-size:12px; color:#aaa;">文字サイズ(px)</label>
-                                <input type="number" id="set-font" value="24" style="width: 80px;">
-                            </div>
-                            <div>
-                                <label style="font-size:12px; color:#aaa;">枠の幅(%)</label>
-                                <input type="number" id="set-width" value="90" style="width: 80px;" placeholder="90">
-                            </div>
-                        </div>
-
-                        <div id="q-inputs" style="overflow-y:auto; flex:1;">
-                            </div>
+                        <label>制限時間（秒）</label>
+                        <input type="number" id="set-time" value="30" style="width: 80px;">
                     </div>
                     
-                    <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
+                    <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
                         <button class="btn-sub" onclick="Host.showScreen('screen-title')">戻る</button>
                         <button class="btn-large" style="margin:0; font-size:18px; padding:10px 40px;" onclick="Host.saveCurrentSet()">保存</button>
                     </div>
@@ -217,20 +187,16 @@
         <div id="screen-debug" class="screen hidden">
             <div class="debug-container">
                 <div class="debug-header">
-                    <h3 style="margin:0;">MULTI-DEBUGGER</h3>
+                    <h3 style="margin:0;">MULTI-DEBUGGER (LOCAL)</h3>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <label>生成人数:</label>
-                        <input type="number" id="debug-count" value="5" style="width:60px;">
+                        <label>生成人数:</label><input type="number" id="debug-count" value="5" style="width:60px;">
                         <button class="btn-action" onclick="Debugger.spawnPlayers()">生成 & エントリー</button>
                     </div>
                     <div style="margin-left:auto;">
                         <button class="btn-sub" onclick="Host.showScreen('screen-settings')">設定へ戻る</button>
-                        <button class="btn-sub" onclick="window.open(window.location.href, '_blank')">※ 別窓でホスト画面を開く</button>
                     </div>
                 </div>
-                
-                <div id="debug-grid" class="debug-grid">
-                    </div>
+                <div id="debug-grid" class="debug-grid"></div>
             </div>
         </div>
 
@@ -249,9 +215,7 @@
         </div>
 
         <div id="screen-judge" class="screen hidden">
-            <div id="judge-ui-top" class="judge-ui-top">
-                Q.<span id="j-q-pt"></span> : <span id="j-q-text"></span>
-            </div>
+            <div id="judge-ui-top" class="judge-ui-top">Q.<span id="j-q-pt"></span> : <span id="j-q-text"></span></div>
             <div class="judge-wrapper">
                 <div id="judge-already-msg" class="judge-alert hidden">※既に正解が出ています！</div>
                 <div class="ranking-box" id="rank-list"></div>
@@ -268,10 +232,10 @@
 
     <div id="player-app" class="hidden">
         <div id="p-screen-login" class="screen">
-            <div class="p-container">
-                <h2>ENTRY</h2>
-                <input type="text" id="p-name-input" placeholder="名前を入力" style="width:100%; margin: 20px 0;">
-                <button class="btn-send" onclick="Player.login()">参加する</button>
+            <div class="p-container" style="justify-content:center;">
+                <h2 style="font-size:32px; color:var(--c1);">ENTRY</h2>
+                <input type="text" id="p-name-input" placeholder="名前を入力" style="margin: 20px 0; text-align:center;">
+                <button class="btn-send" style="background:var(--c1); margin-top:0;" onclick="Player.login()">参加する</button>
             </div>
         </div>
         <div id="p-screen-main" class="screen hidden">
@@ -280,11 +244,14 @@
                     <span id="p-disp-name">名無し</span>
                     <span style="font-weight: bold;"><span id="p-score">0</span> pts</span>
                 </div>
-                <div id="p-wait-msg" style="padding: 40px 0; color: #888;">
-                    問題出題まで<br>しばらくお待ちください...
+                
+                <div id="p-wait-msg" style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#888;">
+                    <div style="font-size:40px; margin-bottom:20px;">⏳</div>
+                    <div>出題をお待ちください</div>
                 </div>
-                <div id="p-game-area" class="hidden">
-                    <div style="text-align: left; margin-bottom: 5px; color: #aaa;">問題を選択:</div>
+
+                <div id="p-game-area" class="hidden" style="flex:1; display:flex; flex-direction:column;">
+                    <div style="text-align: left; margin-bottom: 10px; color: #aaa;">問題を選択:</div>
                     <div class="p-pt-select">
                         <button class="btn-pt color-1" onclick="Player.selectPt(1)" id="p-btn-1">1</button>
                         <button class="btn-pt color-2" onclick="Player.selectPt(2)" id="p-btn-2">2</button>
@@ -292,7 +259,8 @@
                         <button class="btn-pt color-4" onclick="Player.selectPt(4)" id="p-btn-4">4</button>
                         <button class="btn-pt color-5" onclick="Player.selectPt(5)" id="p-btn-5">5</button>
                     </div>
-                    <input type="text" id="p-answer-input" class="p-input" placeholder="答えを入力...">
+                    <div style="text-align: left; margin-bottom: 10px; color: #aaa;">解答欄:</div>
+                    <input type="text" id="p-answer-input" class="p-input" placeholder="ここに答えを入力">
                     <button id="p-submit-btn" class="btn-send" onclick="Player.confirmSend()">送信する</button>
                 </div>
             </div>
@@ -300,302 +268,389 @@
         <div id="p-modal" class="modal">
             <div class="modal-content">
                 <h3>確認</h3>
-                <p><span id="m-pt" style="font-weight:bold;">1</span>pt の問題に回答します。</p>
+                <p><span id="m-pt" style="font-weight:bold; font-size:24px;">1</span>pt の問題に回答します。</p>
                 <div style="font-size: 24px; font-weight: bold; margin: 20px 0; border-bottom: 1px solid #555; padding-bottom: 10px;" id="m-ans"></div>
                 <p style="font-size: 12px; color: #f55;">※送信すると変更できません</p>
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
-                    <button class="btn-sub" onclick="document.getElementById('p-modal').style.display='none'">キャンセル</button>
-                    <button class="btn-send" style="width: auto; padding: 10px 30px; background:var(--c1);" onclick="Player.sendAnswer()">送信</button>
+                    <button class="btn-sub" style="flex:1;" onclick="document.getElementById('p-modal').style.display='none'">キャンセル</button>
+                    <button class="btn-send" style="flex:1; padding: 10px; margin:0; background:var(--c1);" onclick="Player.sendAnswer()">送信</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <audio id="bgm-player" loop></audio>
-    <audio id="se-timeup-player"></audio>
-
 <script>
-/* STORAGE & DB */
-const DATA_KEY = 'quiz_royale_sets_v5'; 
-const CONF_KEY = 'quiz_royale_conf_v5'; 
-const CHANNEL = 'quiz_royale_v6';
+/* NETWORK: PEERJS */
+const Net = {
+    peer: null,
+    conn: null, // For Player
+    conns: [], // For Host
+    hostId: null,
+    isHost: false,
 
+    initHost: () => {
+        Net.isHost = true;
+        Net.peer = new Peer(); // Auto-generate ID
+        Net.peer.on('open', (id) => {
+            Net.hostId = id;
+            const url = window.location.href.split('?')[0] + "?role=player&host=" + id;
+            new QRCode(document.getElementById("qrcode"), { text: url, width: 150, height: 150, colorDark:"#000", colorLight:"#fff" });
+            // Debug link
+            const debugLink = `<a href="${url}" target="_blank" style="color:#aaf;">回答者用URL</a>`;
+            document.getElementById('debug-link-container').innerHTML = `Host ID: ${id} <br> ${debugLink}`;
+        });
+        Net.peer.on('connection', (c) => {
+            Net.conns.push(c);
+            c.on('data', (data) => Host.handleData(data, c.peer));
+            c.on('close', () => { Net.conns = Net.conns.filter(x => x !== c); Host.refreshPlayers(); });
+            // Send current state immediately
+            c.send({ type: 'STATE', db: DB });
+        });
+    },
+
+    initPlayer: (hostId) => {
+        Net.isHost = false;
+        Net.peer = new Peer();
+        Net.peer.on('open', (id) => {
+            Net.conn = Net.peer.connect(hostId);
+            Net.conn.on('open', () => { console.log("Connected to Host"); });
+            Net.conn.on('data', (data) => Player.handleData(data));
+            Net.conn.on('close', () => { alert("ホストとの接続が切れました"); location.reload(); });
+        });
+    },
+
+    broadcast: (data) => {
+        if(Net.isHost) Net.conns.forEach(c => c.send(data));
+    },
+    
+    sendToHost: (data) => {
+        if(Net.conn && Net.conn.open) Net.conn.send(data);
+    }
+};
+
+/* DB & LOGIC */
+const DATA_KEY = 'quiz_royale_sets_v9';
 const DB = {
     state: { phase: 'LOBBY', currentSet: null },
-    players: {}, answers: [], solved: [false, false, false, false, false, false],
-    save: () => { localStorage.setItem(CHANNEL, JSON.stringify({ state: DB.state, players: DB.players, answers: DB.answers, solved: DB.solved, ts: Date.now() })); },
-    load: () => { const d = localStorage.getItem(CHANNEL); if(d){ const data = JSON.parse(d); DB.state = data.state; DB.players = data.players; DB.answers = data.answers; DB.solved = data.solved; return true; } return false; },
-    resetAnswers: () => { DB.answers = []; DB.solved = [false, false, false, false, false, false]; DB.save(); }
-};
-window.addEventListener('storage', (e) => { 
-    if(e.key === CHANNEL) { 
-        DB.load(); 
-        if(ROLE==='host') {
-            Host.onUpdate();
-            // Also update debug grid if present
-            if(!document.getElementById('screen-debug').classList.contains('hidden')) Debugger.onUpdate();
-        } 
-        if(ROLE==='player') Player.onUpdate(); 
-    }
-});
-const params = new URLSearchParams(window.location.search);
-const ROLE = params.get('role') === 'player' ? 'player' : 'host';
-
-/* SOUND */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let volBgm = 0.5, volSe = 0.5;
-
-function playSe(type) {
-    if(type === 'timeup') {
-        const audio = document.getElementById('se-timeup-player');
-        if(audio.src) { audio.volume = volSe; audio.play().catch(e=>{}); return; }
-    }
-    if(audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-    const gainVal = 0.3 * volSe;
-    if(type === 'count') { osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); } 
-    else if(type === 'start') { osc.type = 'square'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8); }
-    else if(type === 'timeup') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); }
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type==='start'?0.8:0.5));
-}
-function playBgm() { const audio = document.getElementById('bgm-player'); audio.volume = volBgm; if(audio.src) audio.play().catch(e=>{}); }
-function stopBgm() { const audio = document.getElementById('bgm-player'); audio.pause(); audio.currentTime = 0; }
-
-/* DEBUGGER LOGIC (MULTI PLAYER SIM) */
-const Debugger = {
-    vPlayers: [], // {id, name, selectedPt}
+    players: {}, answers: [], solved: [false,false,false,false,false,false],
     
-    spawnPlayers: () => {
-        const count = parseInt(document.getElementById('debug-count').value) || 1;
-        Debugger.vPlayers = [];
-        const grid = document.getElementById('debug-grid');
-        grid.innerHTML = "";
-        
-        DB.load();
-        
-        for(let i=0; i<count; i++) {
-            const pid = 'debug_' + Date.now() + '_' + i;
-            const name = `TestPlayer ${i+1}`;
-            Debugger.vPlayers.push({ id: pid, name: name, selectedPt: null });
-            
-            // Register to DB
-            DB.players[pid] = { name: name, score: 0 };
-            
-            // Create UI
-            const card = document.createElement('div');
-            card.className = 'debug-card';
-            card.id = `d-card-${i}`;
-            card.innerHTML = `
-                <div class="debug-name-row"><span>${name}</span><span id="d-score-${i}">0pt</span></div>
-                <div class="debug-status-text" id="d-status-${i}">Waiting...</div>
-                <div class="debug-pt-row">
-                    <button class="d-pt-btn color-1" onclick="Debugger.sel(${i}, 1)" id="d-btn-${i}-1">1</button>
-                    <button class="d-pt-btn color-2" onclick="Debugger.sel(${i}, 2)" id="d-btn-${i}-2">2</button>
-                    <button class="d-pt-btn color-3" onclick="Debugger.sel(${i}, 3)" id="d-btn-${i}-3">3</button>
-                    <button class="d-pt-btn color-4" onclick="Debugger.sel(${i}, 4)" id="d-btn-${i}-4">4</button>
-                    <button class="d-pt-btn color-5" onclick="Debugger.sel(${i}, 5)" id="d-btn-${i}-5">5</button>
-                </div>
-                <input type="text" class="d-input" id="d-input-${i}" placeholder="Answer">
-                <div class="d-send" onclick="Debugger.send(${i})" id="d-send-${i}">SEND</div>
-            `;
-            grid.appendChild(card);
-        }
-        DB.save();
-    },
-    
-    sel: (idx, pt) => {
-        Debugger.vPlayers[idx].selectedPt = pt;
-        for(let p=1; p<=5; p++) {
-            const btn = document.getElementById(`d-btn-${idx}-${p}`);
-            if(p === pt) btn.classList.add('selected'); else btn.classList.remove('selected');
-        }
-    },
-    
-    send: (idx) => {
-        const p = Debugger.vPlayers[idx];
-        const text = document.getElementById(`d-input-${idx}`).value;
-        if(!p.selectedPt || !text) return;
-        
-        DB.load();
-        if(DB.state.phase !== 'ACTIVE') return alert("Not active");
-        if(DB.answers.find(a => a.playerId === p.id)) return;
-        
-        DB.answers.push({ playerId: p.id, name: p.name, pt: p.selectedPt, text: text, timestamp: Date.now() });
-        DB.save();
-        
-        // Update UI locally
-        Debugger.onUpdate();
-    },
-    
-    onUpdate: () => {
-        const phase = DB.state.phase;
-        Debugger.vPlayers.forEach((p, i) => {
-            // Update Score
-            if(DB.players[p.id]) document.getElementById(`d-score-${i}`).innerText = DB.players[p.id].score + "pt";
-            
-            // Check Answered
-            const ans = DB.answers.find(a => a.playerId === p.id);
-            const card = document.getElementById(`d-card-${i}`);
-            const stat = document.getElementById(`d-status-${i}`);
-            const sendBtn = document.getElementById(`d-send-${i}`);
-            
-            if(ans) {
-                card.classList.add('done');
-                stat.innerText = "Answered: " + ans.pt + "pt";
-                sendBtn.classList.remove('active');
-            } else {
-                card.classList.remove('done');
-                if(phase === 'ACTIVE') {
-                    stat.innerText = "ACTIVE!";
-                    stat.style.color = "#4f4";
-                    sendBtn.classList.add('active');
-                } else {
-                    stat.innerText = "Waiting (" + phase + ")";
-                    stat.style.color = "#666";
-                    sendBtn.classList.remove('active');
-                    // Reset if LOBBY
-                    if(phase === 'LOBBY' || phase === 'SELECT') {
-                        p.selectedPt = null;
-                        document.getElementById(`d-input-${i}`).value = "";
-                        for(let b=1; b<=5; b++) document.getElementById(`d-btn-${i}-${b}`).classList.remove('selected');
-                    }
-                }
-            }
-        });
-    }
+    resetAnswers: () => { DB.answers = []; DB.solved = [false,false,false,false,false,false]; },
 };
 
 /* HOST LOGIC */
 const Host = {
-    sets: [], config: {fontSize: 24, barWidth: 90, volBgm: 50, volSe: 50},
-    editingIndex: -1, timerInterval: null, judgeIndex: 0, sortedAnswers: [], isJudgingActive: false,
+    sets: [], editingIndex: -1, timerInterval: null, judgeIndex: 0, sortedAnswers: [], isJudgingActive: false,
 
     init: () => {
-        if(ROLE !== 'host') {
+        const params = new URLSearchParams(window.location.search);
+        if(params.get('role') === 'player') {
             document.getElementById('host-app').classList.add('hidden');
             document.getElementById('player-app').classList.remove('hidden');
-            Player.init();
+            const hid = params.get('host');
+            if(!hid) { alert("ホストIDが見つかりません。QRコードからアクセスしてください。"); return; }
+            Player.init(hid);
             return;
         }
         
-        document.getElementById('bgm-file').addEventListener('change', (e) => { const f=e.target.files[0]; if(f) document.getElementById('bgm-player').src=URL.createObjectURL(f); });
-        document.getElementById('se-timeup-file').addEventListener('change', (e) => { const f=e.target.files[0]; if(f) document.getElementById('se-timeup-player').src=URL.createObjectURL(f); });
+        // Host Init
+        Net.initHost();
+        Host.loadSets();
+        Host.initInputs();
         
-        document.getElementById('vol-bgm').addEventListener('input', (e)=>{ Host.config.volBgm=parseInt(e.target.value); volBgm=Host.config.volBgm/100; document.getElementById('bgm-player').volume=volBgm; });
-        document.getElementById('vol-se').addEventListener('input', (e)=>{ Host.config.volSe=parseInt(e.target.value); volSe=Host.config.volSe/100; });
-
-        let savedSets = localStorage.getItem(DATA_KEY);
-        if(!savedSets) {
-            const v4 = localStorage.getItem('quiz_royale_sets_v4');
-            if(v4) { savedSets=v4; localStorage.setItem(DATA_KEY, v4); }
-        }
-        if(savedSets) Host.sets = JSON.parse(savedSets);
-        else Host.sets = [{ title: "サンプル", time: 30, qs: ["首都", "果物", "計算", "干支", "山"] }];
-
-        const savedConf = localStorage.getItem(CONF_KEY);
-        if(savedConf) Host.config = JSON.parse(savedConf);
-        if(Host.config.volBgm!==undefined) { document.getElementById('vol-bgm').value=Host.config.volBgm; volBgm=Host.config.volBgm/100; }
-        if(Host.config.volSe!==undefined) { document.getElementById('vol-se').value=Host.config.volSe; volSe=Host.config.volSe/100; }
-
-        const qInputs = document.getElementById('q-inputs'); qInputs.innerHTML = "";
-        for(let i=1; i<=5; i++) qInputs.innerHTML += `<div style="display:flex;gap:5px;margin-bottom:5px;"><span class="color-${i}" style="padding:5px;width:30px;text-align:center;font-weight:bold;border-radius:3px;">${i}</span><input type="text" id="q-in-${i}" placeholder="Q${i}" style="flex:1;"></div>`;
-
-        DB.state.phase = 'LOBBY'; DB.save();
-        setInterval(() => { if(DB.load()) document.getElementById('host-player-count').innerText = Object.keys(DB.players).length; }, 1000);
-
+        DB.state.phase = 'LOBBY';
+        
         document.addEventListener('keydown', (e) => {
-            if(e.code === 'Escape' && DB.state.phase!=='LOBBY' && DB.state.phase!=='SELECT') { e.preventDefault(); Host.forceQuit(); return; }
+            if(e.code === 'Escape' && DB.state.phase!=='LOBBY') { e.preventDefault(); Host.forceQuit(); }
             if(DB.state.phase === 'TIMEUP' && e.code === 'Space') { e.preventDefault(); Host.startJudging(); } 
             else if(DB.state.phase === 'JUDGING' && e.code === 'Space') { e.preventDefault(); if(!Host.isJudgingActive) Host.revealNext(); }
         });
     },
 
-    goToLobby: () => { Host.showScreen('screen-lobby'); document.getElementById("qrcode").innerHTML=""; new QRCode(document.getElementById("qrcode"), { text:window.location.href+"?role=player", width:150, height:150, colorDark:"#000000", colorLight:"#ffffff" }); DB.state.phase='LOBBY'; DB.save(); },
-    goToSelect: () => { Host.showScreen('screen-select'); const list=document.getElementById('set-list'); list.innerHTML=""; Host.sets.forEach((set,idx)=>{ const btn=document.createElement('button'); btn.className='btn-large'; btn.innerText=set.title; btn.onclick=()=>Host.startSet(idx); list.appendChild(btn); }); DB.state.phase='SELECT'; },
+    loadSets: () => {
+        const d = localStorage.getItem(DATA_KEY);
+        Host.sets = d ? JSON.parse(d) : [{ title: "サンプル", time: 30, qs: ["首都", "果物", "計算", "干支", "山"] }];
+    },
     
+    initInputs: () => {
+        const qInputs = document.getElementById('q-inputs');
+        qInputs.innerHTML = "";
+        for(let i=1; i<=5; i++) {
+            qInputs.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;">
+                <span class="color-${i}" style="padding:5px; width:30px; text-align:center; font-weight:bold; border-radius:3px; color:#000;">${i}</span>
+                <input type="text" id="q-in-${i}" placeholder="Q${i} (${i}pt)" style="flex:1;">
+            </div>`;
+        }
+    },
+
+    handleData: (data, peerId) => {
+        if(data.type === 'LOGIN') {
+            DB.players[peerId] = { name: data.name, score: 0 };
+            Host.refreshPlayers();
+            Net.broadcast({ type: 'STATE', db: DB });
+        } else if(data.type === 'ANSWER') {
+            if(DB.state.phase === 'ACTIVE') {
+                if(!DB.answers.find(a => a.playerId === peerId)) {
+                    DB.answers.push({ playerId: peerId, name: data.name, pt: data.pt, text: data.text, timestamp: Date.now() });
+                    Net.broadcast({ type: 'STATE', db: DB });
+                    // Also update debug UI if open
+                    if(!document.getElementById('screen-debug').classList.contains('hidden')) Debugger.onUpdate();
+                }
+            }
+        }
+    },
+
+    refreshPlayers: () => {
+        document.getElementById('host-player-count').innerText = Object.keys(DB.players).length;
+    },
+
+    /* NAVIGATION */
+    showScreen: (id) => { document.querySelectorAll('#host-app .screen').forEach(el => el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); },
+    goToLobby: () => { Host.showScreen('screen-lobby'); DB.state.phase='LOBBY'; Net.broadcast({type:'STATE', db:DB}); },
+    goToSelect: () => { 
+        Host.showScreen('screen-select'); 
+        const list = document.getElementById('set-list'); list.innerHTML = "";
+        Host.sets.forEach((set, idx) => {
+            const btn = document.createElement('button'); btn.className = 'btn-large';
+            btn.innerText = set.title; btn.onclick = () => Host.startSet(idx);
+            list.appendChild(btn);
+        });
+        DB.state.phase='SELECT'; Net.broadcast({type:'STATE', db:DB});
+    },
+
+    /* SETTINGS */
     goToSettings: () => { Host.showScreen('screen-settings'); Host.renderSetList(); Host.createNewSet(); },
-    goToDebugMode: () => { Host.showScreen('screen-debug'); }, // New Screen
-
     renderSetList: () => {
-        const list=document.getElementById('settings-list'); list.innerHTML="";
-        Host.sets.forEach((set,i)=>{ const li=document.createElement('li'); li.className=`set-item ${i===Host.editingIndex?'active':''}`; li.innerHTML=`<div style="flex:1;">${set.title}</div><div class="set-controls"><button class="btn-action" onclick="event.stopPropagation();Host.moveSet(${i},-1)">▲</button><button class="btn-action" onclick="event.stopPropagation();Host.moveSet(${i},1)">▼</button><button class="btn-action" style="background:#a33;" onclick="event.stopPropagation();Host.deleteSet(${i})">×</button></div>`; li.onclick=()=>Host.loadSetForEdit(i); list.appendChild(li); });
+        const list = document.getElementById('settings-list'); list.innerHTML = "";
+        Host.sets.forEach((set, i) => {
+            const li = document.createElement('li'); li.className = `set-item ${i === Host.editingIndex ? 'active' : ''}`;
+            li.innerHTML = `<span>${set.title}</span> <button class="btn-sub" style="margin:0; padding:2px 5px;" onclick="event.stopPropagation(); Host.deleteSet(${i})">×</button>`;
+            li.onclick = () => Host.loadSetForEdit(i); list.appendChild(li);
+        });
     },
-    moveSet: (idx, dir) => { if(idx+dir<0||idx+dir>=Host.sets.length)return; const t=Host.sets[idx]; Host.sets[idx]=Host.sets[idx+dir]; Host.sets[idx+dir]=t; localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.renderSetList(); },
-    createNewSet: () => { Host.editingIndex=-1; Host.renderSetList(); document.getElementById('set-genre').value=""; document.getElementById('set-time').value=30; document.getElementById('set-font').value=24; document.getElementById('set-width').value=90; for(let i=1;i<=5;i++)document.getElementById(`q-in-${i}`).value=""; },
-    loadSetForEdit: (idx) => { Host.editingIndex=idx; Host.renderSetList(); const set=Host.sets[idx]; document.getElementById('set-genre').value=set.title; document.getElementById('set-time').value=set.time; document.getElementById('set-font').value=set.fontSize||24; document.getElementById('set-width').value=set.width||90; for(let i=1;i<=5;i++)document.getElementById(`q-in-${i}`).value=set.qs[i-1]; },
+    createNewSet: () => { Host.editingIndex = -1; Host.renderSetList(); document.getElementById('set-genre').value = ""; document.getElementById('set-time').value = 30; for(let i=1; i<=5; i++) document.getElementById(`q-in-${i}`).value = ""; },
+    loadSetForEdit: (idx) => { Host.editingIndex = idx; Host.renderSetList(); const set = Host.sets[idx]; document.getElementById('set-genre').value = set.title; document.getElementById('set-time').value = set.time; for(let i=1; i<=5; i++) document.getElementById(`q-in-${i}`).value = set.qs[i-1]; },
     saveCurrentSet: () => {
-        const t=document.getElementById('set-genre').value; const tm=parseInt(document.getElementById('set-time').value); const fs=parseInt(document.getElementById('set-font').value)||24; const w=parseInt(document.getElementById('set-width').value)||90; const qs=[]; for(let i=1;i<=5;i++)qs.push(document.getElementById(`q-in-${i}`).value);
-        if(!t)return alert("タイトルを入力してください");
-        localStorage.setItem(CONF_KEY,JSON.stringify(Host.config));
-        const ns={title:t, time:tm, fontSize:fs, width:w, qs:qs};
-        if(Host.editingIndex>=0) Host.sets[Host.editingIndex]=ns; else { Host.sets.push(ns); Host.editingIndex=Host.sets.length-1; }
-        localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.renderSetList(); alert("保存しました");
+        const t = document.getElementById('set-genre').value; const tm = parseInt(document.getElementById('set-time').value);
+        const qs = []; for(let i=1; i<=5; i++) qs.push(document.getElementById(`q-in-${i}`).value);
+        if(!t) return alert("タイトルを入力してください");
+        const newSet = { title: t, time: tm, qs: qs };
+        if(Host.editingIndex >= 0) Host.sets[Host.editingIndex] = newSet; else { Host.sets.push(newSet); Host.editingIndex = Host.sets.length - 1; }
+        localStorage.setItem(DATA_KEY, JSON.stringify(Host.sets)); Host.renderSetList(); alert("保存しました");
     },
-    deleteSet: (idx) => { if(!confirm("削除しますか？"))return; Host.sets.splice(idx,1); localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.createNewSet(); },
+    deleteSet: (idx) => { if(confirm("削除しますか？")) { Host.sets.splice(idx, 1); localStorage.setItem(DATA_KEY, JSON.stringify(Host.sets)); Host.createNewSet(); } },
 
+    /* DEBUGGER */
+    goToDebugMode: () => { Host.showScreen('screen-debug'); },
+
+    /* GAME */
     startSet: (idx) => {
-        const set=Host.sets[idx]; DB.state.currentSet=set; DB.resetAnswers();
-        Host.showScreen('screen-game'); document.getElementById('game-genre-title').innerText=set.title; document.getElementById('timeup-msg').classList.add('hidden');
-        const list=document.getElementById('host-q-list'); list.innerHTML=""; list.style.width=(set.width||90)+"%"; const fs=set.fontSize||24;
-        set.qs.forEach((q,i)=>list.innerHTML+=`<div class="q-bar"><div class="q-bar-pt color-${i+1}">${i+1}pt</div><div class="q-bar-text" style="font-size:${fs}px">${q}</div></div>`);
-        DB.state.phase='COUNTDOWN'; DB.save();
-        const ol=document.getElementById('host-count-overlay'); ol.style.display='flex'; let c=3; ol.innerText=c; playSe('count');
-        const ct=setInterval(()=>{ c--; if(c>0){ol.innerText=c;playSe('count');}else{clearInterval(ct);ol.style.display='none';playSe('start');playBgm();Host.startGameLoop(set.time);} },1000);
-        Host.activeInterval=ct;
+        const set = Host.sets[idx]; DB.state.currentSet = set; DB.resetAnswers();
+        Host.showScreen('screen-game'); document.getElementById('game-genre-title').innerText = set.title;
+        document.getElementById('timeup-msg').classList.add('hidden');
+        const list = document.getElementById('host-q-list'); list.innerHTML = "";
+        set.qs.forEach((q, i) => {
+            list.innerHTML += `<div class="q-bar"><div class="q-bar-pt color-${i+1}">${i+1}pt</div><div class="q-bar-text">${q}</div></div>`;
+        });
+        DB.state.phase = 'COUNTDOWN'; Net.broadcast({type:'STATE', db:DB});
+        const ov = document.getElementById('host-count-overlay'); ov.style.display = 'flex'; let c=3; ov.innerText=c; 
+        const ct = setInterval(() => { c--; if(c>0) ov.innerText=c; else { clearInterval(ct); ov.style.display='none'; Host.startGameLoop(set.time); } }, 1000);
+        Host.activeInterval = ct;
     },
     startGameLoop: (sec) => {
-        DB.state.phase='ACTIVE'; DB.save(); let left=sec; const el=document.getElementById('game-timer'); el.innerText=left;
-        Host.timerInterval=setInterval(()=>{ left--; el.innerText=left; if(left<=0)Host.timeUp(); },1000);
+        DB.state.phase = 'ACTIVE'; Net.broadcast({type:'STATE', db:DB});
+        let left = sec; const el = document.getElementById('game-timer'); el.innerText = left;
+        Host.timerInterval = setInterval(() => { left--; el.innerText = left; if(left <= 0) Host.timeUp(); }, 1000);
     },
-    timeUp: () => { clearInterval(Host.timerInterval); stopBgm(); playSe('timeup'); DB.state.phase='TIMEUP'; DB.save(); document.getElementById('timeup-msg').classList.remove('hidden'); },
-    forceQuit: () => { clearInterval(Host.timerInterval); clearInterval(Host.activeInterval); stopBgm(); document.getElementById('host-count-overlay').style.display='none'; Host.goToSelect(); DB.state.phase='SELECT'; DB.save(); },
+    timeUp: () => { clearInterval(Host.timerInterval); DB.state.phase='TIMEUP'; Net.broadcast({type:'STATE', db:DB}); document.getElementById('timeup-msg').classList.remove('hidden'); },
+    forceQuit: () => { clearInterval(Host.timerInterval); clearInterval(Host.activeInterval); document.getElementById('host-count-overlay').style.display='none'; Host.goToSelect(); DB.state.phase='SELECT'; Net.broadcast({type:'STATE', db:DB}); },
 
     startJudging: () => {
-        DB.state.phase='JUDGING'; DB.save(); Host.showScreen('screen-judge');
-        Host.sortedAnswers=[...DB.answers].sort((a,b)=>a.timestamp-b.timestamp); Host.judgeIndex=-1; Host.isJudgingActive=false;
-        const list=document.getElementById('rank-list'); list.innerHTML="";
-        Host.sortedAnswers.forEach((ans,i)=>list.innerHTML+=`<div class="rank-row" id="rank-item-${i}"><div class="rank-order">#${i+1}</div><div class="rank-name">${ans.name}</div><div class="rank-detail" id="rank-detail-${i}"><span class="rank-pt-badge color-${ans.pt}">${ans.pt}pt</span><span class="rank-ans">${ans.text}</span><span id="rank-result-${i}"></span></div></div>`);
+        DB.state.phase='JUDGING'; Net.broadcast({type:'STATE', db:DB}); Host.showScreen('screen-judge');
+        Host.sortedAnswers = [...DB.answers].sort((a,b) => a.timestamp - b.timestamp); Host.judgeIndex = -1; Host.isJudgingActive = false;
+        const list = document.getElementById('rank-list'); list.innerHTML = "";
+        Host.sortedAnswers.forEach((ans, i) => {
+            list.innerHTML += `<div class="rank-row" id="rank-item-${i}"><div class="rank-order">#${i+1}</div><div class="rank-name">${ans.name}</div><div class="rank-detail" id="rank-detail-${i}"><span class="rank-pt-badge color-${ans.pt}" style="color:#000;">${ans.pt}pt</span><span class="rank-ans">${ans.text}</span><span id="rank-result-${i}"></span></div></div>`;
+        });
     },
     revealNext: () => {
-        Host.judgeIndex++; if(Host.judgeIndex>=Host.sortedAnswers.length){ Host.finishJudging(); return; }
-        const ans=Host.sortedAnswers[Host.judgeIndex]; const qText=DB.state.currentSet.qs[ans.pt-1];
-        document.querySelectorAll('.rank-row').forEach(e=>e.classList.remove('focused')); document.getElementById(`rank-item-${Host.judgeIndex}`).classList.add('focused'); document.getElementById(`rank-detail-${Host.judgeIndex}`).classList.add('visible');
-        document.getElementById('j-q-pt').innerText=ans.pt; document.getElementById('j-q-text').innerText=qText;
+        Host.judgeIndex++; if(Host.judgeIndex >= Host.sortedAnswers.length) { Host.finishJudging(); return; }
+        const ans = Host.sortedAnswers[Host.judgeIndex]; const qText = DB.state.currentSet.qs[ans.pt-1];
+        document.querySelectorAll('.rank-row').forEach(e => e.classList.remove('focused')); document.getElementById(`rank-item-${Host.judgeIndex}`).classList.add('focused'); document.getElementById(`rank-detail-${Host.judgeIndex}`).classList.add('visible');
+        document.getElementById('j-q-pt').innerText = ans.pt; document.getElementById('j-q-text').innerText = qText;
         document.getElementById('judge-ui-top').classList.add('active'); document.getElementById('judge-ui-bottom').classList.add('active');
-        Host.isJudgingActive=true; if(DB.solved[ans.pt])document.getElementById('judge-already-msg').classList.remove('hidden'); else document.getElementById('judge-already-msg').classList.add('hidden');
+        Host.isJudgingActive = true; if(DB.solved[ans.pt]) document.getElementById('judge-already-msg').classList.remove('hidden'); else document.getElementById('judge-already-msg').classList.add('hidden');
     },
     judge: (isOk) => {
-        const ans=Host.sortedAnswers[Host.judgeIndex]; const rs=document.getElementById(`rank-result-${Host.judgeIndex}`);
-        if(isOk){ DB.solved[ans.pt]=true; if(DB.players[ans.playerId])DB.players[ans.playerId].score+=parseInt(ans.pt); rs.innerHTML='<span class="solved-mark">◎ GET!</span>'; }
+        const ans = Host.sortedAnswers[Host.judgeIndex]; const rs = document.getElementById(`rank-result-${Host.judgeIndex}`);
+        if(isOk) { DB.solved[ans.pt] = true; if(DB.players[ans.playerId]) DB.players[ans.playerId].score += parseInt(ans.pt); rs.innerHTML='<span class="solved-mark">◎ GET!</span>'; }
         else rs.innerHTML='<span class="failed-mark">×</span>';
-        DB.save(); document.getElementById('judge-ui-top').classList.remove('active'); document.getElementById('judge-ui-bottom').classList.remove('active'); document.getElementById('judge-already-msg').classList.add('hidden'); Host.isJudgingActive=false;
+        document.getElementById('judge-ui-top').classList.remove('active'); document.getElementById('judge-ui-bottom').classList.remove('active'); document.getElementById('judge-already-msg').classList.add('hidden');
+        Host.isJudgingActive = false; Net.broadcast({type:'STATE', db:DB});
     },
-    finishJudging: () => { Host.goToSelect(); DB.state.phase='SELECT'; DB.save(); },
-    showScreen: (id) => { document.querySelectorAll('#host-app .screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); },
-    onUpdate: () => {}
+    finishJudging: () => { Host.goToSelect(); DB.state.phase='SELECT'; Net.broadcast({type:'STATE', db:DB}); }
 };
 
 /* PLAYER LOGIC */
 const Player = {
     id: null, name: null, selectedPt: null,
-    init: () => { const id=sessionStorage.getItem('p_id'); if(id){ Player.id=id; Player.name=sessionStorage.getItem('p_name'); Player.showScreen('p-screen-main'); Player.onUpdate(); } else { Player.id='p_'+Date.now()+Math.random().toString(36).substr(2,9); sessionStorage.setItem('p_id',Player.id); } },
-    login: () => { const n=document.getElementById('p-name-input').value; if(!n)return; Player.name=n; sessionStorage.setItem('p_name',n); DB.load(); DB.players[Player.id]={name:n,score:0}; DB.save(); Player.showScreen('p-screen-main'); Player.onUpdate(); },
-    onUpdate: () => {
-        if(!Player.name)return; if(DB.players[Player.id]){ document.getElementById('p-disp-name').innerText=Player.name; document.getElementById('p-score').innerText=DB.players[Player.id].score; }
-        const ph=DB.state.phase; const wm=document.getElementById('p-wait-msg'); const ga=document.getElementById('p-game-area');
-        if(ph==='ACTIVE'){
-            if(DB.answers.find(a=>a.playerId===Player.id)){ wm.innerHTML="回答送信済み。<br>結果を待っています..."; wm.classList.remove('hidden'); ga.classList.add('hidden'); }
-            else{ wm.classList.add('hidden'); ga.classList.remove('hidden'); }
-        } else if(ph==='TIMEUP'||ph==='JUDGING'){ wm.innerHTML="TIME UP!<br>集計中..."; wm.classList.remove('hidden'); ga.classList.add('hidden'); }
-        else{ wm.innerHTML="問題出題まで<br>しばらくお待ちください..."; wm.classList.remove('hidden'); ga.classList.add('hidden'); if(ph==='LOBBY'||ph==='SELECT'){ Player.selectedPt=null; document.getElementById('p-answer-input').value=""; Player.updatePtBtns(); } }
+    
+    init: (hid) => {
+        Net.initPlayer(hid);
     },
-    selectPt: (pt) => { Player.selectedPt=pt; Player.updatePtBtns(); },
-    updatePtBtns: () => { for(let i=1;i<=5;i++){ const b=document.getElementById(`p-btn-${i}`); if(i===Player.selectedPt)b.classList.add('selected'); else b.classList.remove('selected'); } },
-    confirmSend: () => { const t=document.getElementById('p-answer-input').value; if(!Player.selectedPt||!t)return; document.getElementById('m-pt').innerText=Player.selectedPt; document.getElementById('m-ans').innerText=t; document.getElementById('p-modal').style.display='flex'; },
-    sendAnswer: () => { if(DB.state.phase!=='ACTIVE')return; const t=document.getElementById('p-answer-input').value; DB.load(); if(DB.answers.find(a=>a.playerId===Player.id))return; DB.answers.push({playerId:Player.id, name:Player.name, pt:Player.selectedPt, text:t, timestamp:Date.now()}); DB.save(); document.getElementById('p-modal').style.display='none'; Player.onUpdate(); },
-    showScreen: (id) => { document.querySelectorAll('#player-app .screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
+    
+    handleData: (data) => {
+        if(data.type === 'STATE') {
+            // Update Local State
+            const serverDB = data.db;
+            const phase = serverDB.state.phase;
+            const myId = Net.peer.id;
+            
+            // 1. Update Score/Name if logged in
+            if(myId && serverDB.players[myId]) {
+                document.getElementById('p-disp-name').innerText = serverDB.players[myId].name;
+                document.getElementById('p-score').innerText = serverDB.players[myId].score;
+                // If we are logged in but on login screen, move to main
+                if(!document.getElementById('p-screen-login').classList.contains('hidden')) {
+                    Player.showScreen('p-screen-main');
+                }
+            }
+
+            // 2. State Management
+            const waitMsg = document.getElementById('p-wait-msg');
+            const gameArea = document.getElementById('p-game-area');
+            
+            if(phase === 'LOBBY' || phase === 'SELECT' || phase === 'COUNTDOWN') {
+                waitMsg.innerHTML = "問題出題まで<br>しばらくお待ちください...";
+                waitMsg.classList.remove('hidden');
+                gameArea.classList.add('hidden');
+                // Reset inputs if new round
+                if(phase === 'LOBBY' || phase === 'SELECT') {
+                    Player.selectedPt = null;
+                    document.getElementById('p-answer-input').value = "";
+                    Player.updatePtBtns();
+                }
+            } else if(phase === 'ACTIVE') {
+                // Check if already answered
+                const myAns = serverDB.answers.find(a => a.playerId === myId);
+                if(myAns) {
+                    waitMsg.innerHTML = "回答送信済み<br>結果発表をお待ちください";
+                    waitMsg.classList.remove('hidden');
+                    gameArea.classList.add('hidden');
+                } else {
+                    waitMsg.classList.add('hidden');
+                    gameArea.classList.remove('hidden');
+                }
+            } else {
+                // TIMEUP / JUDGE
+                waitMsg.innerHTML = "集計中...";
+                waitMsg.classList.remove('hidden');
+                gameArea.classList.add('hidden');
+            }
+        }
+    },
+
+    login: () => {
+        const name = document.getElementById('p-name-input').value;
+        if(!name) return alert("名前を入力してください");
+        Net.sendToHost({ type: 'LOGIN', name: name });
+    },
+
+    selectPt: (pt) => {
+        Player.selectedPt = pt;
+        Player.updatePtBtns();
+    },
+    updatePtBtns: () => {
+        for(let i=1; i<=5; i++) {
+            const btn = document.getElementById(`p-btn-${i}`);
+            if(i === Player.selectedPt) btn.classList.add('selected'); else btn.classList.remove('selected');
+        }
+    },
+    confirmSend: () => {
+        const txt = document.getElementById('p-answer-input').value;
+        if(!Player.selectedPt) return alert("問題(pt)を選んでください");
+        if(!txt) return alert("答えを入力してください");
+        document.getElementById('m-pt').innerText = Player.selectedPt;
+        document.getElementById('m-ans').innerText = txt;
+        document.getElementById('p-modal').style.display = 'flex';
+    },
+    sendAnswer: () => {
+        const txt = document.getElementById('p-answer-input').value;
+        Net.sendToHost({ type: 'ANSWER', name: document.getElementById('p-disp-name').innerText, pt: Player.selectedPt, text: txt });
+        document.getElementById('p-modal').style.display = 'none';
+        // UI update will happen on broadcast receipt
+    },
+    showScreen: (id) => {
+        document.querySelectorAll('#player-app .screen').forEach(el => el.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
 };
 
+/* DEBUGGER (Local Simulation) */
+const Debugger = {
+    vPlayers: [],
+    spawnPlayers: () => {
+        const count = parseInt(document.getElementById('debug-count').value) || 1;
+        Debugger.vPlayers = [];
+        const grid = document.getElementById('debug-grid'); grid.innerHTML = "";
+        
+        for(let i=0; i<count; i++) {
+            const pid = 'debug_' + i; const name = `TestPlayer ${i+1}`;
+            Debugger.vPlayers.push({ id: pid, name: name, selectedPt: null });
+            // Direct DB inject for debug
+            DB.players[pid] = { name: name, score: 0 };
+            
+            grid.innerHTML += `
+                <div class="debug-card" id="d-card-${i}">
+                    <div class="debug-name-row"><span>${name}</span><span id="d-score-${i}">0pt</span></div>
+                    <div class="debug-status-text" id="d-status-${i}">Waiting...</div>
+                    <div class="debug-pt-row">
+                        <button class="d-pt-btn color-1" onclick="Debugger.sel(${i},1)" id="d-btn-${i}-1">1</button>
+                        <button class="d-pt-btn color-2" onclick="Debugger.sel(${i},2)" id="d-btn-${i}-2">2</button>
+                        <button class="d-pt-btn color-3" onclick="Debugger.sel(${i},3)" id="d-btn-${i}-3">3</button>
+                        <button class="d-pt-btn color-4" onclick="Debugger.sel(${i},4)" id="d-btn-${i}-4">4</button>
+                        <button class="d-pt-btn color-5" onclick="Debugger.sel(${i},5)" id="d-btn-${i}-5">5</button>
+                    </div>
+                    <input type="text" class="d-input" id="d-input-${i}" placeholder="Answer">
+                    <div class="d-send" onclick="Debugger.send(${i})" id="d-send-${i}">SEND</div>
+                </div>`;
+        }
+        Host.refreshPlayers();
+    },
+    sel: (idx, pt) => {
+        Debugger.vPlayers[idx].selectedPt = pt;
+        for(let p=1; p<=5; p++) {
+            const btn = document.getElementById(`d-btn-${idx}-${p}`);
+            if(p===pt) btn.classList.add('selected'); else btn.classList.remove('selected');
+        }
+    },
+    send: (idx) => {
+        const p = Debugger.vPlayers[idx];
+        const txt = document.getElementById(`d-input-${idx}`).value;
+        if(!p.selectedPt || !txt) return;
+        // Mock Packet
+        Host.handleData({ type:'ANSWER', name:p.name, pt:p.selectedPt, text:txt }, p.id);
+    },
+    onUpdate: () => {
+        // Update debug cards
+        const phase = DB.state.phase;
+        Debugger.vPlayers.forEach((p, i) => {
+            if(DB.players[p.id]) document.getElementById(`d-score-${i}`).innerText = DB.players[p.id].score + "pt";
+            const ans = DB.answers.find(a => a.playerId === p.id);
+            const stat = document.getElementById(`d-status-${i}`);
+            const btn = document.getElementById(`d-send-${i}`);
+            if(ans) {
+                document.getElementById(`d-card-${i}`).classList.add('done');
+                stat.innerText = "Answered"; btn.classList.remove('active');
+            } else {
+                document.getElementById(`d-card-${i}`).classList.remove('done');
+                if(phase === 'ACTIVE') { stat.innerText = "ACTIVE"; stat.style.color="#4f4"; btn.classList.add('active'); }
+                else { stat.innerText = "Wait"; stat.style.color="#888"; btn.classList.remove('active'); }
+            }
+        });
+    }
+};
+
+// Start
 Host.init();
 </script>
 </body>
