@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V11 (Online)</title>
+    <title>QUIZ ROYALE V11.1 (Online + Sort)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -148,7 +148,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V11.0 (ONLINE)</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V11.1 (ONLINE+SORT)</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
             <div style="margin-top:20px; font-size:12px; color:#666;">※スマホ参加対応</div>
@@ -399,7 +399,7 @@ const Host = {
     initInputs: () => {
         const div = document.getElementById('q-inputs'); div.innerHTML = "";
         for(let i=1; i<=5; i++) {
-            div.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;"><span class="color-${i}" style="padding:5px; width:30px; text-align:center; font-weight:bold; border-radius:3px;">${i}</span><input type="text" id="q-in-${i}" placeholder="Q${i}" style="flex:1;"></div>`;
+            div.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;"><span class="color-${i}" style="padding:5px; width:30px; text-align:center; font-weight:bold; border-radius:3px; color:#000;">${i}</span><input type="text" id="q-in-${i}" placeholder="Q${i}" style="flex:1;"></div>`;
         }
     },
 
@@ -437,9 +437,24 @@ const Host = {
         const list = document.getElementById('settings-list'); list.innerHTML = "";
         Host.sets.forEach((set, i) => {
             const li = document.createElement('li'); li.className = `set-item ${i === Host.editingIndex ? 'active' : ''}`;
-            li.innerHTML = `<span>${set.title}</span> <button class="btn-sub" style="margin:0; padding:2px 5px;" onclick="event.stopPropagation(); Host.deleteSet(${i})">×</button>`;
+            // Restored Sort Buttons
+            li.innerHTML = `
+                <div style="flex:1;">${set.title}</div>
+                <div class="set-controls">
+                    <button class="btn-action" onclick="event.stopPropagation(); Host.moveSet(${i}, -1)">▲</button>
+                    <button class="btn-action" onclick="event.stopPropagation(); Host.moveSet(${i}, 1)">▼</button>
+                    <button class="btn-action" style="background:#a33;" onclick="event.stopPropagation(); Host.deleteSet(${i})">×</button>
+                </div>
+            `;
             li.onclick = () => Host.loadSetForEdit(i); list.appendChild(li);
         });
+    },
+    moveSet: (idx, direction) => {
+        if (idx + direction < 0 || idx + direction >= Host.sets.length) return;
+        const temp = Host.sets[idx]; Host.sets[idx] = Host.sets[idx + direction]; Host.sets[idx + direction] = temp;
+        if(Host.editingIndex === idx) Host.editingIndex += direction;
+        else if(Host.editingIndex === idx + direction) Host.editingIndex -= direction;
+        localStorage.setItem(DATA_KEY, JSON.stringify(Host.sets)); Host.renderSetList();
     },
     createNewSet: () => { Host.editingIndex = -1; Host.renderSetList(); document.getElementById('set-genre').value = ""; document.getElementById('set-time').value = 30; for(let i=1; i<=5; i++) document.getElementById(`q-in-${i}`).value = ""; },
     loadSetForEdit: (idx) => { Host.editingIndex = idx; Host.renderSetList(); const set = Host.sets[idx]; document.getElementById('set-genre').value = set.title; document.getElementById('set-time').value = set.time; document.getElementById('set-font').value = set.fontSize || 24; document.getElementById('set-width').value = set.width || 90; for(let i=1; i<=5; i++) document.getElementById(`q-in-${i}`).value = set.qs[i-1]; },
