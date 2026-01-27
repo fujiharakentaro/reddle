@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V11.1 (Online + Sort)</title>
+    <title>QUIZ ROYALE V12.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -81,7 +81,7 @@
         .judge-alert { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; color: #ff5252; font-weight: bold; text-shadow: 2px 2px 0 #000; border: 3px solid #ff5252; padding: 20px; background: rgba(0,0,0,0.8); z-index: 20; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
 
-        /* DEBUGGER STYLES */
+        /* DEBUGGER STYLES (RESTORED) */
         .debug-container { width: 100%; height: 100%; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; background: #222; }
         .debug-header { background: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; border: 1px solid #555; }
         .debug-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; align-content: start; }
@@ -148,7 +148,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V11.1 (ONLINE+SORT)</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V12.0 STABLE</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
             <div style="margin-top:20px; font-size:12px; color:#666;">※スマホ参加対応</div>
@@ -182,7 +182,10 @@
                     <h2 style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:20px;">EDIT MISSION</h2>
                     
                     <div class="config-block">
-                        <div class="config-title"><span>システム・音響設定</span></div>
+                        <div class="config-title">
+                            <span>システム・音響設定</span>
+                            <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面へ</button>
+                        </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:12px;">
                             <div>
                                 <label>BGMファイル</label>
@@ -217,6 +220,22 @@
                         <button class="btn-large" style="margin:0; font-size:18px; padding:10px 40px;" onclick="Host.saveCurrentSet()">保存</button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div id="screen-debug" class="screen hidden">
+            <div class="debug-container">
+                <div class="debug-header">
+                    <h3 style="margin:0;">MULTI-DEBUGGER</h3>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label>生成人数:</label><input type="number" id="debug-count" value="5" style="width:60px;">
+                        <button class="btn-action" onclick="Debugger.spawnPlayers()">生成 & エントリー</button>
+                    </div>
+                    <div style="margin-left:auto;">
+                        <button class="btn-sub" onclick="Host.showScreen('screen-settings')">設定へ戻る</button>
+                    </div>
+                </div>
+                <div id="debug-grid" class="debug-grid"></div>
             </div>
         </div>
 
@@ -268,7 +287,7 @@
                 
                 <div id="p-wait-msg" class="p-wait-box">
                     <div style="font-size:50px; margin-bottom:20px;">⏳</div>
-                    <div id="p-wait-text" style="font-size:20px; font-weight:bold;">出題をお待ちください</div>
+                    <div id="p-wait-text" style="font-size:20px; font-weight:bold;">問題出題まで<br>お待ちください</div>
                 </div>
 
                 <div id="p-game-area" class="hidden" style="flex:1; display:flex; flex-direction:column;">
@@ -319,7 +338,12 @@ const Net = {
         Net.peer.on('connection', c => {
             Net.conns.push(c);
             c.on('data', d => Host.handleData(d, c.peer));
-            c.on('close', () => { Net.conns = Net.conns.filter(x=>x!==c); Host.refreshCount(); });
+            c.on('close', () => { 
+                // Remove player logic on disconnect
+                if(DB.players[c.peer]) delete DB.players[c.peer];
+                Net.conns = Net.conns.filter(x=>x!==c); 
+                Host.refreshCount(); 
+            });
             c.send({ type:'STATE', db:DB }); // Send initial state
         });
     },
@@ -337,8 +361,8 @@ const Net = {
 };
 
 /* DB & CONFIG */
-const DATA_KEY = 'quiz_royale_sets_v11'; 
-const CONF_KEY = 'quiz_royale_conf_v11';
+const DATA_KEY = 'quiz_royale_sets_v12'; 
+const CONF_KEY = 'quiz_royale_conf_v12';
 
 const DB = {
     state: { phase: 'LOBBY', currentSet: null },
@@ -386,8 +410,14 @@ const Host = {
     },
 
     loadData: () => {
-        const d = localStorage.getItem(DATA_KEY);
+        // Data Migration check
+        let d = localStorage.getItem(DATA_KEY);
+        if(!d) {
+            const old = localStorage.getItem('quiz_royale_sets_v11');
+            if(old) { d=old; localStorage.setItem(DATA_KEY, d); }
+        }
         Host.sets = d ? JSON.parse(d) : [{ title: "サンプル", time: 30, qs: ["首都", "果物", "計算", "干支", "山"] }];
+        
         const c = localStorage.getItem(CONF_KEY);
         if(c) {
             Host.config = JSON.parse(c);
@@ -407,11 +437,14 @@ const Host = {
     handleData: (data, pid) => {
         if(data.type === 'LOGIN') {
             DB.players[pid] = { name: data.name, score: 0 };
+            Host.refreshCount();
             Net.broadcast({ type: 'STATE', db: DB }); // Update all players
         } else if(data.type === 'ANSWER') {
             if(DB.state.phase === 'ACTIVE' && !DB.answers.find(a => a.playerId === pid)) {
                 DB.answers.push({ playerId: pid, name: data.name, pt: data.pt, text: data.text, timestamp: Date.now() });
                 Net.broadcast({ type: 'STATE', db: DB });
+                // Debug Update if visible
+                if(!document.getElementById('screen-debug').classList.contains('hidden')) Debugger.onUpdate();
             }
         }
     },
@@ -433,11 +466,12 @@ const Host = {
 
     /* SETTINGS */
     goToSettings: () => { Host.showScreen('screen-settings'); Host.renderSetList(); Host.createNewSet(); },
+    goToDebugMode: () => { Host.showScreen('screen-debug'); }, // Debug restore
     renderSetList: () => {
         const list = document.getElementById('settings-list'); list.innerHTML = "";
         Host.sets.forEach((set, i) => {
             const li = document.createElement('li'); li.className = `set-item ${i === Host.editingIndex ? 'active' : ''}`;
-            // Restored Sort Buttons
+            // SORT Buttons Restored
             li.innerHTML = `
                 <div style="flex:1;">${set.title}</div>
                 <div class="set-controls">
@@ -532,25 +566,97 @@ const Host = {
     stopBgm: () => { const a=document.getElementById('bgm-player'); a.pause(); a.currentTime=0; }
 };
 
+/* DEBUGGER (RESTORED) */
+const Debugger = {
+    vPlayers: [],
+    spawnPlayers: () => {
+        const count = parseInt(document.getElementById('debug-count').value) || 1;
+        Debugger.vPlayers = [];
+        const grid = document.getElementById('debug-grid'); grid.innerHTML = "";
+        
+        for(let i=0; i<count; i++) {
+            const pid = 'debug_' + i; const name = `TestPlayer ${i+1}`;
+            Debugger.vPlayers.push({ id: pid, name: name, selectedPt: null });
+            // Simulate Login directly into DB
+            DB.players[pid] = { name: name, score: 0 };
+            
+            grid.innerHTML += `
+                <div class="debug-card" id="d-card-${i}">
+                    <div class="debug-name-row"><span>${name}</span><span id="d-score-${i}">0pt</span></div>
+                    <div class="debug-status-text" id="d-status-${i}">Waiting...</div>
+                    <div class="debug-pt-row">
+                        <button class="d-pt-btn color-1" onclick="Debugger.sel(${i},1)" id="d-btn-${i}-1">1</button>
+                        <button class="d-pt-btn color-2" onclick="Debugger.sel(${i},2)" id="d-btn-${i}-2">2</button>
+                        <button class="d-pt-btn color-3" onclick="Debugger.sel(${i},3)" id="d-btn-${i}-3">3</button>
+                        <button class="d-pt-btn color-4" onclick="Debugger.sel(${i},4)" id="d-btn-${i}-4">4</button>
+                        <button class="d-pt-btn color-5" onclick="Debugger.sel(${i},5)" id="d-btn-${i}-5">5</button>
+                    </div>
+                    <input type="text" class="d-input" id="d-input-${i}" placeholder="Answer">
+                    <div class="d-send" onclick="Debugger.send(${i})" id="d-send-${i}">SEND</div>
+                </div>`;
+        }
+        Host.refreshCount();
+    },
+    sel: (idx, pt) => {
+        Debugger.vPlayers[idx].selectedPt = pt;
+        for(let p=1; p<=5; p++) {
+            const btn = document.getElementById(`d-btn-${idx}-${p}`);
+            if(p===pt) btn.classList.add('selected'); else btn.classList.remove('selected');
+        }
+    },
+    send: (idx) => {
+        const p = Debugger.vPlayers[idx];
+        const txt = document.getElementById(`d-input-${idx}`).value;
+        if(!p.selectedPt || !txt) return;
+        // Mock Packet
+        Host.handleData({ type:'ANSWER', name:p.name, pt:p.selectedPt, text:txt }, p.id);
+    },
+    onUpdate: () => {
+        // Update debug cards
+        const phase = DB.state.phase;
+        Debugger.vPlayers.forEach((p, i) => {
+            if(DB.players[p.id]) document.getElementById(`d-score-${i}`).innerText = DB.players[p.id].score + "pt";
+            const ans = DB.answers.find(a => a.playerId === p.id);
+            const stat = document.getElementById(`d-status-${i}`);
+            const btn = document.getElementById(`d-send-${i}`);
+            if(ans) {
+                document.getElementById(`d-card-${i}`).classList.add('done');
+                stat.innerText = "Answered"; btn.classList.remove('active');
+            } else {
+                document.getElementById(`d-card-${i}`).classList.remove('done');
+                if(phase === 'ACTIVE') { stat.innerText = "ACTIVE"; stat.style.color="#4f4"; btn.classList.add('active'); }
+                else { stat.innerText = "Wait"; stat.style.color="#888"; btn.classList.remove('active'); }
+            }
+        });
+    }
+};
+
 /* PLAYER LOGIC */
 const Player = {
     id: null, name: null, selPt: null,
     
     init: (hid) => {
-        Player.id = sessionStorage.getItem('pid') || 'p_'+Date.now(); sessionStorage.setItem('pid', Player.id);
-        Player.name = sessionStorage.getItem('pname');
+        // Restore ID if exists to keep score on reconnect
+        Player.id = sessionStorage.getItem('pid');
+        if(!Player.id) {
+            Player.id = 'p_' + Date.now() + Math.random().toString(36).substr(2, 5);
+            sessionStorage.setItem('pid', Player.id);
+        }
         Net.initPlayer(hid);
     },
     
     handleData: (data) => {
         if(data.type === 'STATE') {
-            const db = data.db; const myId = Net.peer.id;
+            const db = data.db; const myId = Net.peer.id || Player.id;
             
             // 1. Sync Score
-            if(myId && db.players[myId]) {
+            if(db.players[myId]) {
                 document.getElementById('p-disp-name').innerText = db.players[myId].name;
                 document.getElementById('p-score').innerText = db.players[myId].score;
-                if(!document.getElementById('p-screen-login').classList.contains('hidden')) Player.showScreen('p-screen-main');
+                // If logged in but on login screen, move to main
+                if(!document.getElementById('p-screen-login').classList.contains('hidden')) {
+                    Player.showScreen('p-screen-main');
+                }
             }
 
             // 2. Sync Screen
@@ -572,8 +678,8 @@ const Player = {
                 if(ph==='TIMEUP') txt.innerText = "TIME UP!";
                 else if(ph==='JUDGING') txt.innerText = "集計中...";
                 else {
-                    txt.innerText = "出題をお待ちください";
-                    // Reset
+                    txt.innerText = "問題出題までお待ちください";
+                    // Reset inputs
                     if(ph==='LOBBY'||ph==='SELECT'||ph==='COUNTDOWN') {
                         Player.selPt = null; document.getElementById('p-answer-input').value = "";
                         Player.updateBtns();
@@ -586,6 +692,10 @@ const Player = {
     login: () => {
         const n = document.getElementById('p-name-input').value; if(!n) return alert("名前を入力");
         Player.name = n; sessionStorage.setItem('pname', n);
+        // Force Switch Screen Immediately for UX
+        Player.showScreen('p-screen-main');
+        document.getElementById('p-disp-name').innerText = n;
+        
         Net.sendHost({ type: 'LOGIN', name: n });
     },
 
@@ -607,6 +717,10 @@ const Player = {
         const t = document.getElementById('p-answer-input').value;
         Net.sendHost({ type: 'ANSWER', name: Player.name, pt: Player.selPt, text: t });
         document.getElementById('p-modal').style.display = 'none';
+        // Immediately show waiting
+        document.getElementById('p-game-area').classList.add('hidden');
+        document.getElementById('p-wait-msg').classList.remove('hidden');
+        document.getElementById('p-wait-text').innerText = "送信しました...";
     },
     showScreen: (id) => { document.querySelectorAll('#player-app .screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
 };
