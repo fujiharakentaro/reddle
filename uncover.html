@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V13.3 (CPU Exclude)</title>
+    <title>QUIZ ROYALE V13.4 (Fix CPU & Score)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -138,6 +138,8 @@
         
         .conn-status { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; margin-right: 5px; }
         .conn-status.on { background: #2f2; box-shadow: 0 0 5px #2f2; }
+        
+        .score-display { color: #ffeb3b; font-weight: bold; margin-left: 10px; }
 
     </style>
 </head>
@@ -146,7 +148,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V13.3 (CPU Exclude)</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V13.4 (Fix CPU & Score)</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
         </div>
@@ -162,7 +164,7 @@
                 
                 <p style="font-size:20px; margin-top:20px;">QRコードを読み込んでエントリーしてください</p>
                 <div style="font-size: 30px; color:var(--c2); font-weight:bold; margin:20px 0;">
-                    参加人数: <span id="host-player-count">0</span>人
+                    參加人数: <span id="host-player-count">0</span>人
                 </div>
             </div>
             <div style="margin-top:30px; display:flex; gap:20px;">
@@ -353,15 +355,16 @@ const Debugger = {
             const id = 'cpu-' + i;
             const name = 'CPU' + i;
             
-            // 擬似ログイン (名前ベースでスコア管理される)
+            // 擬似ログイン
             Host.handleData({type:'LOGIN', name:name}, id);
             
-            // カード作成 (★点数表示を追加)
+            // カード作成
             const card = document.createElement('div');
             card.className = 'debug-card';
             let btnsHtml = '<div class="debug-pt-row">';
             for(let b=1; b<=5; b++){
-                btnsHtml += `<button class="d-pt-btn color-${b}" onclick="Debugger.sendAns('${id}', '${name}', ${b})">${b}</button>`;
+                // ★修正: type="button" を明示
+                btnsHtml += `<button type="button" class="d-pt-btn color-${b}" onclick="Debugger.sendAns('${id}', '${name}', ${b})">${b}</button>`;
             }
             btnsHtml += '</div>';
             
@@ -373,13 +376,13 @@ const Debugger = {
                 ${btnsHtml}
                 <div style="display:flex; gap:5px; margin-top:5px;">
                     <input type="text" class="d-input" id="d-in-${id}" placeholder="回答">
-                    <button class="d-send" onclick="Debugger.sendText('${id}', '${name}')">送</button>
+                    <button type="button" class="d-send" onclick="Debugger.sendText('${id}', '${name}')">送</button>
                 </div>
             `;
             grid.appendChild(card);
         }
-        alert(count + "人のCPUを追加しました");
-        Debugger.update(); // 初期表示更新
+        alert(count + "人のCPUを追加しました。ゲーム開始後、この画面か別タブで操作してください。");
+        Debugger.update(); 
     },
     sendAns: (id, name, pt) => {
         Host.handleData({type:'ANSWER', name:name, pt:pt, text:pt}, id);
@@ -388,7 +391,6 @@ const Debugger = {
         const t = document.getElementById(`d-in-${id}`).value;
         if(t) Host.handleData({type:'ANSWER', name:name, pt:1, text:t}, id);
     },
-    // ★点数更新用関数
     update: () => {
         for(let name in DB.scores){
             const el = document.getElementById(`d-score-${name}`);
@@ -452,7 +454,6 @@ const CHANNEL = 'quiz_royale_v6';
 
 const DB = {
     state: { phase: 'LOBBY', currentSet: null },
-    // ★名前ベースでスコア管理
     scores: {}, 
     players: {}, 
     answers: [], 
@@ -537,13 +538,11 @@ const Host = {
     handleData: (data, peerId) => {
         if(data.type === 'LOGIN') {
             DB.players[peerId] = { name: data.name };
-            // ★名前ベースでスコア管理 (初期化)
             if(DB.scores[data.name] === undefined) {
                 DB.scores[data.name] = 0;
             }
             Host.updateCount();
             Net.broadcast({ type: 'SYNC', db: DB });
-            // ★デバッグ画面も更新
             if(typeof Debugger !== 'undefined') Debugger.update();
         } else if(data.type === 'ANSWER') {
             if(DB.state.phase === 'ACTIVE') {
