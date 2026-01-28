@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Impostor Game</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #121212; --panel: #1e1e1e; --text: #e0e0e0;
+            --accent: #bb86fc; --primary: #3700b3; --error: #cf6679;
+        }
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        
+        .screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; width: 100%; max-width: 600px; margin: 0 auto; }
+        .hidden { display: none !important; }
+        
+        h1, h2 { margin: 0 0 20px 0; color: var(--accent); }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 15px; background: #333; border: 1px solid #555; color: #fff; border-radius: 8px; font-size: 16px; }
+        button { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
+        button:active { transform: scale(0.98); opacity: 0.8; }
+        button.secondary { background: #444; }
+        
+        .card { background: var(--panel); padding: 20px; border-radius: 12px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 15px; }
+        .role-badge { display: inline-block; padding: 5px 10px; background: #333; border-radius: 4px; font-size: 12px; margin-bottom: 5px; color: #aaa; }
+        
+        .ans-btn { text-align: left; margin-bottom: 10px; background: var(--panel); border: 1px solid #444; }
+        .ans-btn:hover { border-color: var(--accent); }
+        
+        #qrcode { background: #fff; padding: 10px; border-radius: 8px; display: inline-block; margin: 20px 0; }
+        .status-bar { font-size: 14px; color: #888; margin-bottom: 20px; }
+        .highlight { color: var(--accent); font-weight: bold; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-login" class="screen">
+        <h1>AI IMPOSTOR</h1>
+        <div class="card">
+            <p>名前を入力して参加</p>
+            <input type="text" id="inp-name" placeholder="あなたの名前">
+            <button onclick="App.login()">参加 / 部屋作成</button>
+        </div>
+        <div id="host-setup" class="hidden card" style="margin-top:20px; border:1px solid var(--accent);">
+            <h3>ホスト設定</h3>
+            <p style="font-size:12px; color:#aaa;">※ホストのみ入力。OpenAI API Key</p>
+            <input type="password" id="inp-apikey" placeholder="sk-...">
+            <div id="qrcode"></div>
+            <p>URLをシェアして招待</p>
+        </div>
+    </div>
+
+    <div id="screen-lobby" class="screen hidden">
+        <h2>LOBBY</h2>
+        <div class="status-bar">参加者待機中...</div>
+        <div id="lobby-list" class="card" style="text-align:left; min-height:100px;"></div>
+        <div id="host-controls" class="hidden">
+            <button onclick="App.startGame()">ゲームスタート</button>
+        </div>
+        <p id="wait-msg">ホストが開始するまでお待ちください</p>
+    </div>
+
+    <div id="screen-role" class="screen hidden">
+        <h2>MISSION</h2>
+        <div class="card">
+            <div class="role-badge">ターゲット (A)</div>
+            <div id="role-a" class="highlight">???</div>
+            <hr style="border:0; border-top:1px solid #444; margin:15px 0;">
+            <div class="role-badge">質問者 (B)</div>
+            <div id="role-b" class="highlight">???</div>
+        </div>
+        <div class="card">
+            <p id="role-instruction">指示待ち...</p>
+        </div>
+        <button id="btn-role-ok" onclick="App.confirmRole()">OK</button>
+    </div>
+
+    <div id="screen-question" class="screen hidden">
+        <h2>QUESTION</h2>
+        <div class="card">
+            <p><span class="highlight" id="q-target-name"></span> への質問を考えてください</p>
+            <textarea id="inp-question" rows="3" placeholder="例: 好きな朝ごはんは？"></textarea>
+            <button onclick="App.sendQuestion()">質問を送信</button>
+        </div>
+    </div>
+
+    <div id="screen-answer" class="screen hidden">
+        <h2>ANSWER</h2>
+        <div class="card">
+            <div class="role-badge">質問</div>
+            <p id="disp-question" style="font-weight:bold; font-size:1.2em;">...</p>
+        </div>
+        <div class="card">
+            <p id="ans-instruction">回答を入力してください</p>
+            <input type="text" id="inp-answer" placeholder="回答...">
+            <button onclick="App.sendAnswer()">送信</button>
+        </div>
+        <div id="ans-wait" class="hidden">他の回答を待っています...</div>
+    </div>
+
+    <div id="screen-judge" class="screen hidden">
+        <h2>WHO IS REAL?</h2>
+        <div class="card">
+            <p>A (<span id="j-target-name"></span>) の回答はどれ？</p>
+            <div id="answer-list"></div>
+        </div>
+    </div>
+
+    <div id="screen-result" class="screen hidden">
+        <h2>RESULT</h2>
+        <div class="card">
+            <div id="result-msg" style="font-size:1.5em; font-weight:bold; margin-bottom:10px;"></div>
+            <div id="result-detail" style="text-align:left;"></div>
+        </div>
+        <div id="host-restart" class="hidden">
+            <button onclick="App.returnLobby()">ロビーへ戻る</button>
+        </div>
+    </div>
+
+<script>
+/* --- CORE SYSTEM --- */
+const DB = {
+    myId: null, isHost: false, name: '', apiKey: '',
+    players: {}, // { id: {name: "Taro", score: 0} }
+    state: { phase: 'LOBBY', roleA: null, roleB: null, question: '', answers: [] }
+};
+
+/* --- NETWORK (PeerJS) --- */
+const Net = {
+    peer: null, conn: null, conns: [],
+    init: (hostId) => {
+        Net.peer = new Peer();
+        Net.peer.on('open', id => {
+            DB.myId = id;
+            if (!hostId) { // I am Host
+                DB.isHost = true;
+                const url = location.href.split('?')[0] + "?host=" + id;
+                new QRCode(document.getElementById("qrcode"), { text: url, width: 128, height: 128 });
+                document.getElementById('host-setup').classList.remove('hidden');
+                document.getElementById('host-controls').classList.remove('hidden');
+                document.getElementById('host-restart').classList.remove('hidden');
+                document.getElementById('wait-msg').classList.add('hidden');
+                App.updateLobby();
+            } else { // I am Client
+                Net.conn = Net.peer.connect(hostId);
+                Net.conn.on('open', () => {
+                    Net.conn.send({ type: 'JOIN', name: DB.name });
+                });
+                Net.conn.on('data', data => App.handleData(data));
+                Net.conn.on('close', () => alert("ホストが切断しました"));
+            }
+        });
+        
+        // Host logic
+        if (!hostId) {
+            Net.peer.on('connection', conn => {
+                Net.conns.push(conn);
+                conn.on('data', data => {
+                    if (data.type === 'JOIN') {
+                        DB.players[conn.peer] = { name: data.name, conn: conn };
+                        App.broadcast({ type: 'UPDATE_LOBBY', players: App.getPlayerNames() });
+                        App.updateLobby();
+                    }
+                    else if (data.type === 'QUESTION') {
+                        DB.state.question = data.text;
+                        App.startAnsweringPhase();
+                    }
+                    else if (data.type === 'ANSWER') {
+                        DB.state.answers.push({ id: conn.peer, text: data.text, isAI: false });
+                        App.checkAnswers();
+                    }
+                    else if (data.type === 'JUDGE') {
+                        App.showResult(data.choiceIdx);
+                    }
+                });
+                conn.on('close', () => {
+                    delete DB.players[conn.peer];
+                    Net.conns = Net.conns.filter(c => c !== conn);
+                    App.broadcast({ type: 'UPDATE_LOBBY', players: App.getPlayerNames() });
+                    App.updateLobby();
+                });
+            });
+        }
+    },
+    send: (data) => { if (Net.conn) Net.conn.send(data); },
+    broadcast: (data) => { Net.conns.forEach(c => c.send(data)); }
+};
+
+/* --- AI LOGIC (OpenAI) --- */
+const AI = {
+    generateAnswer: async (targetType, question) => {
+        if (!DB.apiKey) return "AI Key未設定";
+        
+        let systemPrompt = "";
+        if (targetType === 'HUMAN') {
+            // Aが人間。AIは人間に溶け込むように回答する（Impostor）
+            systemPrompt = "あなたは日本の若者です。日常会話のゲーム中なので、短く、カジュアルに、ひらがな多めで答えてください。敬語は使わないで。";
+        } else {
+            // AがAI。AIは「少しAIっぽさ」を残して回答する（Target）
+            systemPrompt = "あなたはAIです。少しだけ機械的で、漢字を正確に使い、論理的な回答をしてください。ただし長すぎないように。";
+        }
+
+        try {
+            const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${DB.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-3.5-turbo",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: `質問: ${question}` }
+                    ],
+                    max_tokens: 50
+                })
+            });
+            const json = await res.json();
+            return json.choices[0].message.content.trim();
+        } catch (e) {
+            console.error(e);
+            return "エラーが発生しました";
+        }
+    }
+};
+
+/* --- APP LOGIC --- */
+const App = {
+    init: () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hostId = urlParams.get('host');
+        if (hostId) sessionStorage.setItem('hostId', hostId);
+    },
+
+    showScreen: (id) => {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    },
+
+    login: () => {
+        const name = document.getElementById('inp-name').value;
+        if (!name) return alert("名前を入力してください");
+        DB.name = name;
+        
+        const hostId = sessionStorage.getItem('hostId'); // URL param or null
+        Net.init(hostId);
+        
+        if (!hostId) { // Host
+            DB.players[Net.peer.id] = { name: name + "(You)", isHost: true }; // Dummy for UI
+            App.updateLobby();
+        }
+        App.showScreen('screen-lobby');
+    },
+
+    getPlayerNames: () => {
+        return Object.values(DB.players).map(p => p.name);
+    },
+
+    updateLobby: () => {
+        const list = document.getElementById('lobby-list');
+        list.innerHTML = App.getPlayerNames().map(n => `<div>・${n}</div>`).join('');
+    },
+
+    handleData: (data) => {
+        if (data.type === 'UPDATE_LOBBY') {
+            const list = document.getElementById('lobby-list');
+            list.innerHTML = data.players.map(n => `<div>・${n}</div>`).join('');
+        }
+        else if (data.type === 'ROLE_ASSIGN') {
+            App.setRole(data.roleA, data.roleB);
+        }
+        else if (data.type === 'PHASE_QUESTION') {
+            App.showScreen(DB.myId === DB.state.roleB.id ? 'screen-question' : 'screen-answer');
+            if (DB.myId !== DB.state.roleB.id) {
+                document.getElementById('ans-instruction').innerText = "質問を待っています...";
+                document.getElementById('inp-answer').disabled = true;
+            } else {
+                document.getElementById('q-target-name').innerText = DB.state.roleA.name;
+            }
+        }
+        else if (data.type === 'PHASE_ANSWER') {
+            document.getElementById('disp-question').innerText = data.question;
+            if (DB.myId !== DB.state.roleB.id) {
+                // A or Impostor
+                const isA = (DB.myId === DB.state.roleA.id);
+                // If A is AI, everyone acts as Impostor trying to be AI
+                // If A is Human, A acts truthful, others act as Impostor trying to be A
+                
+                let instruction = "";
+                if (DB.state.roleA.isAI) {
+                    instruction = `Aは「AI」です！\nあなたはAIになりすまして回答してください。`;
+                } else {
+                    if (isA) instruction = "あなたはA本人です。\n正直に（人間らしく）答えてください。";
+                    else instruction = `Aは「${DB.state.roleA.name}」です。\nAになりすまして答えてください。`;
+                }
+                
+                document.getElementById('ans-instruction').innerText = instruction;
+                document.getElementById('inp-answer').disabled = false;
+            } else {
+                // B waits
+                App.showScreen('screen-judge'); // B waits on judge screen basically
+                document.getElementById('answer-list').innerHTML = "回答が出揃うのを待っています...";
+            }
+        }
+        else if (data.type === 'PHASE_JUDGE') {
+            if (DB.myId === DB.state.roleB.id) {
+                App.showScreen('screen-judge');
+                document.getElementById('j-target-name').innerText = DB.state.roleA.name;
+                const list = document.getElementById('answer-list');
+                list.innerHTML = "";
+                data.answers.forEach((ans, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'ans-btn';
+                    btn.innerText = ans.text;
+                    btn.onclick = () => App.sendJudge(idx);
+                    list.appendChild(btn);
+                });
+            } else {
+                App.showScreen('screen-result');
+                document.getElementById('result-msg').innerText = "回答者が選択中...";
+                document.getElementById('result-detail').innerHTML = "";
+            }
+        }
+        else if (data.type === 'RESULT') {
+            App.showScreen('screen-result');
+            const res = data.result;
+            document.getElementById('result-msg').innerText = res.success ? "正解！！" : "不正解...";
+            let html = `<p>選ばれた回答: <strong>${res.selectedAnswer}</strong></p>`;
+            html += `<p>回答者: ${res.authorName}</p>`;
+            html += `<hr><p>【内訳】</p>`;
+            res.allAnswers.forEach(a => {
+                html += `<div>${a.name}: ${a.text} ${a.isA ? "(本物)" : ""}</div>`;
+            });
+            document.getElementById('result-detail').innerHTML = html;
+        }
+        else if (data.type === 'RESET') {
+            App.showScreen('screen-lobby');
+        }
+    },
+
+    /* --- HOST ONLY FUNCTIONS --- */
+    startGame: () => {
+        if (!DB.isHost) return;
+        
+        // 1. Setup API
+        DB.apiKey = document.getElementById('inp-apikey').value;
+        
+        // 2. Assign Roles
+        const pIds = Object.keys(DB.players); // Clients only (Host logic handles its own display but usually Host is just moderator or player)
+        // For simplicity, Host participates as a player if they entered name
+        // But Net logic separates Host. Let's treat Host as a player too for logic simplicity if pushed to pIds
+        // Current implementation: DB.players includes connected clients. Host manually added self? No, Host is not in DB.players in this specific peerjs logic usually.
+        // Let's add Host to game logic:
+        // Actually, let's keep Host as moderator/server to simplify "A and B not same" logic across devices.
+        // *Correction*: User wants "All access". So Host is a player.
+        // We need to ensure Host ID is in the pool.
+        
+        // Let's rebuilding player list for game logic
+        const allIds = [...pIds]; 
+        // Note: Host ID is DB.myId. Is it in pIds? 
+        // In Net.initHost -> DB.players only gets 'JOIN' data. Host didn't send JOIN.
+        // Let's add Host to players list manually for Game Logic
+        // Fix: Host should be in DB.players.
+        
+        // Candidates for A: Players + "AI"
+        const candidatesA = [...allIds, "AI"];
+        
+        // Decide B (Guesser) - Must be Human
+        const bIndex = Math.floor(Math.random() * allIds.length);
+        const idB = allIds[bIndex];
+        
+        // Decide A (Subject) - Can be AI, but not B
+        let idA = idB;
+        while (idA === idB) {
+            const r = Math.floor(Math.random() * candidatesA.length);
+            idA = candidatesA[r];
+        }
+        
+        const isAI = (idA === "AI");
+        const nameA = isAI ? "AI" : (idA === DB.myId ? DB.name : DB.players[idA].name);
+        const nameB = (idB === DB.myId) ? DB.name : DB.players[idB].name;
+
+        DB.state.roleA = { id: idA, name: nameA, isAI: isAI };
+        DB.state.roleB = { id: idB, name: nameB };
+        DB.state.answers = [];
+
+        // Broadcast Roles
+        const roleData = { type: 'ROLE_ASSIGN', roleA: DB.state.roleA, roleB: DB.state.roleB };
+        App.broadcast(roleData);
+        App.handleData(roleData); // Host update self
+    },
+
+    setRole: (roleA, roleB) => {
+        DB.state.roleA = roleA;
+        DB.state.roleB = roleB;
+        
+        document.getElementById('role-a').innerText = roleA.name;
+        document.getElementById('role-b').innerText = roleB.name;
+        
+        const isB = (DB.myId === roleB.id);
+        const txt = isB ? "あなたは質問者です。\n全員が準備完了したら質問を入力します。" : "あなたは回答者です。\nAになりすまして回答する準備をしてください。";
+        document.getElementById('role-instruction').innerText = txt;
+        
+        App.showScreen('screen-role');
+    },
+
+    confirmRole: () => {
+        // Simple wait: If B confirms, go to Question. Others wait.
+        if (DB.myId === DB.state.roleB.id) {
+            App.showScreen('screen-question');
+            document.getElementById('q-target-name').innerText = DB.state.roleA.name;
+        } else {
+            document.getElementById('btn-role-ok').innerText = "待機中...";
+            document.getElementById('btn-role-ok').disabled = true;
+        }
+    },
+
+    sendQuestion: () => {
+        const q = document.getElementById('inp-question').value;
+        if(!q) return;
+        
+        const data = { type: 'PHASE_ANSWER', question: q };
+        if (DB.isHost) {
+            DB.state.question = q;
+            App.broadcast(data);
+            App.handleData(data);
+            App.triggerAIAnswer(q);
+        } else {
+            Net.send({ type: 'QUESTION', text: q }); // Send to Host
+        }
+    },
+
+    // Host handles AI answer
+    triggerAIAnswer: async (q) => {
+        if (!DB.isHost) return;
+        
+        // If A is AI: Target mode. If A is Human: Impostor mode.
+        // However, if A is AI, the AI is the "Real" answer.
+        // If A is Human, the AI is an "Impostor".
+        
+        const isTarget = DB.state.roleA.isAI;
+        // Also need AI impostor if A is Human?
+        // Requirement: "AI answers naturally... mix AI and human answers"
+        // Let's always have AI answer to spice things up? 
+        // Or only if A is AI?
+        // Requirement: "When A is AI... AI answers robotically". "Mix AI and human answers".
+        // Let's make AI always answer.
+        
+        const ans = await AI.generateAnswer(isTarget ? 'AI' : 'HUMAN', q);
+        DB.state.answers.push({ id: 'AI', text: ans, isAI: true });
+        App.checkAnswers();
+    },
+
+    sendAnswer: () => {
+        const a = document.getElementById('inp-answer').value;
+        if(!a) return;
+        
+        // UI Update
+        document.getElementById('inp-answer').value = "";
+        document.getElementById('screen-answer').classList.add('hidden');
+        document.getElementById('ans-wait').classList.remove('hidden');
+        App.showScreen('screen-answer'); // refresh visibility
+        
+        if (DB.isHost) {
+            DB.state.answers.push({ id: DB.myId, text: a, isAI: false });
+            App.checkAnswers();
+        } else {
+            Net.send({ type: 'ANSWER', text: a });
+        }
+    },
+
+    checkAnswers: () => {
+        if (!DB.isHost) return;
+        
+        // Check if everyone (except B) has answered
+        // Expected count: (Total Players - 1 (B)) + 1 (AI)
+        // Wait, if A is AI, Total Players - 1 (B) players act as impostors.
+        // If A is Human, Total Players - 2 (A, B) act as impostors + A acts real.
+        // Basically everyone except B answers.
+        
+        // Count active players (including Host)
+        const totalPlayers = Object.keys(DB.players).length + 1; // +1 for Host if not in list? 
+        // My logic above for players list was a bit fuzzy. Let's assume DB.players has clients.
+        // Host needs to be accounted for.
+        
+        const answerCount = DB.state.answers.filter(a => !a.isAI).length;
+        const required = totalPlayers - 1; // Everyone except B
+        
+        // Check AI answer presence
+        const aiAnswered = DB.state.answers.some(a => a.isAI);
+        
+        if (answerCount >= required && aiAnswered) {
+            // Shuffle
+            const shuffled = DB.state.answers.sort(() => Math.random() - 0.5);
+            const data = { type: 'PHASE_JUDGE', answers: shuffled };
+            App.broadcast(data);
+            App.handleData(data);
+        }
+    },
+
+    sendJudge: (idx) => {
+        // B only
+        if (DB.isHost) {
+            App.showResult(idx);
+        } else {
+            Net.send({ type: 'JUDGE', choiceIdx: idx });
+        }
+    },
+
+    showResult: (choiceIdx) => {
+        // Host Logic to calculate result
+        const selected = DB.state.answers[choiceIdx];
+        const isCorrect = (selected.id === DB.state.roleA.id);
+        
+        // Name resolution
+        const getName = (id, isAI) => {
+            if (isAI) return "AI";
+            if (id === DB.myId) return DB.name;
+            return DB.players[id] ? DB.players[id].name : "Unknown";
+        };
+
+        const resultData = {
+            success: isCorrect,
+            selectedAnswer: selected.text,
+            authorName: getName(selected.id, selected.isAI),
+            allAnswers: DB.state.answers.map(a => ({
+                text: a.text,
+                name: getName(a.id, a.isAI),
+                isA: (a.id === DB.state.roleA.id)
+            }))
+        };
+
+        const data = { type: 'RESULT', result: resultData };
+        if (DB.isHost) {
+            App.broadcast(data);
+            App.handleData(data);
+        }
+    },
+
+    returnLobby: () => {
+        if (!DB.isHost) return;
+        
+        // Reset Host State
+        DB.state.answers = [];
+        DB.state.question = '';
+        
+        // IMPORTANT: Reset Players list logic if needed? 
+        // Requirement: "参加人数は...タイトル画面から進んだ時は一旦0に戻して"
+        // But this is "Return to Lobby", usually keeps connection. 
+        // If "Back to Title" -> Reload page effectively.
+        // Let's just reset game state here.
+        
+        const data = { type: 'RESET' };
+        App.broadcast(data);
+        App.handleData(data);
+    }
+};
+
+// Start
+App.init();
+
+</script>
+</body>
+</html>
