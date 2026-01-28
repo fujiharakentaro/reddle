@@ -3,204 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Impostor Game</title>
+    <title>AI Impostor: PC Host & Mobile Clients</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --text: #e0e0e0;
-            --accent: #bb86fc; --primary: #3700b3; --error: #cf6679;
+            --accent: #00e5ff; --primary: #6200ea; --danger: #cf6679;
+            --success: #00e676;
         }
         * { box-sizing: border-box; touch-action: manipulation; }
-        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; height: 100vh; overflow: hidden; }
         
-        .screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; width: 100%; max-width: 600px; margin: 0 auto; }
         .hidden { display: none !important; }
+        .full-screen { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
         
-        h1, h2 { margin: 0 0 20px 0; color: var(--accent); }
-        input, textarea { width: 100%; padding: 12px; margin-bottom: 15px; background: #333; border: 1px solid #555; color: #fff; border-radius: 8px; font-size: 16px; }
-        button { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
+        /* --- UI COMPONENTS --- */
+        h1 { color: var(--accent); margin-bottom: 10px; font-size: 2rem; }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; width: 100%; max-width: 600px; }
+        
+        .card { background: var(--panel); padding: 20px; border-radius: 12px; width: 100%; max-width: 600px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 15px; }
+        
+        input, textarea { width: 100%; padding: 15px; background: #333; border: 1px solid #555; color: #fff; border-radius: 8px; font-size: 16px; margin-bottom: 15px; }
+        button { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:active { transform: scale(0.98); opacity: 0.8; }
-        button.secondary { background: #444; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        button.secondary { background: #444; border: 1px solid #666; margin-top: 10px; }
+
+        /* HOST SPECIFIC */
+        #host-app .player-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; }
+        .player-chip { background: #333; padding: 10px 20px; border-radius: 20px; border: 1px solid var(--accent); }
+        .answer-box { text-align: left; margin: 10px 0; border: 1px solid #444; padding: 15px; border-radius: 8px; background: #252525; }
         
-        .card { background: var(--panel); padding: 20px; border-radius: 12px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 15px; }
-        .role-badge { display: inline-block; padding: 5px 10px; background: #333; border-radius: 4px; font-size: 12px; margin-bottom: 5px; color: #aaa; }
+        /* TEST MODE SPECIFIC */
+        .test-btns { display: flex; gap: 10px; margin-bottom: 15px; }
+        .test-btns button { flex: 1; font-size: 14px; padding: 10px; background: #333; border: 2px solid transparent; }
+        .test-btns button.active { border-color: var(--accent); background: #444; color: var(--accent); }
+        #h-test-result { min-height: 60px; padding: 15px; background: #000; border-radius: 8px; text-align: left; color: #fff; margin-bottom: 15px; border: 1px dashed #555; }
+
+        /* CLIENT SPECIFIC */
+        .role-display { font-size: 1.5rem; font-weight: bold; color: var(--accent); margin: 20px 0; }
+        .ui-disabled { opacity: 0.4; pointer-events: none; filter: grayscale(100%); }
         
-        .ans-btn { text-align: left; margin-bottom: 10px; background: var(--panel); border: 1px solid #444; }
-        .ans-btn:hover { border-color: var(--accent); }
-        
-        #qrcode { background: #fff; padding: 10px; border-radius: 8px; display: inline-block; margin: 20px 0; }
-        .status-bar { font-size: 14px; color: #888; margin-bottom: 20px; }
-        .highlight { color: var(--accent); font-weight: bold; font-size: 1.2em; }
+        #qrcode { background: #fff; padding: 10px; border-radius: 8px; display: inline-block; }
     </style>
 </head>
 <body>
 
-    <div id="screen-login" class="screen">
-        <h1>AI IMPOSTOR</h1>
-        <div class="card">
-            <p>名前を入力して参加</p>
-            <input type="text" id="inp-name" placeholder="あなたの名前">
-            <button onclick="App.login()">参加 / 部屋作成</button>
+    <div id="host-app" class="hidden full-screen">
+        <div id="h-screen-setup" class="card">
+            <h1>AI IMPOSTOR <span style="font-size:0.5em; color:#888;">(HOST)</span></h1>
+            <p>OpenAI API Keyを入力してください</p>
+            <input type="password" id="h-apikey" placeholder="sk-..." onchange="Host.saveKey()">
+            <button onclick="Host.initNetwork()">部屋を作成 (QR表示)</button>
+            <button onclick="Host.goToTestMode()" class="secondary">AI回答テスト</button>
         </div>
-        <div id="host-setup" class="hidden card" style="margin-top:20px; border:1px solid var(--accent);">
-            <h3>ホスト設定</h3>
-            <p style="font-size:12px; color:#aaa;">※ホストのみ入力。OpenAI API Key</p>
-            <input type="password" id="inp-apikey" placeholder="sk-...">
-            <div id="qrcode"></div>
-            <p>URLをシェアして招待</p>
+
+        <div id="h-screen-test" class="hidden card">
+            <h2>AI 解答テスト</h2>
+            <p style="font-size:12px; color:#888; margin-bottom:10px;">APIキーを使用してAIの挙動を確認します</p>
+            
+            <div class="test-btns">
+                <button id="btn-mode-human" onclick="Host.setTestRole('HUMAN')" class="active">人間になりすます<br><span style="font-size:10px">(タメ口・ひらがな)</span></button>
+                <button id="btn-mode-ai" onclick="Host.setTestRole('AI')">AIとして答える<br><span style="font-size:10px">(硬い口調・漢字)</span></button>
+            </div>
+
+            <input type="text" id="h-test-input" placeholder="質問を入力 (例: 好きな食べ物は？)">
+            <button onclick="Host.runTest()">生成</button>
+            
+            <div style="text-align:left; font-size:12px; color:#888; margin-bottom:5px;">AIの回答:</div>
+            <div id="h-test-result">ここに回答が表示されます</div>
+
+            <button onclick="Host.backToSetup()" class="secondary">設定へ戻る</button>
+        </div>
+
+        <div id="h-screen-lobby" class="hidden card">
+            <h2>参加者募集中</h2>
+            <div style="display:flex; gap:20px; align-items:center; justify-content:center;">
+                <div id="qrcode"></div>
+                <div style="text-align:left;">
+                    <p>スマホで読み込んで参加</p>
+                    <p style="font-size:2em; font-weight:bold; color:var(--accent);">参加人数: <span id="h-count">0</span></p>
+                </div>
+            </div>
+            <div id="h-player-list" class="player-list"></div>
+            <button onclick="Host.startGame()" id="h-btn-start" disabled>ゲームスタート (2人以上)</button>
+        </div>
+
+        <div id="h-screen-game" class="hidden card">
+            <h2 id="h-phase-title">進行中</h2>
+            <div id="h-game-content" style="font-size: 1.2rem; min-height: 200px; display:flex; flex-direction:column; justify-content:center;">
+                </div>
         </div>
     </div>
 
-    <div id="screen-lobby" class="screen hidden">
-        <h2>LOBBY</h2>
-        <div class="status-bar">参加者待機中...</div>
-        <div id="lobby-list" class="card" style="text-align:left; min-height:100px;"></div>
-        <div id="host-controls" class="hidden">
-            <button onclick="App.startGame()">ゲームスタート</button>
+    <div id="client-app" class="hidden full-screen">
+        <div id="c-screen-login" class="card">
+            <h1>ENTRY</h1>
+            <p>名前を入力してください</p>
+            <input type="text" id="c-name" placeholder="名前">
+            <button onclick="Client.join()">参加する</button>
         </div>
-        <p id="wait-msg">ホストが開始するまでお待ちください</p>
-    </div>
 
-    <div id="screen-role" class="screen hidden">
-        <h2>MISSION</h2>
-        <div class="card">
-            <div class="role-badge">ターゲット (A)</div>
-            <div id="role-a" class="highlight">???</div>
-            <hr style="border:0; border-top:1px solid #444; margin:15px 0;">
-            <div class="role-badge">質問者 (B)</div>
-            <div id="role-b" class="highlight">???</div>
-        </div>
-        <div class="card">
-            <p id="role-instruction">指示待ち...</p>
-        </div>
-        <button id="btn-role-ok" onclick="App.confirmRole()">OK</button>
-    </div>
+        <div id="c-screen-main" class="hidden card">
+            <div class="p-status">
+                <span id="c-disp-name">Name</span>
+            </div>
 
-    <div id="screen-question" class="screen hidden">
-        <h2>QUESTION</h2>
-        <div class="card">
-            <p><span class="highlight" id="q-target-name"></span> への質問を考えてください</p>
-            <textarea id="inp-question" rows="3" placeholder="例: 好きな朝ごはんは？"></textarea>
-            <button onclick="App.sendQuestion()">質問を送信</button>
-        </div>
-    </div>
+            <div id="c-role-area" class="hidden">
+                <div class="role-display" id="c-role-text"></div>
+                <p id="c-instruction" style="margin-bottom:15px; color:#aaa;"></p>
+            </div>
 
-    <div id="screen-answer" class="screen hidden">
-        <h2>ANSWER</h2>
-        <div class="card">
-            <div class="role-badge">質問</div>
-            <p id="disp-question" style="font-weight:bold; font-size:1.2em;">...</p>
-        </div>
-        <div class="card">
-            <p id="ans-instruction">回答を入力してください</p>
-            <input type="text" id="inp-answer" placeholder="回答...">
-            <button onclick="App.sendAnswer()">送信</button>
-        </div>
-        <div id="ans-wait" class="hidden">他の回答を待っています...</div>
-    </div>
+            <div id="c-game-area" class="ui-disabled" style="margin-top:20px;">
+                <p id="c-area-label" style="text-align:left; color:#888; font-size:12px;">入力欄</p>
+                <textarea id="c-input-text" rows="3" placeholder="..."></textarea>
+                <button id="c-btn-submit" onclick="Client.sendAction()">送信</button>
+            </div>
 
-    <div id="screen-judge" class="screen hidden">
-        <h2>WHO IS REAL?</h2>
-        <div class="card">
-            <p>A (<span id="j-target-name"></span>) の回答はどれ？</p>
-            <div id="answer-list"></div>
-        </div>
-    </div>
+            <div id="c-status-msg" style="margin-top:20px; font-weight:bold; color:#888;">
+                ホストの操作をお待ちください
+            </div>
 
-    <div id="screen-result" class="screen hidden">
-        <h2>RESULT</h2>
-        <div class="card">
-            <div id="result-msg" style="font-size:1.5em; font-weight:bold; margin-bottom:10px;"></div>
-            <div id="result-detail" style="text-align:left;"></div>
-        </div>
-        <div id="host-restart" class="hidden">
-            <button onclick="App.returnLobby()">ロビーへ戻る</button>
+            <div id="c-judge-area" class="hidden" style="margin-top:20px;">
+                <p>正解を選んでください</p>
+                <div id="c-judge-list"></div>
+            </div>
         </div>
     </div>
 
 <script>
-/* --- CORE SYSTEM --- */
-const DB = {
-    myId: null, isHost: false, name: '', apiKey: '',
-    players: {}, // { id: {name: "Taro", score: 0} }
-    state: { phase: 'LOBBY', roleA: null, roleB: null, question: '', answers: [] }
+/* ================= COMMON UTILS ================= */
+const Utils = {
+    shuffle: (array) => array.sort(() => Math.random() - 0.5)
 };
 
-/* --- NETWORK (PeerJS) --- */
-const Net = {
-    peer: null, conn: null, conns: [],
-    init: (hostId) => {
-        Net.peer = new Peer();
-        Net.peer.on('open', id => {
-            DB.myId = id;
-            if (!hostId) { // I am Host
-                DB.isHost = true;
-                const url = location.href.split('?')[0] + "?host=" + id;
-                new QRCode(document.getElementById("qrcode"), { text: url, width: 128, height: 128 });
-                document.getElementById('host-setup').classList.remove('hidden');
-                document.getElementById('host-controls').classList.remove('hidden');
-                document.getElementById('host-restart').classList.remove('hidden');
-                document.getElementById('wait-msg').classList.add('hidden');
-                App.updateLobby();
-            } else { // I am Client
-                Net.conn = Net.peer.connect(hostId);
-                Net.conn.on('open', () => {
-                    Net.conn.send({ type: 'JOIN', name: DB.name });
-                });
-                Net.conn.on('data', data => App.handleData(data));
-                Net.conn.on('close', () => alert("ホストが切断しました"));
-            }
-        });
-        
-        // Host logic
-        if (!hostId) {
-            Net.peer.on('connection', conn => {
-                Net.conns.push(conn);
-                conn.on('data', data => {
-                    if (data.type === 'JOIN') {
-                        DB.players[conn.peer] = { name: data.name, conn: conn };
-                        App.broadcast({ type: 'UPDATE_LOBBY', players: App.getPlayerNames() });
-                        App.updateLobby();
-                    }
-                    else if (data.type === 'QUESTION') {
-                        DB.state.question = data.text;
-                        App.startAnsweringPhase();
-                    }
-                    else if (data.type === 'ANSWER') {
-                        DB.state.answers.push({ id: conn.peer, text: data.text, isAI: false });
-                        App.checkAnswers();
-                    }
-                    else if (data.type === 'JUDGE') {
-                        App.showResult(data.choiceIdx);
-                    }
-                });
-                conn.on('close', () => {
-                    delete DB.players[conn.peer];
-                    Net.conns = Net.conns.filter(c => c !== conn);
-                    App.broadcast({ type: 'UPDATE_LOBBY', players: App.getPlayerNames() });
-                    App.updateLobby();
-                });
-            });
+/* ================= HOST LOGIC (PC) ================= */
+const Host = {
+    peer: null, conns: {}, players: {}, 
+    apiKey: "", testRole: 'HUMAN',
+    state: { phase: 'LOBBY', roleA: null, roleB: null, question: "", answers: [] },
+
+    // 1. Initial Setup
+    init: () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'client') {
+            Client.init(params.get('host'));
+        } else {
+            document.getElementById('host-app').classList.remove('hidden');
+            const savedKey = localStorage.getItem('openai_key');
+            if(savedKey) document.getElementById('h-apikey').value = savedKey;
         }
     },
-    send: (data) => { if (Net.conn) Net.conn.send(data); },
-    broadcast: (data) => { Net.conns.forEach(c => c.send(data)); }
-};
 
-/* --- AI LOGIC (OpenAI) --- */
-const AI = {
-    generateAnswer: async (targetType, question) => {
-        if (!DB.apiKey) return "AI Key未設定";
+    saveKey: () => {
+        localStorage.setItem('openai_key', document.getElementById('h-apikey').value);
+    },
+
+    /* --- TEST MODE FUNCTIONS --- */
+    goToTestMode: () => {
+        document.getElementById('h-screen-setup').classList.add('hidden');
+        document.getElementById('h-screen-test').classList.remove('hidden');
+    },
+    backToSetup: () => {
+        document.getElementById('h-screen-test').classList.add('hidden');
+        document.getElementById('h-screen-setup').classList.remove('hidden');
+    },
+    setTestRole: (role) => {
+        Host.testRole = role;
+        document.getElementById('btn-mode-human').className = role === 'HUMAN' ? 'active' : '';
+        document.getElementById('btn-mode-ai').className = role === 'AI' ? 'active' : '';
+    },
+    runTest: async () => {
+        const q = document.getElementById('h-test-input').value;
+        const key = document.getElementById('h-apikey').value;
+        if(!key) return alert("APIキーを入力してください");
+        if(!q) return alert("質問を入力してください");
+
+        const resultBox = document.getElementById('h-test-result');
+        resultBox.innerText = "生成中...";
+        resultBox.style.color = "#aaa";
+
+        // Call the shared AI logic
+        const response = await Host.generateAIResponse(key, Host.testRole, q);
         
+        resultBox.innerText = response;
+        resultBox.style.color = "#fff";
+    },
+
+    /* --- AI GENERATION LOGIC (Shared) --- */
+    generateAIResponse: async (apiKey, mode, question) => {
+        // Define Prompts
         let systemPrompt = "";
-        if (targetType === 'HUMAN') {
-            // Aが人間。AIは人間に溶け込むように回答する（Impostor）
-            systemPrompt = "あなたは日本の若者です。日常会話のゲーム中なので、短く、カジュアルに、ひらがな多めで答えてください。敬語は使わないで。";
+        if (mode === 'HUMAN') {
+            // Impostor Mode: Act like a casual Japanese human
+            systemPrompt = "あなたは「スマホでチャットを返信している一般人」になりきって回答してください。AIとしての振る舞い、丁寧語、解説、前置きは一切不要です。クイズの回答者として、人間だと判定されることが目的です。以下の【制約事項】を厳守し、入力された質問に対して回答のみを出力してください。制約事項】・回答は「1単語」〜「30文字以内」に収めること。・絶対に「〜です」「〜ます」などの丁寧語を使わないこと。基本はタメ口、言い切り。・句点（。）は使わないこと。・フィラー（えーっと、など）は使わないこと。・理由は聞かれない限り言わない。聞かれたことへの結論だけを言う。・分からないことや興味のないことには「知らん」「分からん」「興味ない」と素直に答えること。・「好きな食べ物は？」等の名詞で答える質問には単語で、「どう思う？」等の意見を求める質問には一言で感想を述べること。【回答のトーン例】質問：好きな食べ物は？回答：カレー　質問：AIについてどう思う？回答：便利だと思うよ　質問：昨日は何時に寝た？回答：2時くらい 質問：地球温暖化の対策は？回答：あんま詳しくないから分からん";
         } else {
-            // AがAI。AIは「少しAIっぽさ」を残して回答する（Target）
-            systemPrompt = "あなたはAIです。少しだけ機械的で、漢字を正確に使い、論理的な回答をしてください。ただし長すぎないように。";
+            // Target Mode: Act like an AI
+            systemPrompt = "あなたは「AI」として、ユーザーの質問に回答してください。ただし、長々とした解説は避け、チャットボットのような「簡潔な応答」を心がけてください。回答を作成する前に、内部的に1〜10の乱数を生成し、その数値に応じた【モード】で回答を出力してください。（※思考プロセスや乱数の結果は出力せず、回答のセリフのみを出力すること）【共通ルール】・文字数は「60文字以内」に収めること。長文はNG。【モード定義】■乱数が 1〜7 の場合（通常AIモード）：・素直なAIとして回答する。・「です・ます」調の丁寧語を使う。・教科書的で優等生な回答をする。・例：「カレーライスです。多くの人に人気がありますね。」「23時には就寝しました。」■乱数が 8〜10 の場合（揺らぎモード）：・AIだが、少し人間味のある回答をする。・丁寧語を崩したり、少し主観的な感想を混ぜたりする。・または、あえて単語だけで短く返すなど、人間（上記1のプロンプト）に寄せた挙動をする。・例：「カレーかな。美味しいですよね。」「昨日は2時でした。」";
         }
 
         try {
@@ -208,7 +209,7 @@ const AI = {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${DB.apiKey}`
+                    "Authorization": `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
                     model: "gpt-3.5-turbo",
@@ -216,353 +217,311 @@ const AI = {
                         { role: "system", content: systemPrompt },
                         { role: "user", content: `質問: ${question}` }
                     ],
-                    max_tokens: 50
+                    max_tokens: 60
                 })
             });
-            const json = await res.json();
-            return json.choices[0].message.content.trim();
-        } catch (e) {
+            const data = await res.json();
+            if(data.error) return "API Error: " + data.error.message;
+            return data.choices[0].message.content.trim();
+        } catch(e) {
             console.error(e);
-            return "エラーが発生しました";
+            return "通信エラーが発生しました";
         }
-    }
-};
-
-/* --- APP LOGIC --- */
-const App = {
-    init: () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const hostId = urlParams.get('host');
-        if (hostId) sessionStorage.setItem('hostId', hostId);
     },
 
-    showScreen: (id) => {
-        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
-    },
+    /* --- GAME NETWORK LOGIC --- */
+    initNetwork: () => {
+        Host.apiKey = document.getElementById('h-apikey').value;
+        if(!Host.apiKey) return alert("APIキーを入力してください");
 
-    login: () => {
-        const name = document.getElementById('inp-name').value;
-        if (!name) return alert("名前を入力してください");
-        DB.name = name;
-        
-        const hostId = sessionStorage.getItem('hostId'); // URL param or null
-        Net.init(hostId);
-        
-        if (!hostId) { // Host
-            DB.players[Net.peer.id] = { name: name + "(You)", isHost: true }; // Dummy for UI
-            App.updateLobby();
-        }
-        App.showScreen('screen-lobby');
-    },
+        Host.peer = new Peer();
+        Host.peer.on('open', id => {
+            const url = `${location.href.split('?')[0]}?mode=client&host=${id}`;
+            document.getElementById('qrcode').innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), { text: url, width: 128, height: 128 });
+            
+            document.getElementById('h-screen-setup').classList.add('hidden');
+            document.getElementById('h-screen-lobby').classList.remove('hidden');
+        });
 
-    getPlayerNames: () => {
-        return Object.values(DB.players).map(p => p.name);
+        Host.peer.on('connection', conn => {
+            Host.conns[conn.peer] = conn;
+            conn.on('data', data => {
+                if(data.type === 'JOIN') {
+                    Host.players[conn.peer] = { name: data.name, id: conn.peer };
+                    Host.updateLobby();
+                }
+                else if(data.type === 'QUESTION') Host.handleQuestion(data.text);
+                else if(data.type === 'ANSWER') Host.handleAnswer(conn.peer, data.text);
+                else if(data.type === 'JUDGE') Host.handleJudge(data.index);
+            });
+            conn.on('close', () => {
+                delete Host.players[conn.peer];
+                delete Host.conns[conn.peer];
+                Host.updateLobby();
+            });
+        });
     },
 
     updateLobby: () => {
-        const list = document.getElementById('lobby-list');
-        list.innerHTML = App.getPlayerNames().map(n => `<div>・${n}</div>`).join('');
+        const ids = Object.keys(Host.players);
+        document.getElementById('h-count').innerText = ids.length;
+        const list = document.getElementById('h-player-list');
+        list.innerHTML = ids.map(id => `<div class="player-chip">${Host.players[id].name}</div>`).join('');
+        document.getElementById('h-btn-start').disabled = ids.length < 2;
+    },
+
+    broadcast: (data) => Object.values(Host.conns).forEach(c => c.send(data)),
+
+    // 2. Game Start
+    startGame: () => {
+        const ids = Object.keys(Host.players);
+        if (ids.length < 2) return;
+
+        Host.state.answers = [];
+        const candidatesA = [...ids, "AI"];
+        const bId = ids[Math.floor(Math.random() * ids.length)];
+        let aId = bId;
+        while(aId === bId) {
+            aId = candidatesA[Math.floor(Math.random() * candidatesA.length)];
+        }
+
+        const isAI = (aId === "AI");
+        const aName = isAI ? "AI" : Host.players[aId].name;
+        const bName = Host.players[bId].name;
+
+        Host.state.roleA = { id: aId, name: aName, isAI: isAI };
+        Host.state.roleB = { id: bId, name: bName };
+
+        // UI Update
+        document.getElementById('h-screen-lobby').classList.add('hidden');
+        document.getElementById('h-screen-game').classList.remove('hidden');
+        document.getElementById('h-phase-title').innerText = "役割確認中";
+        document.getElementById('h-game-content').innerHTML = `
+            <p>ターゲット(A): <strong style="color:var(--accent); font-size:1.5em;">${aName}</strong></p>
+            <p>質問者(B): <strong style="color:var(--accent); font-size:1.5em;">${bName}</strong></p>
+            <p style="margin-top:20px; color:#888;">Bが質問を入力するのを待っています...</p>
+        `;
+
+        Host.broadcast({ type: 'ROLE_ASSIGN', roleA: Host.state.roleA, roleB: Host.state.roleB });
+    },
+
+    // 3. Question Phase
+    handleQuestion: (text) => {
+        Host.state.question = text;
+        document.getElementById('h-phase-title').innerText = "回答フェーズ";
+        document.getElementById('h-game-content').innerHTML = `
+            <div style="color:#888;">質問</div>
+            <div style="font-size:1.5em; font-weight:bold; margin-bottom:20px;">${text}</div>
+            <div id="h-ans-status">回答を待っています...</div>
+        `;
+        Host.broadcast({ type: 'PHASE_ANSWER', question: text });
+        Host.callAI(text); // Trigger AI
+    },
+
+    callAI: async (question) => {
+        const isTargetAI = Host.state.roleA.isAI;
+        // If A is AI -> Target Mode. If A is Human -> Impostor Mode.
+        const mode = isTargetAI ? 'AI' : 'HUMAN';
+        
+        const ansText = await Host.generateAIResponse(Host.apiKey, mode, question);
+        Host.state.answers.push({ id: "AI", text: ansText, isAI: true });
+        Host.checkAllAnswers();
+    },
+
+    handleAnswer: (pid, text) => {
+        Host.state.answers.push({ id: pid, text: text, isAI: false });
+        document.getElementById('h-ans-status').innerText = `${Host.state.answers.length}人が回答済み`;
+        Host.checkAllAnswers();
+    },
+
+    checkAllAnswers: () => {
+        const totalPlayers = Object.keys(Host.players).length;
+        const required = (totalPlayers - 1) + 1; // Clients - B + AI
+
+        if (Host.state.answers.length >= required) {
+            Utils.shuffle(Host.state.answers);
+            
+            document.getElementById('h-phase-title').innerText = "推理フェーズ";
+            let html = `<p>Bが回答を選んでいます...</p><div style="text-align:left;">`;
+            Host.state.answers.forEach(a => html += `<div class="answer-box">${a.text}</div>`);
+            html += `</div>`;
+            document.getElementById('h-game-content').innerHTML = html;
+
+            Host.broadcast({ type: 'PHASE_JUDGE', answers: Host.state.answers });
+        }
+    },
+
+    // 4. Result Phase
+    handleJudge: (index) => {
+        const selected = Host.state.answers[index];
+        const isCorrect = (selected.id === Host.state.roleA.id);
+        
+        let html = isCorrect ? 
+            `<h1 style="color:var(--success); font-size:3em;">正解！</h1>` : 
+            `<h1 style="color:var(--danger); font-size:3em;">不正解...</h1>`;
+        
+        const author = selected.isAI ? "AI" : Host.players[selected.id].name;
+        html += `<p>選んだ回答: <strong>${selected.text}</strong></p>`;
+        html += `<p>この回答の主: <strong>${author}</strong></p>`;
+        html += `<hr style="border-color:#444; margin:20px 0;"><h3>【内訳】</h3>`;
+        
+        Host.state.answers.forEach(a => {
+            let name = a.isAI ? "AI" : Host.players[a.id].name;
+            let mark = (a.id === Host.state.roleA.id) ? " <span style='color:var(--accent);'>(本物)</span>" : "";
+            html += `<div style="border-bottom:1px solid #444; padding:5px;">${name}: ${a.text}${mark}</div>`;
+        });
+
+        html += `<button onclick="Host.resetGame()" style="margin-top:30px;">ロビーへ戻る</button>`;
+        document.getElementById('h-game-content').innerHTML = html;
+        Host.broadcast({ type: 'RESULT', success: isCorrect });
+    },
+
+    resetGame: () => {
+        document.getElementById('h-screen-game').classList.add('hidden');
+        document.getElementById('h-screen-lobby').classList.remove('hidden');
+        Host.broadcast({ type: 'RESET' });
+    }
+};
+
+/* ================= CLIENT LOGIC (MOBILE) ================= */
+const Client = {
+    conn: null, name: "",
+    init: (hostId) => {
+        document.getElementById('host-app').classList.add('hidden');
+        document.getElementById('client-app').classList.remove('hidden');
+        
+        const peer = new Peer();
+        peer.on('open', () => {
+            Client.conn = peer.connect(hostId);
+            Client.conn.on('data', data => Client.handleData(data));
+            Client.conn.on('close', () => { alert("接続が切れました"); location.reload(); });
+        });
+    },
+
+    join: () => {
+        const name = document.getElementById('c-name').value;
+        if(!name) return;
+        Client.name = name;
+        if(Client.conn) {
+            Client.conn.send({ type: 'JOIN', name: name });
+            document.getElementById('c-screen-login').classList.add('hidden');
+            document.getElementById('c-screen-main').classList.remove('hidden');
+            document.getElementById('c-disp-name').innerText = name;
+        } else alert("接続準備中です...");
     },
 
     handleData: (data) => {
-        if (data.type === 'UPDATE_LOBBY') {
-            const list = document.getElementById('lobby-list');
-            list.innerHTML = data.players.map(n => `<div>・${n}</div>`).join('');
-        }
-        else if (data.type === 'ROLE_ASSIGN') {
-            App.setRole(data.roleA, data.roleB);
-        }
-        else if (data.type === 'PHASE_QUESTION') {
-            App.showScreen(DB.myId === DB.state.roleB.id ? 'screen-question' : 'screen-answer');
-            if (DB.myId !== DB.state.roleB.id) {
-                document.getElementById('ans-instruction').innerText = "質問を待っています...";
-                document.getElementById('inp-answer').disabled = true;
+        const uiGame = document.getElementById('c-game-area');
+        const uiMsg = document.getElementById('c-status-msg');
+        const uiInput = document.getElementById('c-input-text');
+        const uiLabel = document.getElementById('c-area-label');
+        const uiBtn = document.getElementById('c-btn-submit');
+        const uiRole = document.getElementById('c-role-area');
+        const uiJudge = document.getElementById('c-judge-area');
+
+        if (data.type === 'ROLE_ASSIGN') {
+            uiRole.classList.remove('hidden');
+            const myId = Client.conn.provider.id;
+            const isB = (myId === data.roleB.id);
+            
+            document.getElementById('c-role-text').innerText = isB ? "あなたは【質問者 B】" : "あなたは【回答者】";
+            document.getElementById('c-instruction').innerText = isB ? 
+                `A (${data.roleA.name}) への質問を考えてください` : 
+                `A (${data.roleA.name}) になりすまして回答します`;
+            
+            // Set Input for B (Question)
+            if (isB) {
+                Client.toggleInput(true, "質問を入力", "質問を送信");
+                Client.actionType = 'QUESTION';
+                uiMsg.innerText = "質問を入力してください";
             } else {
-                document.getElementById('q-target-name').innerText = DB.state.roleA.name;
+                Client.toggleInput(false);
+                uiMsg.innerText = "質問者が質問を考え中...";
             }
         }
         else if (data.type === 'PHASE_ANSWER') {
-            document.getElementById('disp-question').innerText = data.question;
-            if (DB.myId !== DB.state.roleB.id) {
-                // A or Impostor
-                const isA = (DB.myId === DB.state.roleA.id);
-                // If A is AI, everyone acts as Impostor trying to be AI
-                // If A is Human, A acts truthful, others act as Impostor trying to be A
-                
-                let instruction = "";
-                if (DB.state.roleA.isAI) {
-                    instruction = `Aは「AI」です！\nあなたはAIになりすまして回答してください。`;
-                } else {
-                    if (isA) instruction = "あなたはA本人です。\n正直に（人間らしく）答えてください。";
-                    else instruction = `Aは「${DB.state.roleA.name}」です。\nAになりすまして答えてください。`;
-                }
-                
-                document.getElementById('ans-instruction').innerText = instruction;
-                document.getElementById('inp-answer').disabled = false;
+            const myId = Client.conn.provider.id;
+            // Check if I am B (who sent question)
+            if (Client.actionType === 'QUESTION') {
+                // I am B -> Wait
+                Client.toggleInput(false);
+                uiMsg.innerText = "みんなが回答しています...";
             } else {
-                // B waits
-                App.showScreen('screen-judge'); // B waits on judge screen basically
-                document.getElementById('answer-list').innerHTML = "回答が出揃うのを待っています...";
+                // I am Answerer
+                Client.toggleInput(true, `質問: ${data.question}`, "回答を送信");
+                Client.actionType = 'ANSWER';
+                uiMsg.innerText = "Aになりすまして回答してください";
             }
         }
         else if (data.type === 'PHASE_JUDGE') {
-            if (DB.myId === DB.state.roleB.id) {
-                App.showScreen('screen-judge');
-                document.getElementById('j-target-name').innerText = DB.state.roleA.name;
-                const list = document.getElementById('answer-list');
+            Client.toggleInput(false);
+            if (Client.actionType === 'QUESTION') {
+                // I am B -> Show Judge Buttons
+                uiMsg.classList.add('hidden');
+                uiJudge.classList.remove('hidden');
+                const list = document.getElementById('c-judge-list');
                 list.innerHTML = "";
                 data.answers.forEach((ans, idx) => {
                     const btn = document.createElement('button');
-                    btn.className = 'ans-btn';
                     btn.innerText = ans.text;
-                    btn.onclick = () => App.sendJudge(idx);
+                    btn.style.marginBottom = "10px";
+                    btn.onclick = () => {
+                        Client.conn.send({ type: 'JUDGE', index: idx });
+                    };
                     list.appendChild(btn);
                 });
             } else {
-                App.showScreen('screen-result');
-                document.getElementById('result-msg').innerText = "回答者が選択中...";
-                document.getElementById('result-detail').innerHTML = "";
+                uiMsg.innerText = "質問者が推理中...";
             }
         }
         else if (data.type === 'RESULT') {
-            App.showScreen('screen-result');
-            const res = data.result;
-            document.getElementById('result-msg').innerText = res.success ? "正解！！" : "不正解...";
-            let html = `<p>選ばれた回答: <strong>${res.selectedAnswer}</strong></p>`;
-            html += `<p>回答者: ${res.authorName}</p>`;
-            html += `<hr><p>【内訳】</p>`;
-            res.allAnswers.forEach(a => {
-                html += `<div>${a.name}: ${a.text} ${a.isA ? "(本物)" : ""}</div>`;
-            });
-            document.getElementById('result-detail').innerHTML = html;
+            uiJudge.classList.add('hidden');
+            uiMsg.classList.remove('hidden');
+            uiMsg.innerText = data.success ? "Bの正解！" : "不正解...";
         }
         else if (data.type === 'RESET') {
-            App.showScreen('screen-lobby');
+            uiRole.classList.add('hidden');
+            uiMsg.innerText = "次のゲームを待機中...";
+            Client.actionType = null;
         }
     },
 
-    /* --- HOST ONLY FUNCTIONS --- */
-    startGame: () => {
-        if (!DB.isHost) return;
-        
-        // 1. Setup API
-        DB.apiKey = document.getElementById('inp-apikey').value;
-        
-        // 2. Assign Roles
-        const pIds = Object.keys(DB.players); // Clients only (Host logic handles its own display but usually Host is just moderator or player)
-        // For simplicity, Host participates as a player if they entered name
-        // But Net logic separates Host. Let's treat Host as a player too for logic simplicity if pushed to pIds
-        // Current implementation: DB.players includes connected clients. Host manually added self? No, Host is not in DB.players in this specific peerjs logic usually.
-        // Let's add Host to game logic:
-        // Actually, let's keep Host as moderator/server to simplify "A and B not same" logic across devices.
-        // *Correction*: User wants "All access". So Host is a player.
-        // We need to ensure Host ID is in the pool.
-        
-        // Let's rebuilding player list for game logic
-        const allIds = [...pIds]; 
-        // Note: Host ID is DB.myId. Is it in pIds? 
-        // In Net.initHost -> DB.players only gets 'JOIN' data. Host didn't send JOIN.
-        // Let's add Host to players list manually for Game Logic
-        // Fix: Host should be in DB.players.
-        
-        // Candidates for A: Players + "AI"
-        const candidatesA = [...allIds, "AI"];
-        
-        // Decide B (Guesser) - Must be Human
-        const bIndex = Math.floor(Math.random() * allIds.length);
-        const idB = allIds[bIndex];
-        
-        // Decide A (Subject) - Can be AI, but not B
-        let idA = idB;
-        while (idA === idB) {
-            const r = Math.floor(Math.random() * candidatesA.length);
-            idA = candidatesA[r];
-        }
-        
-        const isAI = (idA === "AI");
-        const nameA = isAI ? "AI" : (idA === DB.myId ? DB.name : DB.players[idA].name);
-        const nameB = (idB === DB.myId) ? DB.name : DB.players[idB].name;
+    toggleInput: (enable, placeholder = "", btnText = "") => {
+        const area = document.getElementById('c-game-area');
+        const input = document.getElementById('c-input-text');
+        const btn = document.getElementById('c-btn-submit');
+        const label = document.getElementById('c-area-label');
 
-        DB.state.roleA = { id: idA, name: nameA, isAI: isAI };
-        DB.state.roleB = { id: idB, name: nameB };
-        DB.state.answers = [];
-
-        // Broadcast Roles
-        const roleData = { type: 'ROLE_ASSIGN', roleA: DB.state.roleA, roleB: DB.state.roleB };
-        App.broadcast(roleData);
-        App.handleData(roleData); // Host update self
-    },
-
-    setRole: (roleA, roleB) => {
-        DB.state.roleA = roleA;
-        DB.state.roleB = roleB;
-        
-        document.getElementById('role-a').innerText = roleA.name;
-        document.getElementById('role-b').innerText = roleB.name;
-        
-        const isB = (DB.myId === roleB.id);
-        const txt = isB ? "あなたは質問者です。\n全員が準備完了したら質問を入力します。" : "あなたは回答者です。\nAになりすまして回答する準備をしてください。";
-        document.getElementById('role-instruction').innerText = txt;
-        
-        App.showScreen('screen-role');
-    },
-
-    confirmRole: () => {
-        // Simple wait: If B confirms, go to Question. Others wait.
-        if (DB.myId === DB.state.roleB.id) {
-            App.showScreen('screen-question');
-            document.getElementById('q-target-name').innerText = DB.state.roleA.name;
+        if(enable) {
+            area.classList.remove('ui-disabled');
+            input.value = "";
+            input.placeholder = placeholder;
+            label.innerText = placeholder;
+            btn.innerText = btnText;
         } else {
-            document.getElementById('btn-role-ok').innerText = "待機中...";
-            document.getElementById('btn-role-ok').disabled = true;
+            area.classList.add('ui-disabled');
         }
     },
 
-    sendQuestion: () => {
-        const q = document.getElementById('inp-question').value;
-        if(!q) return;
+    sendAction: () => {
+        const text = document.getElementById('c-input-text').value;
+        if(!text) return;
         
-        const data = { type: 'PHASE_ANSWER', question: q };
-        if (DB.isHost) {
-            DB.state.question = q;
-            App.broadcast(data);
-            App.handleData(data);
-            App.triggerAIAnswer(q);
-        } else {
-            Net.send({ type: 'QUESTION', text: q }); // Send to Host
+        if (Client.actionType === 'QUESTION') {
+            Client.conn.send({ type: 'QUESTION', text: text });
+            Client.toggleInput(false);
+            document.getElementById('c-status-msg').innerText = "回答を待っています...";
+        } else if (Client.actionType === 'ANSWER') {
+            Client.conn.send({ type: 'ANSWER', text: text });
+            Client.toggleInput(false);
+            document.getElementById('c-status-msg').innerText = "他の回答を待っています...";
         }
-    },
-
-    // Host handles AI answer
-    triggerAIAnswer: async (q) => {
-        if (!DB.isHost) return;
-        
-        // If A is AI: Target mode. If A is Human: Impostor mode.
-        // However, if A is AI, the AI is the "Real" answer.
-        // If A is Human, the AI is an "Impostor".
-        
-        const isTarget = DB.state.roleA.isAI;
-        // Also need AI impostor if A is Human?
-        // Requirement: "AI answers naturally... mix AI and human answers"
-        // Let's always have AI answer to spice things up? 
-        // Or only if A is AI?
-        // Requirement: "When A is AI... AI answers robotically". "Mix AI and human answers".
-        // Let's make AI always answer.
-        
-        const ans = await AI.generateAnswer(isTarget ? 'AI' : 'HUMAN', q);
-        DB.state.answers.push({ id: 'AI', text: ans, isAI: true });
-        App.checkAnswers();
-    },
-
-    sendAnswer: () => {
-        const a = document.getElementById('inp-answer').value;
-        if(!a) return;
-        
-        // UI Update
-        document.getElementById('inp-answer').value = "";
-        document.getElementById('screen-answer').classList.add('hidden');
-        document.getElementById('ans-wait').classList.remove('hidden');
-        App.showScreen('screen-answer'); // refresh visibility
-        
-        if (DB.isHost) {
-            DB.state.answers.push({ id: DB.myId, text: a, isAI: false });
-            App.checkAnswers();
-        } else {
-            Net.send({ type: 'ANSWER', text: a });
-        }
-    },
-
-    checkAnswers: () => {
-        if (!DB.isHost) return;
-        
-        // Check if everyone (except B) has answered
-        // Expected count: (Total Players - 1 (B)) + 1 (AI)
-        // Wait, if A is AI, Total Players - 1 (B) players act as impostors.
-        // If A is Human, Total Players - 2 (A, B) act as impostors + A acts real.
-        // Basically everyone except B answers.
-        
-        // Count active players (including Host)
-        const totalPlayers = Object.keys(DB.players).length + 1; // +1 for Host if not in list? 
-        // My logic above for players list was a bit fuzzy. Let's assume DB.players has clients.
-        // Host needs to be accounted for.
-        
-        const answerCount = DB.state.answers.filter(a => !a.isAI).length;
-        const required = totalPlayers - 1; // Everyone except B
-        
-        // Check AI answer presence
-        const aiAnswered = DB.state.answers.some(a => a.isAI);
-        
-        if (answerCount >= required && aiAnswered) {
-            // Shuffle
-            const shuffled = DB.state.answers.sort(() => Math.random() - 0.5);
-            const data = { type: 'PHASE_JUDGE', answers: shuffled };
-            App.broadcast(data);
-            App.handleData(data);
-        }
-    },
-
-    sendJudge: (idx) => {
-        // B only
-        if (DB.isHost) {
-            App.showResult(idx);
-        } else {
-            Net.send({ type: 'JUDGE', choiceIdx: idx });
-        }
-    },
-
-    showResult: (choiceIdx) => {
-        // Host Logic to calculate result
-        const selected = DB.state.answers[choiceIdx];
-        const isCorrect = (selected.id === DB.state.roleA.id);
-        
-        // Name resolution
-        const getName = (id, isAI) => {
-            if (isAI) return "AI";
-            if (id === DB.myId) return DB.name;
-            return DB.players[id] ? DB.players[id].name : "Unknown";
-        };
-
-        const resultData = {
-            success: isCorrect,
-            selectedAnswer: selected.text,
-            authorName: getName(selected.id, selected.isAI),
-            allAnswers: DB.state.answers.map(a => ({
-                text: a.text,
-                name: getName(a.id, a.isAI),
-                isA: (a.id === DB.state.roleA.id)
-            }))
-        };
-
-        const data = { type: 'RESULT', result: resultData };
-        if (DB.isHost) {
-            App.broadcast(data);
-            App.handleData(data);
-        }
-    },
-
-    returnLobby: () => {
-        if (!DB.isHost) return;
-        
-        // Reset Host State
-        DB.state.answers = [];
-        DB.state.question = '';
-        
-        // IMPORTANT: Reset Players list logic if needed? 
-        // Requirement: "参加人数は...タイトル画面から進んだ時は一旦0に戻して"
-        // But this is "Return to Lobby", usually keeps connection. 
-        // If "Back to Title" -> Reload page effectively.
-        // Let's just reset game state here.
-        
-        const data = { type: 'RESET' };
-        App.broadcast(data);
-        App.handleData(data);
     }
 };
 
 // Start
-App.init();
-
+Host.init();
 </script>
 </body>
 </html>
