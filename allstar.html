@@ -3,662 +3,942 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V9.0 (Start Signal Ver)</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>All-Star Quiz System V39</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&family=Anton&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #121212; --panel: #1e1e1e; --text: #ffffff;
-            --c1: #64b5f6; --c2: #81c784; --c3: #fff176; --c4: #ffb74d; --c5: #e57373;
-        }
-        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'M PLUS Rounded 1c', sans-serif; overflow: hidden; }
+        :root { --col-1: #0088ff; --col-2: #ff2222; --col-3: #00cc00; --col-4: #ffcc00; }
+        body { margin: 0; padding: 0; font-family: 'M PLUS Rounded 1c', sans-serif; width: 100vw; min-height: 100vh; overflow: hidden; user-select: none; background-color: #000; }
         .hidden { display: none !important; }
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .flex-center { display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .full-screen { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         
-        /* COLORS */
-        .color-1 { background-color: var(--c1); color: #000; }
-        .color-2 { background-color: var(--c2); color: #000; }
-        .color-3 { background-color: var(--c3); color: #000; }
-        .color-4 { background-color: var(--c4); color: #000; }
-        .color-5 { background-color: var(--c5); color: #000; }
-
-        /* COMMON */
-        h1, h2, h3 { font-family: 'Black Ops One', cursive; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
-        button { cursor: pointer; border: none; outline: none; transition: 0.2s; font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: bold; }
-        button:active { transform: scale(0.98); }
-        input, select, textarea { background: #333; border: 1px solid #555; color: #fff; padding: 10px; border-radius: 5px; font-size: 16px; }
-        input[type="range"] { -webkit-appearance: none; background: #444; height: 8px; border-radius: 5px; outline: none; padding: 0; border: none; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #fff; border-radius: 50%; cursor: pointer; }
-
-        /* HOST STYLES */
-        .btn-large { padding: 20px 60px; font-size: 24px; border-radius: 50px; background: linear-gradient(45deg, #444, #666); color: #fff; border: 2px solid #fff; margin: 15px; }
-        .btn-sub { padding: 10px 20px; font-size: 14px; border-radius: 5px; background: #333; color: #aaa; border: 1px solid #555; }
-        .btn-action { padding: 5px 10px; background: #555; color: #fff; border-radius: 4px; font-size: 12px; margin-left: 2px;}
-        .btn-action:hover { background: #777; }
-        
-        /* SETTINGS LAYOUT */
-        .settings-container { display: flex; width: 95%; max-width: 1000px; height: 85vh; background: var(--panel); border-radius: 10px; overflow: hidden; border: 1px solid #444; }
-        .settings-sidebar { width: 280px; background: #181818; border-right: 1px solid #444; display: flex; flex-direction: column; }
-        .set-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        .set-item { padding: 10px 15px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .set-item:hover { background: #252525; }
-        .set-item.active { background: #333; border-left: 4px solid var(--c1); }
-        .set-controls { display: flex; align-items: center; }
-        .settings-main { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; }
-        
-        .config-block { background:#252525; padding:15px; border-radius:8px; margin-bottom:20px; }
-        .config-title { font-size:14px; color:#aaa; margin-bottom:10px; font-weight:bold; border-bottom:1px solid #444; padding-bottom:5px; display:flex; justify-content:space-between; }
-
-        /* GAMEPLAY HOST */
-        .timer-box { position: absolute; top: 20px; right: 20px; font-size: 48px; font-family: 'Black Ops One'; color: #fff; }
-        .question-list { display: flex; flex-direction: column; gap: 15px; width: 90%; max-width: 1600px; margin: 20px auto; height: 80vh; justify-content: center; }
-        .q-bar { display: flex; align-items: center; background: #222; border-radius: 8px; overflow: hidden; height: 15%; border: 1px solid #444; transition: 0.3s; }
-        .q-bar-pt { width: 80px; height: 100%; display: flex; align-items: center; justify-content: center; font-family: 'Black Ops One'; font-size: 32px; flex-shrink: 0; }
-        .q-bar-text { flex: 1; padding: 0 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .q-bar.solved { opacity: 0.3; filter: grayscale(100%); text-decoration: line-through; }
-
-        /* JUDGING */
-        .judge-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
-        .ranking-box { width: 80%; max-width: 800px; max-height: 70vh; overflow-y: auto; background: rgba(30,30,30,0.9); border: 1px solid #555; border-radius: 10px; padding: 20px; }
-        .rank-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #444; font-size: 24px; transition: 0.3s; }
-        .rank-row.focused { background: #444; border-left: 5px solid #fff; }
-        .rank-order { width: 50px; color: #888; font-family: 'Black Ops One'; }
-        .rank-name { width: 250px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .rank-detail { flex: 1; display: flex; align-items: center; gap: 15px; opacity: 0; transform: translateX(-10px); transition: 0.3s; }
-        .rank-detail.visible { opacity: 1; transform: translateX(0); }
-        .rank-pt-badge { padding: 5px 15px; border-radius: 20px; font-weight: bold; font-family: 'Black Ops One'; font-size: 20px; }
-        .rank-ans { font-weight: bold; font-size: 28px; color: #ffeb3b; }
-        
-        .judge-ui-top { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: rgba(0,0,0,0.9); border-bottom: 2px solid #fff; text-align: center; font-size: 32px; font-weight: bold; z-index: 10; transform: translateY(-100%); transition: 0.3s; }
-        .judge-ui-top.active { transform: translateY(0); }
-        .judge-ui-bottom { position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px; background: rgba(0,0,0,0.9); border-top: 2px solid #fff; display: flex; justify-content: center; gap: 50px; z-index: 10; transform: translateY(100%); transition: 0.3s; }
-        .judge-ui-bottom.active { transform: translateY(0); }
-        .btn-judge { width: 100px; height: 100px; border-radius: 50%; font-size: 40px; font-weight: bold; cursor: pointer; }
-        .btn-ok { background: #22aa22; color: #fff; border: 4px solid #cfc; box-shadow: 0 0 20px #2f2; }
-        .btn-ng { background: #aa2222; color: #fff; border: 4px solid #fcc; box-shadow: 0 0 20px #f22; }
-        .judge-alert { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; color: #ff5252; font-weight: bold; text-shadow: 2px 2px 0 #000; border: 3px solid #ff5252; padding: 20px; background: rgba(0,0,0,0.8); z-index: 20; animation: blink 0.5s infinite alternate; }
-        @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
-
-        /* DEBUGGER STYLES */
-        .debug-container { 
-            width: 100%; height: 100%; padding: 20px; box-sizing: border-box; 
-            display: flex; flex-direction: column; background: #222;
+        /* 背景 */
+        .tv-background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 2px), radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 3px), linear-gradient(135deg, #00bfff 0%, #00008b 100%);
+            background-size: 550px 550px, 350px 350px, 250px 250px, 100% 100%; animation: bgMove 60s linear infinite;
         }
-        .debug-header { 
-            background: #333; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 20px; border: 1px solid #555;
-        }
-        .debug-grid {
-            flex: 1; overflow-y: auto; 
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
-            gap: 10px; align-content: start;
-        }
-        .debug-card {
-            background: #1a1a1a; border: 1px solid #444; border-radius: 8px; padding: 10px;
-            display: flex; flex-direction: column; gap: 5px;
-        }
-        .debug-card.done { opacity: 0.5; border-color: var(--c2); }
-        
-        .debug-name-row { display: flex; justify-content: space-between; font-weight: bold; color: #aaa; font-size: 14px; }
-        .debug-status-text { font-size: 10px; color: #666; }
-        
-        .debug-pt-row { display: flex; gap: 5px; }
-        .d-pt-btn { 
-            flex: 1; aspect-ratio: 1; background: #333; border: 1px solid #555; color: #888; 
-            font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer;
-        }
-        .d-pt-btn.selected { color: #000; border: 2px solid #fff; }
-        
-        .d-input { width: 100%; background: #000; border: 1px solid #555; color: #fff; padding: 5px; box-sizing: border-box; text-align: center; }
-        .d-send { width: 100%; background: #555; color: #fff; padding: 5px; cursor: pointer; border-radius: 4px; }
-        .d-send.active { background: var(--c1); }
+        @keyframes bgMove { from { background-position: 0 0, 40px 60px, 130px 270px, 0 0; } to { background-position: 550px 550px, 390px 410px, 380px 820px, 0 0; } }
 
-        /* OVERLAYS */
-        .count-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index: 50; display: none; align-items: center; justify-content: center; font-size: 200px; color: #fff; font-family: 'Black Ops One'; }
-        .solved-mark { color: #22aa22; font-weight: bold; margin-left: 10px; }
-        .failed-mark { color: #aa2222; font-weight: bold; margin-left: 10px; }
-
-        /* PLAYER SPECIFIC UI */
-        .ui-disabled {
-            opacity: 0.3;
-            pointer-events: none;
-            filter: grayscale(100%);
+        /* TITLE */
+        #title-view { z-index: 100; position: relative; height: 100vh; width: 100vw; }
+        .title-logo-container { position: relative; margin-top: 8vh; margin-bottom: 5vh; transform: scale(1.3); text-align: center; }
+        .title-logo-main {
+            font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 900; font-size: 100px; line-height: 1;
+            color: #ffd700; background: linear-gradient(to bottom, #fffebb 0%, #ffd700 50%, #b8860b 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 5px 0 #5c3a00) drop-shadow(0 0 5px #fff) drop-shadow(0 10px 20px #000);
+            transform: perspective(500px) rotateX(20deg); letter-spacing: -5px; margin-top: 10px;
+            -webkit-text-stroke: 2px #b8860b;
         }
-        .p-container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; text-align: center; }
-        .p-status { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; border: 1px solid #444; font-size: 18px; }
-        .p-pt-select { display: flex; justify-content: space-between; gap: 5px; margin-bottom: 20px; }
-        .btn-pt { flex: 1; aspect-ratio: 1.2; border-radius: 8px; border: none; font-size: 18px; font-weight: bold; font-family: 'Black Ops One'; opacity: 0.6; transition: 0.2s; }
-        .btn-pt.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.5); border: 2px solid #fff; }
-        .p-input { width: 100%; height: 60px; padding: 0 15px; font-size: 24px; box-sizing: border-box; margin-bottom: 20px; border-radius: 10px; border: 2px solid #555; background: #000; color: #fff; text-align: center; line-height: 60px; }
-        .btn-send { width: 100%; padding: 15px; font-size: 24px; font-weight: bold; background: #fff; color: #000; border: none; border-radius: 10px; }
-        .btn-send:disabled { background: #555; color: #888; }
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: none; z-index: 100; align-items: center; justify-content: center; }
-        .modal-content { background: #222; padding: 30px; border-radius: 15px; border: 2px solid #fff; text-align: center; max-width: 90%; }
+        .title-logo-sub {
+            position: absolute; top: -30px; left: 50%; transform: translateX(-50%) perspective(500px) rotateX(20deg);
+            font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 900; font-size: 40px;
+            background: linear-gradient(to right, #ff0000, #ffaa00, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(2px 2px 0 #000) drop-shadow(0 0 10px #fff); 
+            white-space: nowrap; z-index: 2; letter-spacing: 2px;
+            -webkit-text-stroke: 1px #fff;
+        }
+        .title-btn {
+            width: 400px; padding: 20px; margin: 15px; font-size: 32px; font-weight: 900; color: #fff;
+            border-radius: 50px; cursor: pointer; border: 4px solid #fff;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.3);
+            text-shadow: 2px 2px 4px #000; transition: 0.2s; font-family: 'Anton'; letter-spacing: 2px;
+        }
+        .btn-start-big { background: linear-gradient(to bottom, #ff3333, #aa0000); font-size: 40px; padding: 30px; }
+        .btn-start-big:hover { transform: scale(1.05); background: linear-gradient(to bottom, #ff5555, #cc0000); }
+        .btn-settings { background: linear-gradient(to bottom, #0066ff, #003399); width: 250px; font-size: 24px; }
+        .btn-settings:hover { transform: scale(1.05); background: linear-gradient(to bottom, #4488ff, #0055cc); }
+
+        /* SETUP */
+        #setup-view { background: #1a1a1a; color: #fff; position: relative; height: 100vh; } 
+        .setup-container { width: 950px; max-width: 95%; height: 90vh; background: #2a2a2a; border-radius: 10px; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; } 
+        .setup-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; border-bottom: 1px solid #555; padding-bottom: 10px; }
+        .setup-body { flex: 1; overflow-y: auto; padding-right: 5px; position: relative; } 
         
-        .conn-status { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; margin-right: 5px; }
-        .conn-status.on { background: #2f2; box-shadow: 0 0 5px #2f2; }
+        .setup-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; padding: 20px; }
+        .setup-menu-btn {
+            background: linear-gradient(to bottom, #444, #222); border: 2px solid #888; border-radius: 15px;
+            padding: 30px; font-size: 28px; font-weight: bold; color: #fff; cursor: pointer; text-align: left;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: 0.2s;
+        }
+        .setup-menu-btn:hover { background: linear-gradient(to bottom, #666, #333); transform: scale(1.02); border-color: #fff; }
+        .setup-menu-icon { font-size: 40px; margin-right: 20px; }
+
+        .connect-info-box { background: #000; border: 2px solid #00ff00; padding: 15px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .qr-area { background: #fff; padding: 5px; border-radius: 5px; min-width: 150px; min-height: 150px; display: flex; align-items: center; justify-content: center; }
+        .url-area { flex: 1; margin-left: 20px; }
+        .url-input { width: 100%; background: #222; color: #0f0; border: 1px solid #00ff00; padding: 10px; font-family: monospace; font-size: 16px; margin-top: 5px; }
+        
+        input[type="text"], select { background: #111; color: #fff; border: 1px solid #555; padding: 5px; } 
+        .p-card { background: #333; padding: 20px; margin-bottom: 30px; border: 2px solid #555; border-radius: 10px; position: relative; } 
+        .p-card::before { content: "PERIOD"; position: absolute; top: -12px; left: 20px; background: #555; padding: 0 10px; font-weight: bold; font-size: 14px; border-radius: 5px; }
+        .q-card { background: #222; padding: 15px; margin-bottom: 15px; border: 1px solid #444; border-radius: 8px; } 
+        .sort-card { background: linear-gradient(to bottom, #332200, #221100); border: 2px solid #ffd700; padding: 15px; margin-top: 15px; border-radius: 8px; }
+        
+        /* Drag & Drop Area */
+        .drop-area { 
+            border: 2px dashed #666; background: #151515; padding: 10px; text-align: center; color: #aaa; cursor: pointer; transition: 0.2s; position: relative; height: 60px; display:flex; align-items:center; justify-content:center;
+        }
+        .drop-area:hover, .drop-area.dragover { background: #333; border-color: #fff; color: #fff; }
+        .drop-preview { height: 100%; max-width: 100%; object-fit: contain; }
+        
+        .btn { padding: 8px 16px; border-radius: 5px; cursor: pointer; border: none; font-weight: bold; color: #fff; } 
+        .btn-blue { background: #0066ff; } .btn-red { background: #cc0000; } .btn-green { background: #00aa00; }
+        .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+
+        /* HOST GAME */
+        #host-view { display: flex; padding: 20px; box-sizing: border-box; position: relative; height: 100vh; flex-direction: column; }
+        #period-select-view { background: rgba(0,0,0,1); z-index: 800; }
+        .period-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; width: 90%; max-height: 70%; overflow-y: auto; padding: 20px; }
+        .period-btn { background: linear-gradient(to bottom, #cc8800, #884400); border: 3px solid #ffcc00; border-radius: 15px; padding: 30px 20px; color: #fff; font-size: 28px; font-weight: 900; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); text-align: center; font-family: 'Anton'; letter-spacing: 2px; }
+        
+        /* Game Layout */
+        .layout-text { flex-direction: column; width: 100%; height: 100%; }
+        /* Q-Container height reduced to 12% */
+        .q-container { width: 90%; height: 12%; margin: 20px auto 30px auto; position: relative; background: linear-gradient(to right, #3a0088, #5500aa, #3a0088); border-radius: 15px; padding: 5px; border: 2px solid #aaa; display: flex; align-items: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.3); flex-shrink: 0; }
+        .q-icon { font-family: 'Anton'; font-size: 80px; color: #00ffff; text-shadow: 3px 3px 0 #004444, 0 0 10px #00ffff; margin: 0 20px; transform: skewX(-10deg); }
+        .q-text-box { flex: 1; background: #fff; border-radius: 10px; padding: 10px; height: 80%; display: flex; align-items: center; justify-content: center; }
+        .q-text-content { color: #000066; font-size: 3.0vw; font-weight: 900; text-align: center; line-height: 1.2; }
+        
+        /* Options Area (Shared Space) */
+        .options-area { 
+            flex: 1; 
+            width: 90%; margin: 0 auto 5vh auto;
+            position: relative;
+        }
+        
+        /* Layout: Text */
+        .layout-text .options-area {
+            display: flex; flex-direction: column; gap: 15px; justify-content: space-between;
+        }
+        .layout-text .option-panel { 
+            width: 100%; height: 80px; 
+            background: linear-gradient(to bottom, #222, #000); 
+            border-radius: 45px; border: 2px solid #555; 
+            display: flex; align-items: center; padding: 0 10px; position: relative; overflow: hidden; 
+        }
+        .layout-text .opt-num {
+            width: 60px; height: 60px; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            font-family: 'Anton'; font-size: 36px; color: #fff; border: 3px solid #fff; 
+            margin-right: 20px; flex-shrink: 0; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); 
+            box-shadow: 0 3px 5px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.4); 
+            z-index: 5; 
+        }
+
+        /* Layout: Image (2x2 Grid) */
+        .layout-image .options-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 20px;
+            width: 53%; 
+            margin: 0 auto; 
+            justify-content: center;
+            align-content: center;
+        }
+        .layout-image .option-panel {
+            width: 100%; height: auto; padding: 0;
+            border-radius: 20px; background: #000; border: 4px solid #fff;
+            position: relative; overflow: hidden;
+            aspect-ratio: 3 / 2; /* 3:2 Ratio */
+        }
+        
+        .layout-image .opt-num { 
+            position: absolute; top: 10px; left: 10px; margin: 0; 
+            width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff; 
+            font-family: 'Anton'; font-size: 36px; color: #fff;
+            display: flex; justify-content: center; align-items: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); 
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+
+        /* Shared Option Content */
+        .opt-val { color: #fff; font-size: 3vw; font-weight: 900; text-shadow: 0 0 5px #00f; flex: 1; position: relative; height: 100%; display: flex; align-items: center; }
+        
+        /* Image Styling - FORCE STRETCH */
+        .opt-img { 
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: fill; 
+            transform-origin: center center;
+            z-index: 1; 
+        }
+        
+        /* Zoom Effect */
+        .zoom-anim .opt-img { animation: zoomOut 10s linear forwards; }
+        @keyframes zoomOut { from { transform: scale(5.0); } to { transform: scale(1.0); } }
+
+        /* Normal Vote Count */
+        .vote-count { position: absolute; right: 30px; font-family: 'Anton'; font-size: 50px; color: #ffd700; text-shadow: 2px 2px 0 #000; opacity: 0; z-index: 10; }
+        
+        /* Image Layout Vote Count */
+        .layout-image .vote-count {
+            position: absolute;
+            bottom: 10px; right: 10px;
+            background: #0044aa; border: 3px solid #fff; border-radius: 15px;
+            padding: 0 20px; min-width: 60px; font-size: 40px; text-align: center;
+            opacity: 0; z-index: 20;
+        }
+
+        .col-1 { background: radial-gradient(circle at 30% 30%, #44aaff, var(--col-1)); border-color: #fff; } .col-2 { background: radial-gradient(circle at 30% 30%, #ff6666, var(--col-2)); border-color: #fff; } .col-3 { background: radial-gradient(circle at 30% 30%, #66ff66, var(--col-3)); border-color: #fff; } .col-4 { background: radial-gradient(circle at 30% 30%, #ffff66, var(--col-4)); border-color: #fff; }
+        .border-1 { border-color: var(--col-1)!important; } .border-2 { border-color: var(--col-2)!important; } .border-3 { border-color: var(--col-3)!important; } .border-4 { border-color: var(--col-4)!important; }
+        .dimmed { filter: grayscale(100%) brightness(0.3); opacity: 0.6; } .highlighted { animation: flash 0.4s infinite alternate; z-index: 20; box-shadow: 0 0 50px #fff; border-color: #fff !important; }
+        @keyframes flash { from { filter: brightness(100%); } to { filter: brightness(150%); } }
+        
+        #timer-display { position: absolute; bottom: 30px; right: 30px; width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #555, #000); border: 6px solid #fff; box-shadow: 0 0 30px #f00; display: flex; justify-content: center; align-items: center; z-index: 100; }
+        #timer-text { font-family: 'Anton'; font-size: 70px; color: #ff0000; text-shadow: 0 0 10px #ff0000; }
+
+        /* Sort Result View */
+        #sort-result-view { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index: 60; display:flex; align-items:center; justify-content:center; }
+        .sort-compare-container { display:flex; gap: 50px; }
+        .champ-ans-col { display: flex; flex-direction: column; gap: 20px; align-items: center; transition: 0.5s; }
+        .correct-ans-col { display: flex; flex-direction: column; gap: 20px; }
+        .sort-bubble { width: 80px; height: 80px; border-radius: 50%; border: 4px solid #fff; display:flex; justify-content:center; align-items:center; font-family:'Anton'; font-size: 40px; color:#fff; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .sort-row-correct { display: flex; align-items: center; gap: 20px; opacity: 0; transform: translateX(50px); transition: 0.5s; }
+        .sort-row-correct.visible { opacity: 1; transform: translateX(0); }
+        .sort-text-box { background: linear-gradient(to right, #003399, #0066ff); border: 2px solid #fff; border-radius: 40px; padding: 10px 30px; color: #fff; font-size: 28px; font-weight: 900; width: 400px; }
+        .dimmed-all { filter: grayscale(100%) brightness(0.3); opacity: 0.5; }
+
+        /* Period End & Ranking */
+        #period-end-view { background: rgba(0,0,0,0.95); z-index: 200; color: #fff; text-align: center; }
+        .champ-box { background: linear-gradient(to right, #b8860b, #ffd700); padding: 30px 50px; border-radius: 20px; border: 5px solid #fff; box-shadow: 0 0 50px #ffd700; animation: popIn 1s; display:inline-block; }
+        #ranking-modal { background: rgba(0,0,0,0.95); z-index: 200; } .ranking-board { display: flex; width: 95%; max-width: 1000px; height: 80%; background: linear-gradient(to right, #0033cc, #0066ff); border: 4px solid #4488ff; border-radius: 20px; padding: 20px; position: relative; } .ranking-sidebar { width: 100px; margin-right: 15px; background: linear-gradient(to bottom, #00eeff 0%, #0088ff 50%, #0044aa 100%); border-radius: 15px; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; } .side-text { writing-mode: vertical-rl; text-orientation: upright; font-weight: 900; font-size: 42px; color: #002266; letter-spacing: 5px; } .rank-list-area { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: hidden; justify-content: center; } .rank-row { height: 65px; background: linear-gradient(to bottom, #0055aa, #002288); border: 2px solid #66aaff; border-radius: 10px; display: flex; align-items: center; padding: 0 15px; color: #fff; font-size: 32px; font-weight: 800; animation: slideRank 0.5s ease-out forwards; } @keyframes slideRank { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } } .rank-num { width: 60px; text-align: right; margin-right: 20px; font-family: 'Anton'; } .rank-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rank-score-box { background: #000033; border: 2px solid #4488ff; border-radius: 5px; padding: 0 15px; min-width: 100px; text-align: right; font-family: 'Anton'; font-size: 38px; color: #ffdd00; }
+
+        /* --- CLIENT --- */
+        #client-view { background: #000; position: relative; height: 100vh; display: flex; flex-direction: column; }
+        .tv-background-client { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: linear-gradient(135deg, #001133 0%, #000000 100%); }
+        #client-score { 
+            width: 100%; height: 60px; background: linear-gradient(to bottom, #222, #000); 
+            color: #ffd700; text-align: center; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: 900; border-bottom: 2px solid #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.3);
+        }
+        
+        #client-main-area {
+            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative; width: 100%;
+        }
+
+        #client-msg-area {
+            width: 100%; text-align: center; margin-bottom: 30px; min-height: 80px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .client-status-text { color: #fff; font-size: 28px; font-weight: bold; text-shadow: 0 0 5px #0af; }
+        
+        /* Static Result Text */
+        .res-win { display:inline-block; font-family: 'M PLUS Rounded 1c'; font-weight: 900; font-size: 60px; color: #ffd700; text-shadow: 0 0 20px #ff0000, 2px 2px 0 #000; border: 4px solid #fff; padding: 5px 30px; border-radius: 15px; background: rgba(200,0,0,0.9); transform: rotate(-5deg); }
+        .res-lose { display:inline-block; font-family: 'M PLUS Rounded 1c'; font-weight: 900; font-size: 60px; color: #ccc; text-shadow: 0 0 20px #000; border: 4px solid #888; padding: 5px 30px; border-radius: 15px; background: rgba(50,50,50,0.9); transform: rotate(5deg); }
+
+        /* Button Area */
+        #client-pad { 
+            display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 15px;
+            width: 100%;
+        }
+        .ans-btn { 
+            width: 20vw; height: 20vw; max-width: 130px; max-height: 130px;
+            border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; 
+            font-family: 'Anton'; font-size: 40px; color: #fff; 
+            display: flex; justify-content: center; align-items: center; 
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5), inset 0 5px 10px rgba(255,255,255,0.2); 
+            transition: 0.1s; text-shadow: 2px 2px 0 rgba(0,0,0,0.5); cursor: pointer;
+        }
+        .ans-btn:active { transform: scale(0.95); filter: brightness(1.2); border-color: #fff; }
+        .btn-1 { background: radial-gradient(circle at 30% 30%, #44aaff, var(--col-1)); } 
+        .btn-2 { background: radial-gradient(circle at 30% 30%, #ff6666, var(--col-2)); } 
+        .btn-3 { background: radial-gradient(circle at 30% 30%, #66ff66, var(--col-3)); } 
+        .btn-4 { background: radial-gradient(circle at 30% 30%, #ffff66, var(--col-4)); }
+        
+        .ans-btn.disabled { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
+        .ans-btn.selected { border-color: #fff; box-shadow: 0 0 20px #fff; transform: scale(1.1); z-index: 10; filter: brightness(1.3); pointer-events: none; }
+        .ans-btn.sort-selected::after { content: ""; } 
+        .ans-btn.sort-selected { filter: brightness(0.6); pointer-events: none; position: relative; border-color: #aaa; box-shadow: inset 0 0 20px #000; }
+
+        /* Client Overlays */
+        #client-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; background: rgba(0,0,0,0.9); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .client-msg-main { font-size: 32px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #0af; margin-bottom: 20px;}
+        
+        /* Static Result Text */
+        #result-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); font-family: 'M PLUS Rounded 1c'; font-weight: 900; font-size: 100px; white-space: nowrap; z-index: 200; pointer-events: none; text-shadow: 2px 2px 0 #000; padding: 20px; border-radius: 20px; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .res-win { color: #ffd700; background: rgba(255, 0, 0, 0.9); border-color: #fff; text-shadow: 0 0 20px #ffff00; }
+        .res-lose { color: #ccc; background: rgba(50, 50, 50, 0.9); border-color: #888; transform: translate(-50%, -50%) rotate(5deg); }
 
     </style>
 </head>
 <body>
 
-    <div id="host-app">
-        <div id="screen-title" class="screen">
-            <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V9.0 (START Signal)</h2>
-            <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
-            <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
-        </div>
+<div class="tv-background"></div>
 
-        <div id="screen-lobby" class="screen hidden">
-            <h2 style="margin-bottom:20px;">ENTRY LOBBY</h2>
-            <div style="background:#222; padding:30px; border-radius:15px; text-align:center; border:2px solid #444;">
-                <div id="qrcode" style="display:inline-block; background:#fff; padding:15px;"></div>
-                <p style="font-size:20px; margin-top:20px;">QRコードを読み込んでエントリーしてください</p>
-                <div style="font-size: 30px; color:var(--c2); font-weight:bold; margin:20px 0;">
-                    参加人数: <span id="host-player-count">0</span>人
-                </div>
-            </div>
-            <div style="margin-top:30px; display:flex; gap:20px;">
-                <button class="btn-sub" onclick="Host.showScreen('screen-title')">戻る</button>
-                <button class="btn-large" onclick="Host.goToSelect()">問題選択へ進む ➡</button>
-            </div>
-        </div>
+<div id="title-view" class="screen flex-center tv-background">
+    <div class="title-logo-container">
+        <div class="title-logo-sub">オールスター</div>
+        <div class="title-logo-main">感謝祭</div>
+    </div>
+    <button class="title-btn btn-start-big" onclick="goPeriodSelect()">START</button>
+    <button class="title-btn btn-settings" onclick="startSetup()">SETTINGS</button>
+</div>
 
-        <div id="screen-settings" class="screen hidden">
-            <div class="settings-container">
-                <div class="settings-sidebar">
-                    <div style="padding:15px; font-weight:bold; border-bottom:1px solid #444;">問題リスト</div>
-                    <ul class="set-list" id="settings-list"></ul>
-                    <div style="padding:10px;">
-                        <button class="btn-action" style="width:100%; padding:10px; font-size:16px;" onclick="Host.createNewSet()">＋ 新規作成</button>
-                    </div>
-                </div>
-                <div class="settings-main">
-                    <h2 style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:20px;">EDIT MISSION</h2>
-                    
-                    <div class="config-block">
-                        <div class="config-title">
-                            <span>システム・音響設定</span>
-                            <button class="btn-action" style="background:var(--c1); color:#000; font-weight:bold;" onclick="Host.goToDebugMode()">デバッグ: マルチテスト画面へ</button>
-                        </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:12px;">
-                            <div>
-                                <label>BGMファイル</label>
-                                <input type="file" id="bgm-file" accept="audio/*" style="width:100%; margin-bottom:5px;">
-                                <div style="display:flex; align-items:center; gap:5px;">
-                                    <span>BGM音量</span>
-                                    <input type="range" id="vol-bgm" min="0" max="100" value="50" style="flex:1;">
-                                </div>
-                            </div>
-                            <div>
-                                <label>終了時SE (TimeUp)</label>
-                                <input type="file" id="se-timeup-file" accept="audio/*" style="width:100%; margin-bottom:5px;">
-                                <div style="display:flex; align-items:center; gap:5px;">
-                                    <span>SE音量</span>
-                                    <input type="range" id="vol-se" min="0" max="100" value="50" style="flex:1;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="config-block" style="flex:1; display:flex; flex-direction:column;">
-                        <div class="config-title"><span>問題セット編集</span></div>
-                        <label style="font-size:12px; color:#aaa;">ジャンル名 (タイトル)</label>
-                        <input type="text" id="set-genre" placeholder="例: 一般常識" style="width:100%; margin-bottom:15px;">
-                        
-                        <div style="display:flex; gap:15px; margin-bottom:15px; padding-bottom:10px; border-bottom:1px dashed #444;">
-                            <div>
-                                <label style="font-size:12px; color:#aaa;">制限時間(秒)</label>
-                                <input type="number" id="set-time" value="30" style="width: 80px;">
-                            </div>
-                            <div>
-                                <label style="font-size:12px; color:#aaa;">文字サイズ(px)</label>
-                                <input type="number" id="set-font" value="24" style="width: 80px;">
-                            </div>
-                            <div>
-                                <label style="font-size:12px; color:#aaa;">枠の幅(%)</label>
-                                <input type="number" id="set-width" value="90" style="width: 80px;" placeholder="90">
-                            </div>
-                        </div>
-
-                        <div id="q-inputs" style="overflow-y:auto; flex:1;">
-                            </div>
-                    </div>
-                    
-                    <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
-                        <button class="btn-sub" onclick="Host.showScreen('screen-title')">戻る</button>
-                        <button class="btn-large" style="margin:0; font-size:18px; padding:10px 40px;" onclick="Host.saveCurrentSet()">保存</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="screen-debug" class="screen hidden">
-            <div class="debug-container">
-                <div class="debug-header">
-                    <h3 style="margin:0;">MULTI-DEBUGGER</h3>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <label>生成人数:</label>
-                        <input type="number" id="debug-count" value="5" style="width:60px;">
-                        <button class="btn-action" onclick="Debugger.spawnPlayers()">生成 & エントリー</button>
-                    </div>
-                    <div style="margin-left:auto;">
-                        <button class="btn-sub" onclick="Host.showScreen('screen-settings')">設定へ戻る</button>
-                        <button class="btn-sub" onclick="window.open(window.location.href, '_blank')">※ 別窓でホスト画面を開く</button>
-                    </div>
-                </div>
-                
-                <div id="debug-grid" class="debug-grid">
-                    </div>
-            </div>
-        </div>
-
-        <div id="screen-select" class="screen hidden">
-            <h2>SELECT MISSION</h2>
-            <div id="set-list" style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin: 40px;"></div>
-            <button class="btn-sub" style="position:absolute; bottom:30px;" onclick="Host.goToLobby()">ロビーへ戻る</button>
-        </div>
-
-        <div id="screen-game" class="screen hidden">
-            <div class="timer-box" id="game-timer">30</div>
-            <h2 id="game-genre-title" style="margin-top: 20px; font-size: 32px; color:#aaa;">GENRE</h2>
-            <div class="question-list" id="host-q-list"></div>
-            <div id="timeup-msg" class="hidden" style="position: absolute; font-size: 100px; color: #fff; font-family: 'Black Ops One'; text-shadow: 0 0 20px #f00; background:rgba(0,0,0,0.8); width:100%; text-align:center;">TIME UP!</div>
-            <div style="position: absolute; bottom: 20px; color: #666;">[ESC]: Exit / [SPACE]: Rank</div>
-        </div>
-
-        <div id="screen-judge" class="screen hidden">
-            <div id="judge-ui-top" class="judge-ui-top">
-                Q.<span id="j-q-pt"></span> : <span id="j-q-text"></span>
-            </div>
-            <div class="judge-wrapper">
-                <div id="judge-already-msg" class="judge-alert hidden">※既に正解が出ています！</div>
-                <div class="ranking-box" id="rank-list"></div>
-                <div id="judge-info-msg" style="margin-top:10px; color:#666;">Press [SPACE] to Reveal / [ESC] to Exit</div>
-            </div>
-            <div id="judge-ui-bottom" class="judge-ui-bottom">
-                <button class="btn-judge btn-ok" onclick="Host.judge(true)">O</button>
-                <button class="btn-judge btn-ng" onclick="Host.judge(false)">X</button>
-            </div>
-        </div>
+<div id="setup-view" class="screen flex-center">
+    <div class="setup-container">
+        <div class="setup-header"><h2>設定</h2><button class="btn" onclick="goTitle()">戻る</button></div>
         
-        <div id="host-count-overlay" class="count-overlay">3</div>
+        <div id="setup-menu" class="setup-body">
+            <div class="setup-menu-grid">
+                <button class="setup-menu-btn" onclick="showSetupProb()"><div><span class="setup-menu-icon">📝</span>問題登録</div><div>➤</div></button>
+                <button class="setup-menu-btn" onclick="showSetupLink()"><div><span class="setup-menu-icon">🔗</span>解答サイトリンク</div><div>➤</div></button>
+                <button class="setup-menu-btn" onclick="showSetupBgm()"><div><span class="setup-menu-icon">🎵</span>BGM設定</div><div>➤</div></button>
+            </div>
+        </div>
+
+        <div id="setup-problems" class="setup-body hidden">
+            <button class="btn" onclick="showSetupMenu()" style="margin-bottom:10px;">◀ メニューへ</button>
+            <h3 style="color:#fb0;">ピリオド構成 (自動保存)</h3>
+            <div id="p-list"></div>
+            <button class="btn btn-blue" onclick="addPeriod()" style="width:100%; margin-top:10px; padding:15px; font-size:18px;">＋ ピリオドを追加</button>
+        </div>
+
+        <div id="setup-link" class="setup-body hidden">
+            <button class="btn" onclick="showSetupMenu()" style="margin-bottom:10px;">◀ メニューへ</button>
+            <h3 style="color:#fb0;">接続情報</h3>
+            <div class="connect-info-box">
+                <div class="qr-area"><div id="qrcode-setup"><div style='font-size:12px;color:#000;'>QR生成中...</div></div></div>
+                <div class="url-area">
+                    <div style="font-weight:bold; color:#0f0;">参加者用URL:</div>
+                    <input type="text" class="url-input" id="host-url" readonly onclick="this.select()">
+                </div>
+            </div>
+        </div>
+
+        <div id="setup-bgm" class="setup-body hidden">
+            <button class="btn" onclick="showSetupMenu()" style="margin-bottom:10px;">◀ メニューへ</button>
+            <h3 style="color:#fb0;">音響設定 (自動保存)</h3>
+            <div style="line-height:2.5;">
+                出題:<input type="file" accept="audio/*" onchange="saveAudio('q_open',this)"><br>
+                シンキング:<input type="file" accept="audio/*" onchange="saveAudio('thinking',this)"><br>
+                ピリオド終了:<input type="file" accept="audio/*" onchange="saveAudio('period_end',this)"><br>
+                集計:<input type="file" accept="audio/*" onchange="saveAudio('votes',this)"><br>
+                正解:<input type="file" accept="audio/*" onchange="saveAudio('correct',this)"><br>
+                山分け発表:<input type="file" accept="audio/*" onchange="saveAudio('sort_reveal',this)"><br>
+                山分けシンキング:<input type="file" accept="audio/*" onchange="saveAudio('sort_thinking',this)">
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="host-view" class="screen hidden">
+    <div id="period-select-view" class="full-screen hidden flex-center">
+        <h1 style="color:#fff; text-shadow:2px 2px 5px #000; font-size:50px;">ピリオド選択</h1>
+        <div class="period-grid" id="period-grid"></div>
+        <button class="btn" onclick="goTitle()" style="margin-top:30px; padding:15px 30px; font-size:20px;">タイトルへ戻る</button>
     </div>
 
-    <div id="player-app" class="hidden">
-        <div id="p-screen-login" class="screen">
-            <div class="p-container">
-                <h2>ENTRY</h2>
-                <input type="text" id="p-name-input" placeholder="名前を入力" style="width:100%; margin: 20px 0;">
-                <button class="btn-send" onclick="Player.login()">参加する</button>
-            </div>
+    <div id="game-layout" class="layout-text">
+        <div class="q-container" id="q-area-l"><div class="q-icon">Q</div><div class="q-text-box"><div class="q-text-content" id="q-text"></div></div></div>
+        <div class="options-area" id="opt-area">
+            <div id="opt-1" class="option-panel border-1"><div class="opt-num col-1">1</div><div class="opt-val opt-img-box" id="val-1"></div><div class="vote-count" id="vote-1">0</div></div>
+            <div id="opt-2" class="option-panel border-2"><div class="opt-num col-2">2</div><div class="opt-val opt-img-box" id="val-2"></div><div class="vote-count" id="vote-2">0</div></div>
+            <div id="opt-3" class="option-panel border-3"><div class="opt-num col-3">3</div><div class="opt-val opt-img-box" id="val-3"></div><div class="vote-count" id="vote-3">0</div></div>
+            <div id="opt-4" class="option-panel border-4"><div class="opt-num col-4">4</div><div class="opt-val opt-img-box" id="val-4"></div><div class="vote-count" id="vote-4">0</div></div>
         </div>
-        <div id="p-screen-main" class="screen hidden">
-            <div class="p-container">
-                <div class="p-status">
-                    <div style="display:flex; align-items:center;">
-                        <span id="p-conn-status" class="conn-status"></span>
-                        <span id="p-disp-name">名無し</span>
-                    </div>
-                    <span style="font-weight: bold;"><span id="p-score">0</span> pts</span>
-                </div>
-                <div id="p-game-area" class="hidden">
-                    <div style="text-align: left; margin-bottom: 5px; color: #aaa;">問題を選択:</div>
-                    <div class="p-pt-select">
-                        <button class="btn-pt color-1" onclick="Player.selectPt(1)" id="p-btn-1">1</button>
-                        <button class="btn-pt color-2" onclick="Player.selectPt(2)" id="p-btn-2">2</button>
-                        <button class="btn-pt color-3" onclick="Player.selectPt(3)" id="p-btn-3">3</button>
-                        <button class="btn-pt color-4" onclick="Player.selectPt(4)" id="p-btn-4">4</button>
-                        <button class="btn-pt color-5" onclick="Player.selectPt(5)" id="p-btn-5">5</button>
-                    </div>
-                    <input type="text" id="p-answer-input" class="p-input" placeholder="答えを入力...">
-                    <button id="p-submit-btn" class="btn-send" onclick="Player.confirmSend()">送信する</button>
-                </div>
-                <div id="p-status-text" style="color: #888; margin-top: 20px;">問題出題までお待ちください</div>
-            </div>
-        </div>
-        <div id="p-modal" class="modal">
-            <div class="modal-content">
-                <h3>確認</h3>
-                <p><span id="m-pt" style="font-weight:bold;">1</span>pt の問題に回答します。</p>
-                <div style="font-size: 24px; font-weight: bold; margin: 20px 0; border-bottom: 1px solid #555; padding-bottom: 10px;" id="m-ans"></div>
-                <p style="font-size: 12px; color: #f55;">※送信すると変更できません</p>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
-                    <button class="btn-sub" onclick="document.getElementById('p-modal').style.display='none'">キャンセル</button>
-                    <button class="btn-send" style="width: auto; padding: 10px 30px; background:var(--c1);" onclick="Player.sendAnswer()">送信</button>
-                </div>
-            </div>
+    </div>
+    
+    <div id="sort-result-view" class="hidden">
+        <h2 style="position:absolute; top:20px; color:#fff;">正解発表</h2>
+        <div class="sort-compare-container">
+            <div class="champ-ans-col" id="champ-ans-col"><div style="color:#ffd700; font-weight:bold; font-size:30px; margin-bottom:20px;">CHAMPION</div></div>
+            <div class="correct-ans-col" id="correct-ans-col"><div style="color:#00ffff; font-weight:bold; font-size:30px; margin-bottom:20px;">ANSWER</div></div>
         </div>
     </div>
 
-    <audio id="bgm-player" loop></audio>
-    <audio id="se-timeup-player"></audio>
+    <div id="timer-display" class="hidden"><div id="timer-text">10</div></div>
+
+    <div id="period-end-view" class="full-screen hidden flex-center">
+        <h1 style="font-size:80px; color:#fb0; text-shadow:0 0 20px #fb0;">ピリオド終了!</h1>
+        <div style="font-size:40px; margin:30px;">今ピリオドのチャンピオンは...</div>
+        <div id="champ-name" class="champ-box hidden" style="font-size:60px; font-weight:900; color:#000;"></div>
+        <div style="margin-top:50px; color:#aaa; font-size:24px;">Spaceキーで山分けクイズへ</div>
+    </div>
+    
+    <div id="ranking-modal" class="full-screen hidden flex-center">
+        <div class="ranking-board"><div class="ranking-sidebar"><div class="side-text">ランキング</div></div><div class="rank-list-area" id="rank-list"></div></div>
+        <div class="ranking-footer" style="margin-top:20px;color:#aaa;font-size:20px;">Spaceキーで次へ</div>
+    </div>
+</div>
+
+<div id="client-login" class="screen hidden flex-center" style="background:#111;">
+    <div style="background:#333; padding:40px; border-radius:20px; width:80%; text-align:center;">
+        <h2 style="color:#fb0;">ENTRY</h2><input type="text" id="user-name" placeholder="Name" style="font-size:24px; text-align:center; padding:15px; margin-bottom:20px; width:80%;">
+        <button class="btn btn-blue" id="join-btn" onclick="joinGame()" style="width:100%; padding:20px; font-size:20px;" disabled>接続待機中...</button>
+    </div>
+</div>
+<div id="client-view" class="screen hidden">
+    <div class="tv-background-client"></div>
+    <div id="client-score">現在の得点: 0点</div>
+    <div id="client-main-area">
+        <div id="client-msg-area">
+            <div class="client-status-text" id="cli-status-text">出題をお待ちください</div>
+            <div id="client-result-box"></div>
+        </div>
+        <div id="client-pad" class="hidden">
+            <button class="ans-btn btn-1" id="cbtn-1" onclick="sendAnswer('1')">1</button>
+            <button class="ans-btn btn-2" id="cbtn-2" onclick="sendAnswer('2')">2</button>
+            <button class="ans-btn btn-3" id="cbtn-3" onclick="sendAnswer('3')">3</button>
+            <button class="ans-btn btn-4" id="cbtn-4" onclick="sendAnswer('4')">4</button>
+        </div>
+        <div id="sort-ui" class="hidden" style="text-align:center; margin-top:20px;">
+            <div class="sort-ui-selected" id="sort-sel" style="color:#ff0; font-size:20px; margin-bottom:10px;"></div>
+            <button class="btn btn-red" onclick="resetSort()" style="padding:10px 20px;">リセット</button>
+        </div>
+    </div>
+</div>
 
 <script>
-/* NETWORK: PeerJS Wrapper */
-const Net = {
-    peer: null, conn: null, conns: [], isHost: false,
-    initHost: () => {
-        Net.isHost = true;
-        Net.peer = new Peer();
-        Net.peer.on('open', (id) => {
-            const url = location.href.split('?')[0] + "?role=player&host=" + id;
-            new QRCode(document.getElementById("qrcode"), { text: url, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
+    // --- IndexedDB ---
+    const DB_NAME = 'AllStarQuizDB'; const DB_VER = 2; // Version Bump
+    function openDB(){
+        return new Promise((res,rej)=>{
+            const r=indexedDB.open(DB_NAME, DB_VER);
+            r.onupgradeneeded=e=>{
+                const db=e.target.result;
+                if(!db.objectStoreNames.contains('audios')) db.createObjectStore('audios');
+                if(!db.objectStoreNames.contains('data')) db.createObjectStore('data');
+            };
+            r.onsuccess=e=>res(e.target.result);
+            r.onerror=e=>rej(e);
         });
-        Net.peer.on('connection', (c) => {
-            Net.conns.push(c);
-            // 接続時はSYNCを送っておく（途中参加用）
-            c.on('open', () => { c.send({ type: 'SYNC', db: DB }); });
-            c.on('data', (d) => Host.handleData(d, c.peer));
-            c.on('close', () => { 
-                Net.conns = Net.conns.filter(conn => conn !== c);
-                if(DB.players[c.peer]) delete DB.players[c.peer]; 
-                Host.updateCount();
-            });
-            c.on('error', (err) => { console.error(err); });
-        });
-    },
-    initPlayer: (hostId) => {
-        Net.peer = new Peer();
-        Net.peer.on('open', () => {
-            Net.conn = Net.peer.connect(hostId);
-            Net.conn.on('open', () => {
-                document.getElementById('p-conn-status').classList.add('on');
-            });
-            Net.conn.on('data', (d) => Player.handleData(d));
-            Net.conn.on('close', () => { alert("ホストとの接続が切れました"); location.reload(); });
-        });
-        Net.peer.on('error', (err) => { console.error(err); alert("通信エラー: " + err.type); });
-    },
-    // ★【修正】過剰なエラーハンドリングを廃止
-    broadcast: (data) => { 
-        if(Net.isHost) {
-            Net.conns.forEach(c => {
-                // c.openがfalseでも送信を試みる（遅延やバッファリング対応）
-                try {
-                    c.send(data);
-                } catch (e) {
-                    console.error("Broadcast failed for:", c.peer, e);
-                    // 送信エラーでもリストからは削除しない
-                }
-            });
-        }
-    },
-    send: (data) => { if(Net.conn) Net.conn.send(data); }
-};
-
-/* STORAGE & DB */
-const DATA_KEY = 'quiz_royale_sets_v5'; 
-const CONF_KEY = 'quiz_royale_conf_v5'; 
-const CHANNEL = 'quiz_royale_v6';
-
-const DB = {
-    state: { phase: 'LOBBY', currentSet: null },
-    players: {}, answers: [], solved: [false, false, false, false, false, false],
-    save: () => { },
-    load: () => { },
-    resetAnswers: () => { DB.answers = []; DB.solved = [false, false, false, false, false, false]; }
-};
-
-const params = new URLSearchParams(window.location.search);
-const ROLE = params.get('role') === 'player' ? 'player' : 'host';
-
-/* SOUND */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let volBgm = 0.5, volSe = 0.5;
-
-function playSe(type) {
-    if(type === 'timeup') {
-        const audio = document.getElementById('se-timeup-player');
-        if(audio.src) { audio.volume = volSe; audio.play().catch(e=>{}); return; }
     }
-    if(audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-    const gainVal = 0.3 * volSe;
-    if(type === 'count') { osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); } 
-    else if(type === 'start') { osc.type = 'square'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8); }
-    else if(type === 'timeup') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(gainVal, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); }
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + (type==='start'?0.8:0.5));
-}
-function playBgm() { const audio = document.getElementById('bgm-player'); audio.volume = volBgm; if(audio.src) audio.play().catch(e=>{}); }
-function stopBgm() { const audio = document.getElementById('bgm-player'); audio.pause(); audio.currentTime = 0; }
-
-/* HOST LOGIC */
-const Host = {
-    sets: [], config: {fontSize: 24, barWidth: 90, volBgm: 50, volSe: 50},
-    editingIndex: -1, timerInterval: null, judgeIndex: 0, sortedAnswers: [], isJudgingActive: false,
-
-    init: () => {
-        if(ROLE === 'player') {
-            document.getElementById('host-app').classList.add('hidden');
-            document.getElementById('player-app').classList.remove('hidden');
-            const hostId = params.get('host');
-            if(hostId) Player.init(hostId); else alert("QRコードからアクセスしてください");
-            return;
-        }
+    async function saveToDB(store, k, val){
+        const db=await openDB(); const tx=db.transaction(store,'readwrite'); tx.objectStore(store).put(val, k);
+    }
+    async function loadFromDB(){
+        const db=await openDB(); 
+        const tx=db.transaction(['audios','data'],'readonly');
         
-        // Host Init
-        Net.initHost();
-
-        document.getElementById('bgm-file').addEventListener('change', (e) => { const f=e.target.files[0]; if(f) document.getElementById('bgm-player').src=URL.createObjectURL(f); });
-        document.getElementById('se-timeup-file').addEventListener('change', (e) => { const f=e.target.files[0]; if(f) document.getElementById('se-timeup-player').src=URL.createObjectURL(f); });
-        
-        document.getElementById('vol-bgm').addEventListener('input', (e)=>{ Host.config.volBgm=parseInt(e.target.value); volBgm=Host.config.volBgm/100; document.getElementById('bgm-player').volume=volBgm; });
-        document.getElementById('vol-se').addEventListener('input', (e)=>{ Host.config.volSe=parseInt(e.target.value); volSe=Host.config.volSe/100; });
-
-        let savedSets = localStorage.getItem(DATA_KEY);
-        if(!savedSets) {
-            const v4 = localStorage.getItem('quiz_royale_sets_v4');
-            if(v4) { savedSets=v4; localStorage.setItem(DATA_KEY, v4); }
-        }
-        if(savedSets) Host.sets = JSON.parse(savedSets);
-        else Host.sets = [{ title: "サンプル", time: 30, qs: ["首都", "果物", "計算", "干支", "山"] }];
-
-        const savedConf = localStorage.getItem(CONF_KEY);
-        if(savedConf) Host.config = JSON.parse(savedConf);
-        if(Host.config.volBgm!==undefined) { document.getElementById('vol-bgm').value=Host.config.volBgm; volBgm=Host.config.volBgm/100; }
-        if(Host.config.volSe!==undefined) { document.getElementById('vol-se').value=Host.config.volSe; volSe=Host.config.volSe/100; }
-
-        const qInputs = document.getElementById('q-inputs'); qInputs.innerHTML = "";
-        for(let i=1; i<=5; i++) qInputs.innerHTML += `<div style="display:flex;gap:5px;margin-bottom:5px;"><span class="color-${i}" style="padding:5px;width:30px;text-align:center;font-weight:bold;border-radius:3px;">${i}</span><input type="text" id="q-in-${i}" placeholder="Q${i}" style="flex:1;"></div>`;
-
-        DB.state.phase = 'LOBBY'; 
-        
-        document.addEventListener('keydown', (e) => {
-            if(e.code === 'Escape' && DB.state.phase!=='LOBBY' && DB.state.phase!=='SELECT') { e.preventDefault(); Host.forceQuit(); return; }
-            if(DB.state.phase === 'TIMEUP' && e.code === 'Space') { e.preventDefault(); Host.startJudging(); } 
-            else if(DB.state.phase === 'JUDGING' && e.code === 'Space') { e.preventDefault(); if(!Host.isJudgingActive) Host.revealNext(); }
+        // Load Audio
+        const as=tx.objectStore('audios');
+        ['q_open','thinking','votes','correct','sort_reveal','sort_thinking','period_end'].forEach(k=>{
+            const r=as.get(k);
+            r.onsuccess=e=>{ if(r.result) audioFiles[k]=URL.createObjectURL(r.result); };
         });
-    },
+        
+        // Load Data
+        const ds=tx.objectStore('data');
+        const r=ds.get('periods');
+        r.onsuccess=e=>{ if(r.result) { periods=r.result; } }; // Load saved periods but delay render until setup open
+    }
 
-    // PeerJS Data Handling
-    handleData: (data, peerId) => {
-        if(data.type === 'LOGIN') {
-            DB.players[peerId] = { name: data.name, score: 0 };
-            Host.updateCount();
-            Net.broadcast({ type: 'SYNC', db: DB });
-        } else if(data.type === 'ANSWER') {
-            if(DB.state.phase === 'ACTIVE') {
-                if(!DB.answers.find(a => a.playerId === peerId)) {
-                    DB.answers.push({ playerId: peerId, name: data.name, pt: data.pt, text: data.text, timestamp: Date.now() });
-                    Net.broadcast({ type: 'SYNC', db: DB });
-                }
-            }
-        }
-    },
-    updateCount: () => {
-        document.getElementById('host-player-count').innerText = Object.keys(DB.players).length;
-    },
-
-    goToLobby: () => { 
-        Host.showScreen('screen-lobby'); 
-        DB.players = {};
-        DB.state.phase='LOBBY'; 
-        Host.updateCount();
-        Net.broadcast({ type: 'SYNC', db: DB });
-    },
-    goToSelect: () => { Host.showScreen('screen-select'); const list=document.getElementById('set-list'); list.innerHTML=""; Host.sets.forEach((set,idx)=>{ const btn=document.createElement('button'); btn.className='btn-large'; btn.innerText=set.title; btn.onclick=()=>Host.startSet(idx); list.appendChild(btn); }); DB.state.phase='SELECT'; Net.broadcast({type:'SYNC', db:DB}); },
+    // --- Data & State ---
+    let periods = [{ title: "第1ピリオド", questions: [{qType:'text', zoom:false, q:"日本一高い山は？",correct:"1",options:{1:{type:'text',val:'富士山'},2:{type:'text',val:'北岳'},3:{type:'text',val:'奥穂高岳'},4:{type:'text',val:'間ノ岳'}}}], sortingQ: {q:"次の出来事を古い順に並べよ", order:["2","4","1","3"], options:{1:{type:'text',val:'明治維新'},2:{type:'text',val:'関ヶ原の戦い'},3:{type:'text',val:'第二次世界大戦終結'},4:{type:'text',val:'ペリー来航'}}} }];
+    let audioFiles={q_open:null,thinking:null,votes:null,correct:null,sort_reveal:null,sort_thinking:null, period_end:null};
     
-    goToSettings: () => { Host.showScreen('screen-settings'); Host.renderSetList(); Host.createNewSet(); },
-    goToDebugMode: () => { Host.showScreen('screen-debug'); }, 
+    let peer, conn, conns={}, myId;
+    let currentPIdx=0, currentQIdx=0, hostState=0; 
+    
+    // ▼▼▼ State Variables ▼▼▼
+    let answers={}, participants={}, scores={}, periodScores={}, periodTimes={};
+    let clientStartTime=0, bgmAudio=null;
+    let isSorting=false, clientSortAns=[], champSortAns=null, lastChoice=null;
+    let isLagTime = false;
+    let currentChampId = null; 
+    // ▲▲▲▲▲▲
 
-    renderSetList: () => {
-        const list=document.getElementById('settings-list'); list.innerHTML="";
-        Host.sets.forEach((set,i)=>{ const li=document.createElement('li'); li.className=`set-item ${i===Host.editingIndex?'active':''}`; li.innerHTML=`<div style="flex:1;">${set.title}</div><div class="set-controls"><button class="btn-action" onclick="event.stopPropagation();Host.moveSet(${i},-1)">▲</button><button class="btn-action" onclick="event.stopPropagation();Host.moveSet(${i},1)">▼</button><button class="btn-action" style="background:#a33;" onclick="event.stopPropagation();Host.deleteSet(${i})">×</button></div>`; li.onclick=()=>Host.loadSetForEdit(i); list.appendChild(li); });
-    },
-    moveSet: (idx, dir) => { if(idx+dir<0||idx+dir>=Host.sets.length)return; const t=Host.sets[idx]; Host.sets[idx]=Host.sets[idx+dir]; Host.sets[idx+dir]=t; localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.renderSetList(); },
-    createNewSet: () => { Host.editingIndex=-1; Host.renderSetList(); document.getElementById('set-genre').value=""; document.getElementById('set-time').value=30; document.getElementById('set-font').value=24; document.getElementById('set-width').value=90; for(let i=1;i<=5;i++)document.getElementById(`q-in-${i}`).value=""; },
-    loadSetForEdit: (idx) => { Host.editingIndex=idx; Host.renderSetList(); const set=Host.sets[idx]; document.getElementById('set-genre').value=set.title; document.getElementById('set-time').value=set.time; document.getElementById('set-font').value=set.fontSize||24; document.getElementById('set-width').value=set.width||90; for(let i=1;i<=5;i++)document.getElementById(`q-in-${i}`).value=set.qs[i-1]; },
-    saveCurrentSet: () => {
-        const t=document.getElementById('set-genre').value; const tm=parseInt(document.getElementById('set-time').value); const fs=parseInt(document.getElementById('set-font').value)||24; const w=parseInt(document.getElementById('set-width').value)||90; const qs=[]; for(let i=1;i<=5;i++)qs.push(document.getElementById(`q-in-${i}`).value);
-        if(!t)return alert("タイトルを入力してください");
-        localStorage.setItem(CONF_KEY,JSON.stringify(Host.config));
-        const ns={title:t, time:tm, fontSize:fs, width:w, qs:qs};
-        if(Host.editingIndex>=0) Host.sets[Host.editingIndex]=ns; else { Host.sets.push(ns); Host.editingIndex=Host.sets.length-1; }
-        localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.renderSetList(); alert("保存しました");
-    },
-    deleteSet: (idx) => { if(!confirm("削除しますか？"))return; Host.sets.splice(idx,1); localStorage.setItem(DATA_KEY,JSON.stringify(Host.sets)); Host.createNewSet(); },
+    // --- Init ---
+    window.onload = () => {
+        loadFromDB();
+        const u = new URLSearchParams(window.location.search);
+        if(u.get('host')) { showScreen('client-login'); setTimeout(()=>initClient(u.get('host')), 500); } 
+        else { showScreen('title-view'); setTimeout(initHost, 500); }
+        document.addEventListener('keydown', e => { 
+            if(e.code==='Escape') goTitle();
+            if(!document.getElementById('host-view').classList.contains('hidden') && e.code==='Space'){ e.preventDefault(); nextPhase(); }
+        });
+    };
+    function showScreen(id){ document.querySelectorAll('.screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); if(['host-view','setup-view'].includes(id)) document.getElementById(id).style.display='flex'; }
+    function goTitle(){ stopAudio(); showScreen('title-view'); resetHost(); broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); }
+    function goPeriodSelect(){ showScreen('host-view'); hostState=0; nextPhase(); broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); }
+    function resetHost(){ document.getElementById('period-select-view').classList.add('hidden'); document.getElementById('period-end-view').classList.add('hidden'); document.getElementById('ranking-modal').classList.add('hidden'); document.getElementById('sort-result-view').classList.add('hidden');}
 
-    startSet: (idx) => {
-        const set=Host.sets[idx]; DB.state.currentSet=set; DB.resetAnswers();
-        Host.showScreen('screen-game'); document.getElementById('game-genre-title').innerText=set.title; document.getElementById('timeup-msg').classList.add('hidden');
-        const list=document.getElementById('host-q-list'); list.innerHTML=""; list.style.width=(set.width||90)+"%"; const fs=set.fontSize||24;
-        set.qs.forEach((q,i)=>list.innerHTML+=`<div class="q-bar"><div class="q-bar-pt color-${i+1}">${i+1}pt</div><div class="q-bar-text" style="font-size:${fs}px">${q}</div></div>`);
-        
-        DB.state.phase='COUNTDOWN'; 
-        // 待機状態を同期
-        Net.broadcast({type:'SYNC', db:DB});
-        
-        const ol=document.getElementById('host-count-overlay'); ol.style.display='flex'; let c=3; ol.innerText=c; playSe('count');
-        const ct=setInterval(()=>{ c--; if(c>0){ol.innerText=c;playSe('count');}else{clearInterval(ct);ol.style.display='none';playSe('start');playBgm();Host.startGameLoop(set.time);} },1000);
-        Host.activeInterval=ct;
-    },
-    startGameLoop: (sec) => {
-        DB.state.phase='ACTIVE'; 
-        
-        // ★【最重要修正】 V39と同じく「START信号」を明示的に送る
-        // これによりクライアントは状態確認をスキップして強制的に画面を切り替える
-        Net.broadcast({type:'START'});
-        
-        // 念のため状態も同期（途中参加者用）
-        Net.broadcast({type:'SYNC', db:DB}); 
-        
-        let left=sec; const el=document.getElementById('game-timer'); el.innerText=left;
-        Host.timerInterval=setInterval(()=>{ left--; el.innerText=left; if(left<=0)Host.timeUp(); },1000);
-    },
-    timeUp: () => { clearInterval(Host.timerInterval); stopBgm(); playSe('timeup'); DB.state.phase='TIMEUP'; Net.broadcast({type:'SYNC', db:DB}); document.getElementById('timeup-msg').classList.remove('hidden'); },
-    forceQuit: () => { clearInterval(Host.timerInterval); clearInterval(Host.activeInterval); stopBgm(); document.getElementById('host-count-overlay').style.display='none'; Host.goToSelect(); DB.state.phase='SELECT'; Net.broadcast({type:'SYNC', db:DB}); },
+    // --- Setup Navigation ---
+    function showSetupMenu() { document.querySelectorAll('.setup-body').forEach(el=>el.classList.add('hidden')); document.getElementById('setup-menu').classList.remove('hidden'); }
+    function showSetupProb() { document.querySelectorAll('.setup-body').forEach(el=>el.classList.add('hidden')); document.getElementById('setup-problems').classList.remove('hidden'); renderPList(); }
+    function showSetupLink() { document.querySelectorAll('.setup-body').forEach(el=>el.classList.add('hidden')); document.getElementById('setup-link').classList.remove('hidden'); }
+    function showSetupBgm() { document.querySelectorAll('.setup-body').forEach(el=>el.classList.add('hidden')); document.getElementById('setup-bgm').classList.remove('hidden'); }
 
-    startJudging: () => {
-        DB.state.phase='JUDGING'; Net.broadcast({type:'SYNC', db:DB}); Host.showScreen('screen-judge');
-        Host.sortedAnswers=[...DB.answers].sort((a,b)=>a.timestamp-b.timestamp); Host.judgeIndex=-1; Host.isJudgingActive=false;
-        const list=document.getElementById('rank-list'); list.innerHTML="";
-        Host.sortedAnswers.forEach((ans,i)=>list.innerHTML+=`<div class="rank-row" id="rank-item-${i}"><div class="rank-order">#${i+1}</div><div class="rank-name">${ans.name}</div><div class="rank-detail" id="rank-detail-${i}"><span class="rank-pt-badge color-${ans.pt}">${ans.pt}pt</span><span class="rank-ans">${ans.text}</span><span id="rank-result-${i}"></span></div></div>`);
-    },
-    revealNext: () => {
-        Host.judgeIndex++; if(Host.judgeIndex>=Host.sortedAnswers.length){ Host.finishJudging(); return; }
-        const ans=Host.sortedAnswers[Host.judgeIndex]; const qText=DB.state.currentSet.qs[ans.pt-1];
-        document.querySelectorAll('.rank-row').forEach(e=>e.classList.remove('focused')); document.getElementById(`rank-item-${Host.judgeIndex}`).classList.add('focused'); document.getElementById(`rank-detail-${Host.judgeIndex}`).classList.add('visible');
-        document.getElementById('j-q-pt').innerText=ans.pt; document.getElementById('j-q-text').innerText=qText;
-        document.getElementById('judge-ui-top').classList.add('active'); document.getElementById('judge-ui-bottom').classList.add('active');
-        Host.isJudgingActive=true; if(DB.solved[ans.pt])document.getElementById('judge-already-msg').classList.remove('hidden'); else document.getElementById('judge-already-msg').classList.add('hidden');
-    },
-    judge: (isOk) => {
-        const ans=Host.sortedAnswers[Host.judgeIndex]; const rs=document.getElementById(`rank-result-${Host.judgeIndex}`);
-        if(isOk){ DB.solved[ans.pt]=true; if(DB.players[ans.playerId])DB.players[ans.playerId].score+=parseInt(ans.pt); rs.innerHTML='<span class="solved-mark">◎ GET!</span>'; }
-        else rs.innerHTML='<span class="failed-mark">×</span>';
-        DB.save(); document.getElementById('judge-ui-top').classList.remove('active'); document.getElementById('judge-ui-bottom').classList.remove('active'); document.getElementById('judge-already-msg').classList.add('hidden'); Host.isJudgingActive=false;
-        Net.broadcast({type:'SYNC', db:DB}); // 得点更新を通知
-    },
-    finishJudging: () => { Host.goToSelect(); DB.state.phase='SELECT'; Net.broadcast({type:'SYNC', db:DB}); },
-    showScreen: (id) => { document.querySelectorAll('#host-app .screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); },
-    onUpdate: () => {}
-};
+    // --- Functions ---
+    function saveAudio(k, inp){ if(inp.files[0]){ audioFiles[k]=URL.createObjectURL(inp.files[0]); saveToDB('audios', k, inp.files[0]); } }
+    function saveData(){ saveToDB('data', 'periods', periods); }
+    function playAudio(k, loop=false){ if(!audioFiles[k])return; if(bgmAudio){bgmAudio.pause();bgmAudio=null;} const a=new Audio(audioFiles[k]); a.loop=loop; a.play().catch(()=>{}); if(loop)bgmAudio=a; }
+    function stopAudio(){ if(bgmAudio){bgmAudio.pause();bgmAudio=null;} }
 
-/* PLAYER LOGIC */
-const Player = {
-    id: null, name: null, selectedPt: null,
-    init: (hostId) => {
-        Net.initPlayer(hostId);
-    },
-    handleData: (data) => {
-        // ★【最重要修正】 START信号を受け取ったら無条件で解答画面を表示
-        if(data.type === 'START') {
-            const gameArea = document.getElementById('p-game-area');
-            const statusText = document.getElementById('p-status-text');
-            
-            // 強制表示
-            gameArea.classList.remove('hidden');
-            gameArea.classList.remove('ui-disabled');
-            statusText.innerText = "解答を受け付けています！";
-            
-            // リセット処理
-            Player.selectedPt = null;
-            document.getElementById('p-answer-input').value = "";
-            Player.updatePtBtns();
-            return; // 処理終了
-        }
-
-        // 通常の状態同期（途中参加や画面復帰用）
-        if(data.type === 'SYNC') {
-            const db = data.db;
-            const myData = db.players[Net.peer.id];
-            
-            if(myData) {
-                document.getElementById('p-score').innerText = myData.score;
-            }
-
-            const phase = db.state.phase;
-            const gameArea = document.getElementById('p-game-area');
-            const statusText = document.getElementById('p-status-text');
-
-            if (phase === 'ACTIVE') {
-                // すでに回答済みかチェック
-                const myAns = db.answers.find(a => a.playerId === Net.peer.id);
-                if(myAns) {
-                    gameArea.classList.add('hidden');
-                    statusText.innerText = "回答を送信しました。結果をお待ちください。";
-                } else {
-                    statusText.innerText = "解答を受け付けています！";
-                    gameArea.classList.remove('hidden');
-                    gameArea.classList.remove('ui-disabled');
+    function startSetup(){ showScreen('setup-view'); showSetupMenu(); }
+    function initHost(){
+        if(peer) return;
+        document.getElementById("qrcode-setup").innerHTML="<div style='color:#000;font-size:12px;'>接続中...</div>";
+        peer=new Peer();
+        peer.on('open', id=>{
+            myId=id; const url = location.href.split('?')[0] + '?host=' + id;
+            document.getElementById('host-url').value = url;
+            document.getElementById("qrcode-setup").innerHTML="";
+            new QRCode(document.getElementById("qrcode-setup"), {text:url, width:150, height:150});
+        });
+        peer.on('connection',c=>{
+            c.on('open',()=>{ conns[c.peer]=c; c.on('data',d=>{
+                if(d.type==='LOGIN'){ 
+                    participants[c.peer]=d.name; 
+                    // Init scores safely
+                    if(scores[c.peer] === undefined) scores[c.peer]=0;
+                    if(periodScores[c.peer] === undefined) periodScores[c.peer]=0;
+                    if(periodTimes[c.peer] === undefined) periodTimes[c.peer]=0;
                 }
-            } else {
-                // ACTIVE以外は隠す
-                gameArea.classList.add('hidden');
+                if(d.type==='ANSWER') {
+                    // Receive answer logic
+                    // ▼▼▼ 修正: hostState 90 (山分け中) も解答を許可する ▼▼▼
+                    const canAnswer = (hostState === 3 || hostState === 9 || hostState === 90) || isLagTime;
+                    if (canAnswer && !answers[c.peer]) {
+                        answers[c.peer] = d;
+                    }
+                }
+            }); c.on('close',()=>{delete conns[c.peer];}); });
+        });
+    }
+
+    // --- Editor Logic ---
+    function renderPList(){
+        const l=document.getElementById('p-list'); l.innerHTML="";
+        periods.forEach((p,pi)=>{
+            const pd=document.createElement('div'); pd.className='p-card';
+            pd.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:10px;"><input type="text" value="${p.title}" onchange="periods[${pi}].title=this.value;saveData();" style="font-size:20px;font-weight:bold;width:60%;"><button class="btn btn-red" onclick="delP(${pi})">ピリオド削除</button></div><div id="p-${pi}-qs"></div><button class="btn btn-green" onclick="addQ(${pi})">＋ 問題追加</button><div class="sort-card"><span class="sort-header">山分けクイズ設定</span><input type="text" value="${p.sortingQ.q}" onchange="periods[${pi}].sortingQ.q=this.value;saveData();" placeholder="問題文" style="margin-bottom:10px;"><div class="opt-grid">${[1,2,3,4].map(k=>renderSortOpt(pi, k, p.sortingQ.options[k])).join('')}</div><div style="margin-top:10px; color:#ffd700;">正解順 (例: 4,2,1,3): <input type="text" value="${p.sortingQ.order.join(',')}" onchange="periods[${pi}].sortingQ.order=this.value.split(',');saveData();" style="width:150px; background:#443300; color:#fff; font-weight:bold;"></div></div>`;
+            l.appendChild(pd); renderQList(pi);
+        });
+    }
+    
+    function renderQList(pi){
+        const ql=document.getElementById(`p-${pi}-qs`); ql.innerHTML="";
+        periods[pi].questions.forEach((q,qi)=>{
+            const isImg = q.qType === 'image';
+            const qd=document.createElement('div'); qd.className='q-card';
+            qd.innerHTML=`
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                    <b>Q${qi+1}</b>
+                    <div style="font-size:12px;">
+                        形式: <label><input type="radio" name="qt-${pi}-${qi}" ${!isImg?'checked':''} onchange="setQType(${pi},${qi},'text')">文字</label>
+                        <label><input type="radio" name="qt-${pi}-${qi}" ${isImg?'checked':''} onchange="setQType(${pi},${qi},'image')">画像</label>
+                        ${isImg ? `<label style="margin-left:10px;color:#0af;"><input type="checkbox" ${q.zoom?'checked':''} onchange="toggleZoom(${pi},${qi},this.checked)">ズームアウト演出</label>` : ''}
+                    </div>
+                    <button class="btn btn-red" style="padding:5px;" onclick="delQ(${pi},${qi})">削除</button>
+                </div>
+                <input type="text" value="${q.q}" onchange="periods[${pi}].questions[${qi}].q=this.value;saveData();" placeholder="問題文" style="margin-bottom:5px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+                    ${[1,2,3,4].map(k=>renderOptionInput(pi, qi, k, q.options[k], isImg)).join('')}
+                </div>
+                <div style="margin-top:5px;">正解: <select onchange="periods[${pi}].questions[${qi}].correct=this.value;saveData();">${[1,2,3,4].map(k=>`<option value="${k}" ${q.correct==k?'selected':''}>${k}</option>`).join('')}</select></div>
+            `;
+            ql.appendChild(qd);
+        });
+    }
+
+    function renderOptionInput(pi, qi, k, opt, isImg) {
+        if (!isImg) {
+            return `<div style="background:#333;padding:5px;"><span style="font-size:10px;color:#aaa;">${k}</span> <input type="text" value="${opt.val}" onchange="upOv(${pi},${qi},${k},this.value)"></div>`;
+        } else {
+            return `
+            <div style="background:#333;padding:5px;">
+                <span style="font-size:10px;color:#aaa;">${k}</span>
+                <label class="drop-area" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleDrop(event,${pi},${qi},${k})">
+                    ${opt.val ? `<img src="${opt.val}" class="drop-preview">` : 'Drag & Drop / Click'}
+                    <input type="file" accept="image/*" style="display:none;" onchange="upImg(this,${pi},${qi},${k})">
+                </label>
+            </div>`;
+        }
+    }
+
+    function renderSortOpt(pi, k, opt) { 
+        return `<div class="opt-cell"><span style="font-size:12px;color:#aaa;">選択肢${k}</span> <label style="font-size:10px"><input type="radio" name="st-${pi}-${k}" ${opt.type=='text'?'checked':''} onchange="setSortType(${pi},${k},'text')">文</label><label style="font-size:10px"><input type="radio" name="st-${pi}-${k}" ${opt.type=='image'?'checked':''} onchange="setSortType(${pi},${k},'image')">画</label> ${opt.type=='text'?`<input type="text" value="${opt.val}" onchange="upSortOv(${pi},${k},this.value)">`:`<input type="file" accept="image/*" style="font-size:10px;" onchange="upSortImg(this,${pi},${k})">${opt.val?`<img src="${opt.val}" style="height:20px;">`:''}`}</div>`; 
+    }
+
+    // Data Helpers
+    function addPeriod(){periods.push({title:`第${periods.length+1}ピリオド`,questions:[],sortingQ:{q:"",order:[],options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}}}); saveData(); renderPList();}
+    function delP(pi){periods.splice(pi,1); saveData(); renderPList();}
+    function addQ(pi){periods[pi].questions.push({qType:'text', zoom:false, q:"",correct:"1",options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}}); saveData(); renderQList(pi);}
+    function delQ(pi,qi){periods[pi].questions.splice(qi,1); saveData(); renderQList(pi);}
+    
+    function setQType(pi,qi,type){
+        periods[pi].questions[qi].qType = type;
+        // Reset values to avoid confusion
+        for(let k=1; k<=4; k++) { periods[pi].questions[qi].options[k].val = ""; periods[pi].questions[qi].options[k].type = type; }
+        saveData(); renderQList(pi);
+    }
+    function toggleZoom(pi, qi, checked) { periods[pi].questions[qi].zoom = checked; saveData(); }
+    function upOv(pi,qi,k,v){periods[pi].questions[qi].options[k].val=v; saveData();}
+    
+    function handleDrop(e, pi, qi, k) {
+        const file = e.dataTransfer.files[0];
+        if(file && file.type.startsWith('image/')) {
+            const r=new FileReader(); r.onload=ev=>{ periods[pi].questions[qi].options[k].val=ev.target.result; saveData(); renderQList(pi); }; r.readAsDataURL(file);
+        }
+    }
+    function upImg(el,pi,qi,k){if(el.files[0]){const r=new FileReader();r.onload=e=>{periods[pi].questions[qi].options[k].val=e.target.result;saveData();renderQList(pi);};r.readAsDataURL(el.files[0]);}}
+
+    // Sort Helpers
+    function setSortType(pi,k,t){periods[pi].sortingQ.options[k].type=t;periods[pi].sortingQ.options[k].val="";saveData();renderPList();} 
+    function upSortOv(pi,k,v){periods[pi].sortingQ.options[k].val=v;saveData();} 
+    function upSortImg(el,pi,k){if(el.files[0]){const r=new FileReader();r.onload=e=>{periods[pi].sortingQ.options[k].val=e.target.result;saveData();renderPList();};r.readAsDataURL(el.files[0]);}}
+
+    // --- Host Flow ---
+    function renderPSel(){ const g=document.getElementById('period-grid'); g.innerHTML=""; periods.forEach((p,i)=>{ g.innerHTML+=`<div class="period-btn" onclick="selectP(${i})">${p.title}<br><span style="font-size:16px">${p.questions.length}問</span></div>`; }); document.getElementById('period-select-view').classList.remove('hidden'); }
+    function selectP(i){ 
+        currentPIdx=i; currentQIdx=-1; 
+        periodScores={}; scores={}; periodTimes={}; // 初期化
+        for(let id in participants) { periodScores[id]=0; scores[id]=0; periodTimes[id]=0; }
+        broadcastScores();
+        document.getElementById('period-select-view').classList.add('hidden'); 
+        hostState=1; nextPhase(); 
+    }
+
+    function nextPhase(){
+        const P=periods[currentPIdx]; const Q=P.questions[currentQIdx];
+        try {
+            switch(hostState){
+                case 0: renderPSel(); break; // P-Sel
+                case 1: 
+                    currentQIdx++; isSorting=false;
+                    if(currentQIdx>=P.questions.length){ hostState=7; nextPhase(); return; }
+                    resetDisp(); hostState=2; broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); break;
+                case 2: 
+                    displayQ(Q); playAudio('q_open'); playAudio('thinking',false); startTimer(10);
+                    broadcast({type:'START', sort:false}); hostState=3; break; 
+                case 3: stopTimer(); break;
+                case 4: stopTimer(); break; 
+                case 5: showVotes(); playAudio('votes'); hostState=6; break; 
+                case 6: // Correct
+                    showCorrect(Q.correct); calcScores(Q.correct); playAudio('correct'); 
+                    broadcast({type:'RESULT', correct:Q.correct}); 
+                    
+                    // ピリオドラストの問題ならピリオド成績へ
+                    if(currentQIdx === P.questions.length - 1) hostState=135; 
+                    else hostState=130; 
+                    break; 
+                case 130: showRank(Q.correct, 'speed'); hostState=140; break; 
+                case 135: showRank(null, 'period_rank'); hostState=140; break; // ピリオド成績
+                case 140: document.getElementById('ranking-modal').classList.add('hidden'); hostState=1; nextPhase(); break;
                 
-                if (phase === 'TIMEUP') statusText.innerText = "TIME UP!";
-                else if (phase === 'JUDGING') statusText.innerText = "集計中...";
-                else if (phase === 'LOBBY' || phase === 'SELECT' || phase === 'COUNTDOWN') {
-                    statusText.innerText = "問題出題までお待ちください";
-                    Player.selectedPt = null;
-                    document.getElementById('p-answer-input').value = "";
-                    Player.updatePtBtns();
-                }
-            }
-        }
-    },
-    login: () => {
-        const n=document.getElementById('p-name-input').value; if(!n)return; 
-        Player.name=n; 
-        Player.showScreen('p-screen-main');
-        document.getElementById('p-disp-name').innerText = n;
-        Net.send({type:'LOGIN', name:n});
-    },
-    selectPt: (pt) => { Player.selectedPt=pt; Player.updatePtBtns(); },
-    updatePtBtns: () => { for(let i=1;i<=5;i++){ const b=document.getElementById(`p-btn-${i}`); if(i===Player.selectedPt)b.classList.add('selected'); else b.classList.remove('selected'); } },
-    confirmSend: () => { const t=document.getElementById('p-answer-input').value; if(!Player.selectedPt||!t)return; document.getElementById('m-pt').innerText=Player.selectedPt; document.getElementById('m-ans').innerText=t; document.getElementById('p-modal').style.display='flex'; },
-    sendAnswer: () => { 
-        const t=document.getElementById('p-answer-input').value; 
-        Net.send({type:'ANSWER', name:Player.name, pt:Player.selectedPt, text:t}); 
-        document.getElementById('p-modal').style.display='none'; 
-    },
-    showScreen: (id) => { document.querySelectorAll('#player-app .screen').forEach(el=>el.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-};
+                case 7: // P-End (ピリオド終了画面)
+                    document.getElementById('period-end-view').classList.remove('hidden');
+                    document.getElementById('champ-name').classList.add('hidden'); 
+                    
+                    // --- 修正箇所：チャンピオンを決定してIDを保存 ---
+                    let champId = "none"; 
+                    let candidates = Object.keys(participants).map(id => ({
+                        id: id,
+                        score: periodScores[id] || 0,
+                        time: periodTimes[id] || 0
+                    }));
 
-Host.init();
+                    if (candidates.length > 0) {
+                        candidates.sort((a, b) => {
+                            if (b.score !== a.score) return b.score - a.score;
+                            return a.time - b.time;
+                        });
+                        champId = candidates[0].id;
+                    }
+                    currentChampId = champId; 
+                    
+                    document.getElementById('champ-name').innerText = participants[champId] || "該当なし";
+                    champSortAns = null; hostState = 71; break; 
+                
+                case 71: // Reveal Champ
+                    document.getElementById('champ-name').classList.remove('hidden');
+                    // 正解BGM再生(playAudio('correct'))を削除
+                    hostState=8; break;
+                case 8: // Sort Prep
+                    document.getElementById('period-end-view').classList.add('hidden'); resetDisp(); isSorting=true;
+                    displayQ({q:"", options:{1:{type:'text',val:''},2:{type:'text',val:''},3:{type:'text',val:''},4:{type:'text',val:''}}});
+                    broadcast({type:'STANDBY', msg:'山分けクイズが出題されます'});
+                    hostState=9; break;
+                case 9: // Sort Open & Start
+                    displayQ(P.sortingQ); playAudio('q_open'); playAudio('sort_thinking',false); startTimer(20);
+                    broadcast({type:'START', sort:true}); hostState=90; break;
+                case 90: stopTimer(); break;
+                case 10: stopTimer(); break; 
+                case 11: // Sort Reveal Prep (山分けクイズ結果表示準備)
+                    champSortAns = (answers[currentChampId] && answers[currentChampId].choice) ? answers[currentChampId].choice : ["?","?","?","?"];
+                    renderSortResultLayout(champSortAns, P.sortingQ); hostState = 12; break; 
+                case 12: case 13: case 14: case 15: // Reveal
+                    revealSortRow(hostState-12, P.sortingQ.order, champSortAns); playAudio('sort_reveal'); hostState++;
+                    // case 15が終わったら(次が16)、そのまま待機する流れへ
+                    if(hostState > 15) {
+                        calcSortScores(P.sortingQ.order); 
+                        broadcast({type:'RESULT', correct:P.sortingQ.order});
+                        hostState = 16; // 新しい待機ステートへ
+                    }
+                    break;
+                
+                // 131(Ranking) はスキップ
+                case 16: // End Wait -> Title
+                    document.getElementById('sort-result-view').classList.add('hidden'); 
+                    hostState = 0; 
+                    nextPhase(); 
+                    broadcast({type:'STANDBY', msg:'問題の出題をお待ちください'}); 
+                    break;
+            }
+        } catch(e) { console.error(e); alert("エラーが発生しましたが続行します"); document.getElementById('ranking-modal').classList.add('hidden'); hostState=0; }
+    }
+    function broadcast(m){for(let k in conns)conns[k].send(m);}
+    
+    function resetDisp(){
+        document.getElementById('q-text').innerText=""; document.getElementById('sort-result-view').classList.add('hidden');
+        for(let k=1;k<=4;k++){ 
+            const p=document.getElementById('opt-'+k); 
+            p.classList.remove('dimmed','highlighted', 'zoom-anim'); 
+            document.getElementById('val-'+k).innerHTML=""; 
+            document.getElementById('vote-'+k).style.opacity=0; 
+        }
+        document.getElementById('timer-display').classList.add('hidden'); answers={}; stopAudio();
+    }
+    function displayQ(q){
+        document.getElementById('q-text').innerText=q.q;
+        
+        // Layout Switch
+        const gl = document.getElementById('game-layout');
+        if(q.qType === 'image' && !isSorting) {
+            gl.classList.remove('layout-text'); gl.classList.add('layout-image');
+        } else {
+            gl.classList.add('layout-text'); gl.classList.remove('layout-image');
+        }
+
+        for(let k=1;k<=4;k++){
+            const el=document.getElementById('val-'+k); el.className = 'opt-val';
+            if(q.qType==='image' && !isSorting) {
+                el.innerHTML=`<img src="${q.options[k].val}" class="opt-img">`; 
+                if(q.zoom) document.getElementById('opt-'+k).classList.add('zoom-anim');
+            }
+            else el.innerText=q.options[k].val;
+        }
+    }
+    let tId; function startTimer(sec){
+        const el=document.getElementById('timer-display'); el.classList.remove('hidden'); let t=sec; 
+        document.getElementById('timer-text').innerText=sec;
+        const s=Date.now();
+        tId=setInterval(()=>{ 
+            t=sec-(Date.now()-s)/1000; 
+            if(t<=0){t=0;stopTimer();} 
+            document.getElementById('timer-text').innerText=Math.ceil(t); 
+        },50);
+    }
+    function stopTimer(){ 
+        clearInterval(tId); 
+        broadcast({type:'TIMEUP'}); 
+        // BGM CONTINUES (Not Stopped)
+        
+        isLagTime = true;
+        setTimeout(() => { isLagTime = false; }, 5000);
+
+        const isPeriodLastQ = (currentQIdx === periods[currentPIdx].questions.length - 1);
+        if(isPeriodLastQ && (hostState === 3 || hostState === 4)) {
+            playAudio('period_end'); // 専用SE
+        }
+
+        // DIRECT TRANSITION LOGIC
+        if(hostState === 3 || hostState === 4) hostState = 5; // Normal: Thinking -> Pre-Vote
+        else if(hostState === 9 || hostState === 90 || hostState === 10) hostState = 11; // Sort: Thinking -> Pre-Reveal
+        else hostState++; 
+    }
+    
+    function showVotes(){ 
+        stopAudio(); // Stop BGM here (when vote sound plays)
+        document.getElementById('timer-display').classList.add('hidden'); 
+        for(let k=1;k<=4;k++) document.getElementById('vote-'+k).innerText = Object.values(answers).filter(a=>a.choice==k).length; 
+        for(let k=1;k<=4;k++) document.getElementById('vote-'+k).style.opacity=1; 
+    }
+    function showCorrect(c){ for(let k=1;k<=4;k++){ const p=document.getElementById('opt-'+k); if(k==c) p.classList.add('highlighted'); else p.classList.add('dimmed'); } }
+    
+    function renderSortResultLayout(champAns, q){
+        document.getElementById('sort-result-view').classList.remove('hidden');
+        const cCol = document.getElementById('champ-ans-col'); cCol.innerHTML='<div style="color:#ffd700; font-weight:bold; font-size:30px; margin-bottom:20px;">CHAMPION</div>'; cCol.className = 'champ-ans-col';
+        const rCol = document.getElementById('correct-ans-col'); rCol.innerHTML='<div style="color:#00ffff; font-weight:bold; font-size:30px; margin-bottom:20px;">ANSWER</div>';
+        champAns.forEach(k => { const color = k==1?'var(--col-1)':k==2?'var(--col-2)':k==3?'var(--col-3)':'var(--col-4)'; cCol.innerHTML += `<div class="sort-bubble" style="background:${color}">${k}</div>`; });
+        q.order.forEach((k, i) => {
+            const txt = q.options[k].type=='text' ? q.options[k].val : `選択肢${k}`;
+            const color = k==1?'var(--col-1)':k==2?'var(--col-2)':k==3?'var(--col-3)':'var(--col-4)';
+            rCol.innerHTML += `<div class="sort-row-correct" id="sort-row-${i}"><div class="sort-bubble" style="background:${color}">${k}</div><div class="sort-text-box">${txt}</div></div>`;
+        });
+    }
+    function revealSortRow(idx, correctOrder, champAns){
+        document.getElementById(`sort-row-${idx}`).classList.add('visible');
+        if(correctOrder[idx] !== champAns[idx]) document.getElementById('champ-ans-col').classList.add('dimmed-all');
+    }
+
+    function calcScores(c){ 
+        for(let id in answers) {
+            if(answers[id].choice==c){ 
+                // NaN check
+                if(isNaN(scores[id])) scores[id] = 0;
+                if(isNaN(periodScores[id])) periodScores[id] = 0;
+                if(isNaN(periodTimes[id])) periodTimes[id] = 0;
+                
+                scores[id]++; 
+                periodScores[id]++; 
+                
+                // time
+                let t = parseFloat(answers[id].time || 0);
+                periodTimes[id] += t;
+            }
+        } 
+        broadcastScores(); 
+    }
+    function calcSortScores(ord){ for(let id in answers) if(JSON.stringify(answers[id].choice)===JSON.stringify(ord)) scores[id]+=5; broadcastScores(); } 
+    function broadcastScores(){ for(let id in conns) conns[id].send({type:'SCORE', score:scores[id]}); }
+    
+    function showRank(correctAnswer, type = 'speed'){
+        const l=document.getElementById('rank-list'); l.innerHTML="";
+        let w = [];
+        try {
+            if (type === 'overall') {
+                w = Object.keys(scores).map(id=>({n:participants[id]||"Unknown", v:scores[id]})).sort((a,b)=>b.v-a.v);
+                document.querySelector('.side-text').innerText = "総合成績";
+            } else if (type === 'period_rank') {
+                // ピリオド成績: 点数降順 -> 時間昇順
+                w = Object.keys(periodScores).map(id=>({
+                    n:participants[id]||"Unknown", 
+                    v:periodScores[id],
+                    t:periodTimes[id]||0
+                }));
+                w.sort((a,b) => {
+                    if(b.v !== a.v) return b.v - a.v; // 点数が多い順
+                    return a.t - b.t; // 時間が短い順
+                });
+                document.querySelector('.side-text').innerText = "ピリオド成績";
+            } else {
+                // スピード順
+                for(let id in answers) {
+                    if(participants[id] && answers[id].choice == correctAnswer) { 
+                        let t = 99.99; if(answers[id].time !== undefined) t = parseFloat(answers[id].time);
+                        w.push({n:participants[id], v:t});
+                    }
+                }
+                w.sort((a,b)=>a.v-b.v);
+                document.querySelector('.side-text').innerText = "解答ランキング";
+            }
+        } catch(e) { console.log(e); }
+
+        if(!w.length) l.innerHTML="<div style='text-align:center;font-size:40px;color:#fff;'>該当者なし</div>";
+        else {
+            const dispW = w.slice(0, 10);
+            dispW.forEach((p,i)=>{ 
+                let val;
+                if(type === 'speed') val = `${p.v.toFixed(2)}s`;
+                else val = `${p.v}P`;
+
+                // アニメーション遅延: period_rankの場合は下位(リストの下)から表示
+                let delay = i * 0.1;
+                if(type === 'period_rank') {
+                    // 下（配列の後ろ）から順に delay を小さくするのではなく、
+                    // 下から順に表示させたい = 上の人の delay を大きくする
+                    delay = (dispW.length - 1 - i) * 0.5; 
+                }
+
+                l.innerHTML+=`<div class="rank-row" style="animation-delay:${delay}s"><div class="rank-num">${i+1}</div><div class="rank-name">${p.n}</div><div class="rank-score-box">${val}</div></div>`; 
+            });
+        }
+        document.getElementById('ranking-modal').classList.remove('hidden');
+    }
+
+    // --- Client Logic ---
+    function initClient(hid){
+        peer=new Peer(); 
+        peer.on('open',()=>{ 
+            conn=peer.connect(hid); 
+            conn.on('open', ()=>{ document.getElementById('join-btn').disabled = false; document.getElementById('join-btn').innerText = "参加"; });
+            conn.on('data',d=>{
+                if(d.type==='SCORE') document.getElementById('client-score').innerText=`現在の得点: ${d.score}点`;
+                if(d.type==='STANDBY'){ updateClientUI('standby', d.msg); }
+                if(d.type==='START'){ clientStartTime=Date.now(); isSorting=d.sort; resetClientSort(); updateClientUI('active'); }
+                if(d.type==='TIMEUP'){ updateClientUI('locked'); }
+                if(d.type==='RESULT'){ showClientResult(d.correct); }
+            });
+        });
+    }
+    function joinGame(){ 
+        const n=document.getElementById('user-name').value; if(!n)return; 
+        if(!conn || !conn.open) return alert("接続中...少々お待ちください");
+        conn.send({type:'LOGIN', name:n}); showScreen('client-view'); 
+    }
+    
+    function updateClientUI(state, msg="") {
+        const pad = document.getElementById('client-pad');
+        const main = document.getElementById('cli-status-text');
+        const resBox = document.getElementById('client-result-box');
+        resBox.innerHTML = ""; 
+        
+        if (state === 'active') {
+            pad.classList.remove('hidden');
+            main.innerText = "解答してください";
+            document.getElementById('sort-ui').classList.add('hidden'); 
+            document.querySelectorAll('.ans-btn').forEach(b=>{
+                b.classList.remove('disabled', 'selected', 'sort-selected');
+                b.style.pointerEvents = 'auto';
+            });
+            lastChoice = null;
+            if(isSorting) document.getElementById('sort-ui').classList.remove('hidden');
+        } else if (state === 'standby') {
+            pad.classList.add('hidden'); main.innerText = msg; document.getElementById('sort-ui').classList.add('hidden');
+        } else if (state === 'locked') {
+            main.innerText = "正解発表をお待ちください";
+            // ボタンをグレーアウト
+            document.querySelectorAll('.ans-btn').forEach(b=>{
+                b.classList.add('disabled');
+                b.style.pointerEvents = 'none';
+            });
+        }
+    }
+
+    function sendAnswer(c){
+        if(isSorting){
+            if(clientSortAns.includes(c)) return;
+            clientSortAns.push(c);
+            const btn = document.querySelector(`#cbtn-${c}`);
+            btn.classList.add('sort-selected');
+            btn.setAttribute('data-order', clientSortAns.length);
+            document.getElementById('sort-sel').innerText = clientSortAns.join(' → ');
+            if(clientSortAns.length===4) sendSortAnswer();
+        } else {
+            const t = (Date.now() - clientStartTime) / 1000;
+            conn.send({type:'ANSWER', choice:c, time:t});
+            lastChoice = c;
+            document.querySelectorAll('.ans-btn').forEach(b=>{
+                b.style.pointerEvents = 'none';
+                if(b.id === `cbtn-${c}`) b.classList.add('selected');
+                else b.classList.add('disabled');
+            });
+            document.getElementById('cli-status-text').innerText = "解答を受信しました";
+        }
+    }
+    function resetClientSort(){ clientSortAns=[]; document.querySelectorAll('.ans-btn').forEach(b=>{b.classList.remove('selected', 'sort-selected'); b.removeAttribute('data-order');}); document.getElementById('sort-sel').innerText=""; }
+    function sendSortAnswer(){ 
+        const t = (Date.now() - clientStartTime) / 1000;
+        conn.send({type:'ANSWER', choice:clientSortAns, time:t}); 
+        lastChoice = JSON.stringify(clientSortAns);
+        document.getElementById('cli-status-text').innerText = "解答を受信しました";
+    }
+    function resetSort(){ resetClientSort(); }
+    
+    function showClientResult(correct) {
+        const box = document.getElementById('client-result-box');
+        const status = document.getElementById('cli-status-text');
+        status.innerText = ""; 
+        let isCorrect = false;
+        if(isSorting) { if(JSON.stringify(clientSortAns) === JSON.stringify(correct)) isCorrect = true; } 
+        else { if(lastChoice === correct) isCorrect = true; }
+        if(isCorrect) box.innerHTML = `<div class="res-win">正解</div>`;
+        else box.innerHTML = `<div class="res-lose">不正解</div>`;
+    }
 </script>
 </body>
 </html>
