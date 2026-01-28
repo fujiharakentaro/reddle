@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QUIZ ROYALE V12.0 (Manual Score Mode)</title>
+    <title>QUIZ ROYALE V13.0 (Name-Based Score)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=M+PLUS+Rounded+1c:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -138,6 +138,8 @@
         
         .conn-status { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; margin-right: 5px; }
         .conn-status.on { background: #2f2; box-shadow: 0 0 5px #2f2; }
+        
+        .score-display { color: #ffeb3b; font-weight: bold; margin-left: 10px; }
 
     </style>
 </head>
@@ -146,7 +148,7 @@
     <div id="host-app">
         <div id="screen-title" class="screen">
             <h1 style="font-size: 80px; text-shadow: 0 0 20px #fff;">QUIZ ROYALE</h1>
-            <h2 style="color: #aaa; margin-bottom: 40px;">V12.0 (Manual Score Mode)</h2>
+            <h2 style="color: #aaa; margin-bottom: 40px;">V13.0 (Name-based Score)</h2>
             <button class="btn-large" onclick="Host.goToLobby()">GAME START</button>
             <button class="btn-sub" onclick="Host.goToSettings()">設定 (SETTINGS)</button>
         </div>
@@ -302,7 +304,8 @@
                         <span id="p-conn-status" class="conn-status"></span>
                         <span id="p-disp-name">名無し</span>
                     </div>
-                    </div>
+                    <span style="font-weight: bold;"><span id="p-score">0</span> pts</span>
+                </div>
                 <div id="p-game-area" class="hidden">
                     <div style="text-align: left; margin-bottom: 5px; color: #aaa;">問題を選択:</div>
                     <div class="p-pt-select">
@@ -352,7 +355,7 @@ const Net = {
             c.on('data', (d) => Host.handleData(d, c.peer));
             c.on('close', () => { 
                 Net.conns = Net.conns.filter(conn => conn !== c);
-                if(DB.players[c.peer]) delete DB.players[c.peer]; 
+                // ★削除せず維持（名前ベース管理のため、接続が切れてもデータは保持）
                 Host.updateCount();
             });
             c.on('error', (err) => { console.error(err); });
@@ -391,7 +394,11 @@ const CHANNEL = 'quiz_royale_v6';
 
 const DB = {
     state: { phase: 'LOBBY', currentSet: null },
-    players: {}, answers: [], solved: [false, false, false, false, false, false],
+    // ★【変更点】点数は名前で管理する {"佐藤": 10, "田中": 5}
+    scores: {}, 
+    players: {}, 
+    answers: [], 
+    solved: [false, false, false, false, false, false],
     save: () => { },
     load: () => { },
     resetAnswers: () => { DB.answers = []; DB.solved = [false, false, false, false, false, false]; }
@@ -471,13 +478,25 @@ const Host = {
     // PeerJS Data Handling
     handleData: (data, peerId) => {
         if(data.type === 'LOGIN') {
-            DB.players[peerId] = { name: data.name, score: 0 };
+            DB.players[peerId] = { name: data.name }; // IDと名前の紐付け
+            // ★【名前ベース】まだスコアが無ければ初期化、あれば維持
+            if(DB.scores[data.name] === undefined) {
+                DB.scores[data.name] = 0;
+            }
             Host.updateCount();
+            // 名前ごとのスコアリストを送る
             Net.broadcast({ type: 'SYNC', db: DB });
         } else if(data.type === 'ANSWER') {
             if(DB.state.phase === 'ACTIVE') {
                 if(!DB.answers.find(a => a.playerId === peerId)) {
-                    DB.answers.push({ playerId: peerId, name: data.name, pt: data.pt, text: data.text, timestamp: Date.now() });
+                    // ★名前も一緒に保存
+                    DB.answers.push({ 
+                        playerId: peerId, 
+                        name: data.name, // 答えの中にある名前を使う
+                        pt: data.pt, 
+                        text: data.text, 
+                        timestamp: Date.now() 
+                    });
                     Net.broadcast({ type: 'SYNC', db: DB });
                 }
             }
@@ -489,7 +508,7 @@ const Host = {
 
     goToLobby: () => { 
         Host.showScreen('screen-lobby'); 
-        DB.players = {};
+        // DB.players = {}; // 名前ベースなので消さなくてもOKだが、リセットしたいならここ
         DB.state.phase='LOBBY'; 
         Host.updateCount();
         Net.broadcast({ type: 'SYNC', db: DB });
@@ -531,7 +550,6 @@ const Host = {
     },
     startGameLoop: (sec) => {
         DB.state.phase='ACTIVE'; 
-        // ★START信号（強制表示）
         Net.broadcast({type:'START'});
         Net.broadcast({type:'SYNC', db:DB}); 
         
@@ -561,8 +579,11 @@ const Host = {
 
         if(isOk){ 
             DB.solved[ans.pt]=true; 
-            if(DB.players[ans.playerId]) {
-                DB.players[ans.playerId].score = (DB.players[ans.playerId].score || 0) + pts;
+            // ★【名前ベース集計】その名前の点数を加算
+            const playerName = ans.name;
+            if(playerName) {
+                if(DB.scores[playerName] === undefined) DB.scores[playerName] = 0;
+                DB.scores[playerName] += pts;
             }
             rs.innerHTML=`<span class="solved-mark">◎ (+${pts})</span>`; 
         }
@@ -599,8 +620,12 @@ const Player = {
 
         if(data.type === 'SYNC') {
             const db = data.db;
-            const myData = db.players[Net.peer.id];
             
+            // ★【復活】名前を使って点数リストから自分の点数を探す
+            if(Player.name && db.scores && db.scores[Player.name] !== undefined) {
+                document.getElementById('p-score').innerText = db.scores[Player.name];
+            }
+
             const phase = db.state.phase;
             const gameArea = document.getElementById('p-game-area');
             const statusText = document.getElementById('p-status-text');
